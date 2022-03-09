@@ -1,6 +1,6 @@
 # Job Defense Shield
 
-The software in this repo creates a report of problem jobs and users on the large Research Computing clusters.
+The software in this repo creates a report of problem users and problem jobs on the large Research Computing clusters.
 
 It looks for the following:
 + users that have been over-allocating CPU or GPU time
