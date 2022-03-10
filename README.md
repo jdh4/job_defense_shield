@@ -7,6 +7,7 @@ It looks for the following:
 + CPU and GPU job fragmentation (e.g., 1 GPU per node over N nodes)
 + the largest CPU and GPU jobs
 + the jobs that have been queued for the longest
++ cases where a user encountered all failed jobs on the last day they submitted
 
 The script does not protect against:
 + abuses of file storage or I/O
