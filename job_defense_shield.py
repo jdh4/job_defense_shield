@@ -172,14 +172,14 @@ def jobs_with_the_most_gpus(df):
   return g
 
 def longest_queue_times(raw):
-  # below we use submit instead of eligible to compute the queue time
   q = raw[raw.state == "PENDING"].copy()
-  q["q-days"] = round((time.time() - q["submit"])   / SECONDS_PER_HOUR / HOURS_PER_DAY)
+  q = q[~q.jobid.str.contains("_")]
+  q["s-days"] = round((time.time() - q["submit"])   / SECONDS_PER_HOUR / HOURS_PER_DAY)
   q["e-days"] = round((time.time() - q["eligible"]) / SECONDS_PER_HOUR / HOURS_PER_DAY)
-  q["q-days"] = q["q-days"].astype("int64")
+  q["s-days"] = q["s-days"].astype("int64")
   q["e-days"] = q["e-days"].astype("int64")
-  cols = ["jobid", "netid", "cluster", "cores", "qos", "partition", "q-days", "e-days"]
-  q = q[cols].groupby("netid").apply(lambda d: d.iloc[d["q-days"].argmax()]).sort_values("q-days", ascending=False)[:10]
+  cols = ["jobid", "netid", "cluster", "nodes", "cores", "qos", "partition", "s-days", "e-days"]
+  q = q[cols].groupby("netid").apply(lambda d: d.iloc[d["s-days"].argmax()]).sort_values("s-days", ascending=False)[:10]
   return q
 
 def add_dividers(df, title="", pre="\n\n\n"):
@@ -261,8 +261,10 @@ if __name__ == "__main__":
       df_str = un.to_string(index=True, justify="center")
       s += add_dividers(df_str, title=name, pre="\n\n")
 
-  ####### consider jobs in the last 3 days only #######
-  df = df[df.start >= time.time() - 3 * HOURS_PER_DAY * SECONDS_PER_HOUR]
+  ####### consider jobs in the last N days only #######
+  thres_days = 3
+  df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
+  s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
 
   #####################
   ### fragmentation ###
@@ -270,7 +272,7 @@ if __name__ == "__main__":
   fg = multinode_cpu_fragmentation(df)
   if not fg.empty:
     df_str = fg.to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n\n")
+    s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n")
     
   fg = multinode_gpu_fragmentation(df)
   if not fg.empty:
@@ -297,6 +299,6 @@ if __name__ == "__main__":
   ### longest queue times ###
   ###########################
   df_str = longest_queue_times(raw).to_string(index=False, justify="center")
-  s += add_dividers(df_str, title="Longest queue times of currently PENDING jobs (1 job per user)")
+  s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
 
   send_email(s, "halverson@princeton.edu") if args.email else print(s)
