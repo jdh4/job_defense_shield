@@ -1,1 +1,3 @@
 *.csv
+dossier.py
+__pycache__
