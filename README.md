@@ -11,3 +11,6 @@ It looks for the following:
 
 The script does not protect against:
 + abuses of file storage or I/O
+
+
+`dossier.py` is used to obtain the position and department of a user. It is maintained [here](https://github.com/jdh4/tigergpu_visualization).
