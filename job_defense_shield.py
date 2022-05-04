@@ -151,7 +151,6 @@ def gpu_efficiency(d, elapsedraw, single=False):
   return round(100 * total_used / total, 1) if single else (total_used, total)
 
 def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
-  # ignore ondemand and salloc?
   # compute proportion using all much data as possible
   pr = df[(df.cluster == cluster) & (df.partition.isin(partitions)) & pd.notna(df[f"{xpu}-seconds"])].copy()
   pr = pr.groupby("netid").agg({f"{xpu}-seconds":np.sum}).reset_index(drop=False)
@@ -161,7 +160,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce = df[(df.cluster == cluster) & \
           (df["elapsedraw"] >= 0.5 * SECONDS_PER_HOUR) & \
           (df.partition.isin(partitions))].copy()
-  ce = ce[ce.admincomment != {}]  # need to get running jobs
+  ce = ce[ce.admincomment != {}]  # ignore running jobs
   ce = ce.merge(pr, how="left", on="netid")
   if xpu == "cpu":
     ce[f"{xpu}-tuples"] = ce.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"]), axis="columns")
@@ -186,9 +185,9 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
 
 def gpu_jobs_zero_util(df, cluster, partitions):
   zu = df[(df.cluster == cluster) & \
-          (df["elapsedraw"] > 1 * SECONDS_PER_HOUR) & \
+          (df["elapsed-hours"] > 1) & \
           (df.partition.isin(partitions))].copy()
-  zu = zu[zu.admincomment != {}]  # need to get running jobs
+  zu = zu[zu.admincomment != {}]  # ignore running jobs
   def gpus_with_zero_util(d):
     ct = 0
     for node in d['nodes']:
@@ -200,12 +199,33 @@ def gpu_jobs_zero_util(df, cluster, partitions):
       else:
         for gpu in gpus:
           util = d['nodes'][node]['gpu_utilization'][gpu]
-          if int(util) == 0: ct += 1
+          if float(util) == 0: ct += 1
     return ct
   zu["gpus-unused"] = zu.apply(lambda row: gpus_with_zero_util(row["admincomment"]), axis="columns")
   zu = zu[zu["gpus-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
   return zu[["netid", "gpus", "gpus-unused", "jobid", "cluster", "state", "hours", "start-date"]]
+
+def cpu_jobs_zero_util(df, cluster, partitions):
+  zu = df[(df.cluster == cluster) & \
+          (df["elapsed-hours"] > 1) & \
+          (df.partition.isin(partitions))].copy()
+  zu = zu[zu.admincomment != {}]  # ignore running jobs
+  def cpu_nodes_with_zero_util(d):
+    ct = 0
+    for node in d['nodes']:
+      try:
+        cpu_time = d['nodes'][node]['total_time']
+      except:
+        print("total_time not found")
+        return 0
+      else:
+        if float(cpu_time) == 0: ct += 1
+    return ct
+  zu["nodes-unused"] = zu.apply(lambda row: cpu_nodes_with_zero_util(row["admincomment"]), axis="columns")
+  zu = zu[zu["nodes-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
+  zu.state = zu.state.apply(lambda x: JOBSTATES[x])
+  return zu[["netid", "nodes", "nodes-unused", "jobid", "cluster", "state", "hours", "start-date"]]
 
 def unused_allocated_hours_of_completed(df, cluster, partitions, xpu):
   wh = df[(df.cluster == cluster) & \
@@ -345,19 +365,12 @@ if __name__ == "__main__":
   raw = raw[~raw.cluster.isin(["tukey", "perseus"])]
   raw.cluster   =   raw.cluster.str.replace("tiger2", "tiger")
   raw.partition = raw.partition.str.replace("datascience", "datasci")
-  raw.partition = raw.partition.str.replace("physics", "phys")
   raw.state = raw.state.apply(lambda x: "CANCELLED" if "CANCEL" in x else x)
 
   # df excludes pending jobs
   df = raw.copy()
   df = df[pd.notnull(df.alloctres) & (df.alloctres != "")]
   df.start = df.start.astype("int64")
- 
-  #print(df.admincomment.head(25))
-  #for i, x in enumerate(df.admincomment):
-  #  print(i, x)
-  #  print(get_stats_dict(x))
-  #df = df.head(250)
   df = add_new_and_derived_fields(df)
 
   if not args.email:
@@ -374,7 +387,7 @@ if __name__ == "__main__":
   ####################################
   ### used allocated cpu/gpu hours ###
   ####################################
-  cls = (("della", "Della (CPU)", ("cpu", "datascience", "physics"), "cpu"), \
+  cls = (("della", "Della (CPU)", ("cpu", "datasci", "physics"), "cpu"), \
          ("della", "Della (GPU)", ("gpu",), "gpu"), \
          ("stellar", "Stellar (AMD)", ("bigmem", "cimes"), "cpu"), \
          ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
@@ -389,9 +402,9 @@ if __name__ == "__main__":
       s += add_dividers(df_str, title=name, pre="\n\n")
 
   ####### consider jobs in the last N days only #######
-  #thres_days = 4
-  #df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
-  #s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
+  thres_days = 7
+  df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
+  s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
 
   ######################
   ### cpu efficiency ###
@@ -408,14 +421,27 @@ if __name__ == "__main__":
   df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
   s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
 
-  ##############################
-  ### 0 utilization on a GPU ###
-  ##############################
-  s += "\n\n\nZero utilization on a GPU (>1 hour jobs)"
+  #################################
+  ### zero utilization on a GPU ###
+  #################################
+  s += "\n\n\n    Zero utilization on a GPU (>1 hour jobs, ignoring running)"
   for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
                                     ("della", "Della (GPU)", ("gpu",)), \
                                     ("traverse", "Traverse (GPU)", ("all",))]:
     zu = gpu_jobs_zero_util(df, cluster, partitions)
+    if not zu.empty:
+      df_str = zu.to_string(index=False, justify="center")
+      s += add_dividers(df_str, title=name, pre="\n\n")
+
+  ######################################
+  ### zero utilization on a CPU node ###
+  ######################################
+  s += "\n\n\n    Zero utilization on a CPU (>1 hour jobs, ignoring running)"
+  for cluster, name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
+                                    ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
+                                    ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
+                                    ("stellar", "Stellar (AMD)", ("cimes",))]:
+    zu = cpu_jobs_zero_util(df, cluster, partitions)
     if not zu.empty:
       df_str = zu.to_string(index=False, justify="center")
       s += add_dividers(df_str, title=name, pre="\n\n")
