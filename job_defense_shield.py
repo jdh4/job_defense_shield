@@ -150,7 +150,7 @@ def gpu_efficiency(d, elapsedraw, single=False):
         total_used += elapsedraw * (float(util) / 100)
   return round(100 * total_used / total, 1) if single else (total_used, total)
 
-def cpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
+def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   # ignore ondemand and salloc?
   # compute proportion using all much data as possible
   pr = df[(df.cluster == cluster) & (df.partition.isin(partitions)) & pd.notna(df[f"{xpu}-seconds"])].copy()
@@ -186,7 +186,7 @@ def cpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
 
 def gpu_jobs_zero_util(df, cluster, partitions):
   zu = df[(df.cluster == cluster) & \
-          (df["elapsedraw"] >= 0.5 * SECONDS_PER_HOUR) & \
+          (df["elapsedraw"] > 1 * SECONDS_PER_HOUR) & \
           (df.partition.isin(partitions))].copy()
   zu = zu[zu.admincomment != {}]  # need to get running jobs
   def gpus_with_zero_util(d):
@@ -205,7 +205,7 @@ def gpu_jobs_zero_util(df, cluster, partitions):
   zu["gpus-unused"] = zu.apply(lambda row: gpus_with_zero_util(row["admincomment"]), axis="columns")
   zu = zu[zu["gpus-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
-  return zu[["netid", "gpus", "gpus-unused", "jobid", "cluster", "state", "hours"]]
+  return zu[["netid", "gpus", "gpus-unused", "jobid", "cluster", "state", "hours", "start-date"]]
 
 def unused_allocated_hours_of_completed(df, cluster, partitions, xpu):
   wh = df[(df.cluster == cluster) & \
@@ -234,7 +234,7 @@ def unused_allocated_hours_of_completed(df, cluster, partitions, xpu):
 def multinode_cpu_fragmentation(df):
   cols = ["jobid", "netid", "cluster", "nodes", "cores", "state", "partition", "elapsed-hours", "start-date", "start"]
   cond = (df["elapsed-hours"] >= 2) & (df.nodes > 1) & (df.cores / df.nodes < 14) & (df.gpus == 0)
-  m = df[cond][cols]
+  m = df[cond][cols].copy()
   m = m.sort_values(["netid", "start"], ascending=[True, False]).drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   m.state = m.state.apply(lambda x: JOBSTATES[x])
   return m
@@ -243,7 +243,7 @@ def multinode_gpu_fragmentation(df):
   cols = ["jobid", "netid", "cluster", "nodes", "gpus", "state", "partition", "elapsed-hours", "start-date", "start", "admincomment", "elapsedraw"]
   cond1 = (df["elapsed-hours"] >= 2) & (df.nodes > 1) & (df.gpus > 0) & (df.nodes == df.gpus)
   cond2 = (df["elapsed-hours"] >= 2) & (df.nodes > 1) & (df.gpus > 0) & (df.cluster.isin(["tiger", "traverse"])) & (df.gpus < 4 * df.nodes)
-  m = df[cond1 | cond2][cols]
+  m = df[cond1 | cond2][cols].copy()
   m.state = m.state.apply(lambda x: JOBSTATES[x])
   m = m.sort_values(["netid", "start"], ascending=[True, False]).drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   m["eff(%)"] = m.apply(lambda row: gpu_efficiency(row["admincomment"], row["elapsedraw"], single=True) if row["admincomment"] != {} else "", axis="columns")
@@ -257,7 +257,11 @@ def recent_jobs_all_failures(df):
   # next line deals with RUNNING jobs
   f["end"] = f["end"].str.replace("Unknown", str(round(time.time())), regex=False)
   f["end"] = f["end"].astype("int64")
-  f["day-since-epoch"] = f["end"].apply(lambda x: round(int(x) / SECONDS_PER_HOUR / HOURS_PER_DAY))
+  def day_since(x):
+    from datetime import datetime
+    dt = datetime.fromtimestamp(x)
+    return (datetime(dt.year, dt.month, dt.day) - datetime(1970, 1, 1)).days
+  f["day-since-epoch"] = f["end"].apply(day_since)
   d = {"netid":np.size, "state":lambda series: sum([s == "FAILED" for s in series])}
   f = f.groupby(["netid", "cluster", "day-since-epoch"]).agg(d).rename(columns={"netid":"jobs", "state":"num-failed"}).reset_index()
   f = f.groupby(["netid", "cluster"]).apply(lambda d: d.iloc[d["day-since-epoch"].argmax()])
@@ -270,7 +274,7 @@ def recent_jobs_all_failures(df):
 def jobs_with_the_most_cores(df):
   """Top 10 users with the highest number of CPU-cores in a job. Only one job per user is shown."""
   cols = ["jobid", "netid", "cluster", "cores", "nodes", "gpus", "state", "partition", "elapsed-hours", "start-date", "start", "admincomment", "elapsedraw"]
-  c = df[cols].groupby("netid").apply(lambda d: d.iloc[d["cores"].argmax()])
+  c = df[cols].groupby("netid").apply(lambda d: d.iloc[d["cores"].argmax()]).copy()
   c = c.sort_values("cores", ascending=False)[:10].drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   c.state = c.state.apply(lambda x: JOBSTATES[x])
   c["eff(%)"] = c.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"], single=True) if row["admincomment"] != {} else "", axis="columns")
@@ -281,7 +285,7 @@ def jobs_with_the_most_gpus(df):
   """Top 10 users with the highest number of GPUs in a job. Only one job per user is shown."""
   cols = ["jobid", "netid", "cluster", "gpus", "nodes", "cores", "state", "partition", "elapsed-hours", "start-date", "start", "admincomment", "elapsedraw"]
   df = df[df.partition != "cryoem"]
-  g = df[cols].groupby("netid").apply(lambda d: d.iloc[d["gpus"].argmax()])
+  g = df[cols].groupby("netid").apply(lambda d: d.iloc[d["gpus"].argmax()]).copy()
   g = g.sort_values("gpus", ascending=False)[:10].drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   g.state = g.state.apply(lambda x: JOBSTATES[x])
   g["eff(%)"] = g.apply(lambda row: gpu_efficiency(row["admincomment"], row["elapsedraw"], single=True) if row["admincomment"] != {} else "", axis="columns")
@@ -392,9 +396,9 @@ if __name__ == "__main__":
   ######################
   ### cpu efficiency ###
   ######################
-  s += "\n\n\nCPU/GPU Efficiences of top 15 users (of 30+ minute jobs, not running)"
+  s += "\n\n\n           CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
   for cluster, name, partitions, xpu in cls:
-    un = cpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu)
+    un = xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu)
     if not un.empty:
       df_str = un.to_string(index=True, justify="center")
       s += add_dividers(df_str, title=name, pre="\n\n")
@@ -407,7 +411,7 @@ if __name__ == "__main__":
   ##############################
   ### 0 utilization on a GPU ###
   ##############################
-  s += "\n\n\nZero utilization on a GPU (30+ minute jobs)"
+  s += "\n\n\nZero utilization on a GPU (>1 hour jobs)"
   for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
                                     ("della", "Della (GPU)", ("gpu",)), \
                                     ("traverse", "Traverse (GPU)", ("all",))]:
