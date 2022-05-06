@@ -18,7 +18,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 # external
-import dossier
+import dossier  # wget https://raw.githubusercontent.com/jdh4/tigergpu_visualization/master/dossier.py
 
 
 # conversion factors
@@ -179,7 +179,9 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce["coverage"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / row[f"{xpu}-seconds-all"], 2), axis="columns")
   ce["eff(%)"] = ce["eff(%)"].apply(lambda x: round(x))
   ce["cores"] = ce["cores"].apply(lambda x: round(x, 1))
-  ce = ce[["netid", f"{xpu}-hours", "eff(%)", "proportion(%)", "jobs", "interactive", "cores", "coverage"]][ce["eff(%)"] < 70]
+  eff_thres = 70 if xpu == "cpu" else 20
+  filters = (ce["eff(%)"] < eff_thres) & (ce["proportion(%)"] >= 4)
+  ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
   ce.index += 1
   return ce
 
@@ -188,6 +190,7 @@ def gpu_jobs_zero_util(df, cluster, partitions):
           (df["elapsed-hours"] > 1) & \
           (df.partition.isin(partitions))].copy()
   zu = zu[zu.admincomment != {}]  # ignore running jobs
+  zu["interactive"] = zu["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
   def gpus_with_zero_util(d):
     ct = 0
     for node in d['nodes']:
@@ -204,13 +207,14 @@ def gpu_jobs_zero_util(df, cluster, partitions):
   zu["gpus-unused"] = zu.apply(lambda row: gpus_with_zero_util(row["admincomment"]), axis="columns")
   zu = zu[zu["gpus-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
-  return zu[["netid", "gpus", "gpus-unused", "jobid", "cluster", "state", "hours", "start-date"]]
+  return zu[["netid", "gpus", "gpus-unused", "jobid", "cluster", "state", "hours", "interactive", "start-date"]]
 
 def cpu_jobs_zero_util(df, cluster, partitions):
   zu = df[(df.cluster == cluster) & \
           (df["elapsed-hours"] > 1) & \
           (df.partition.isin(partitions))].copy()
   zu = zu[zu.admincomment != {}]  # ignore running jobs
+  zu["interactive"] = zu["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
   def cpu_nodes_with_zero_util(d):
     ct = 0
     for node in d['nodes']:
@@ -225,7 +229,7 @@ def cpu_jobs_zero_util(df, cluster, partitions):
   zu["nodes-unused"] = zu.apply(lambda row: cpu_nodes_with_zero_util(row["admincomment"]), axis="columns")
   zu = zu[zu["nodes-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
-  return zu[["netid", "nodes", "nodes-unused", "jobid", "cluster", "state", "hours", "start-date"]]
+  return zu[["netid", "nodes", "nodes-unused", "jobid", "cluster", "state", "hours", "interactive", "start-date"]]
 
 def unused_allocated_hours_of_completed(df, cluster, partitions, xpu):
   wh = df[(df.cluster == cluster) & \
@@ -278,7 +282,6 @@ def recent_jobs_all_failures(df):
   f["end"] = f["end"].str.replace("Unknown", str(round(time.time())), regex=False)
   f["end"] = f["end"].astype("int64")
   def day_since(x):
-    from datetime import datetime
     dt = datetime.fromtimestamp(x)
     return (datetime(dt.year, dt.month, dt.day) - datetime(1970, 1, 1)).days
   f["day-since-epoch"] = f["end"].apply(day_since)
@@ -289,7 +292,8 @@ def recent_jobs_all_failures(df):
   f["dossier"]  = f.netid.apply(lambda x: dossier.ldap_plus([x])[1])
   f["position"] = f.dossier.apply(lambda x: x[3])
   f["dept"]     = f.dossier.apply(lambda x: x[1])
-  return f[["netid", "position", "dept", "cluster", "jobs", "num-failed"]]
+  filters = ~f["position"].isin(["G3", "G4", "G5", "G6", "G7", "G8"])
+  return f[["netid", "position", "dept", "cluster", "jobs", "num-failed"]][filters]
 
 def jobs_with_the_most_cores(df):
   """Top 10 users with the highest number of CPU-cores in a job. Only one job per user is shown."""
@@ -320,8 +324,8 @@ def longest_queue_times(raw):
   q["s-days"] = q["s-days"].astype("int64")
   q["e-days"] = q["e-days"].astype("int64")
   cols = ["jobid", "netid", "cluster", "nodes", "cores", "qos", "partition", "s-days", "e-days"]
-  q = q[cols].groupby("netid").apply(lambda d: d.iloc[d["s-days"].argmax()]).sort_values("s-days", ascending=False)[:10]
-  return q
+  q = q[cols].groupby("netid").apply(lambda d: d.iloc[d["s-days"].argmax()]).sort_values("s-days", ascending=False)
+  return q[q["s-days"] >= 4]
 
 def add_dividers(df, title="", pre="\n\n\n"):
   rows = df.split("\n")
@@ -357,6 +361,7 @@ if __name__ == "__main__":
 
   flags = "-L -a -X -P -n"
   start_date = datetime.now() - timedelta(days=args.days)
+  # jobname must be last in line below to catch "|" chars in raw_dataframe_from_sacct()
   fields = "jobid,user,cluster,account,partition,cputimeraw,elapsedraw,timelimitraw,nnodes,ncpus,alloctres,submit,eligible,start,end,qos,state,admincomment,jobname"
   renamings = {"user":"netid", "cputimeraw":"cpu-seconds", "nnodes":"nodes", "ncpus":"cores", "timelimitraw":"limit-minutes"}
   numeric_fields = ["cpu-seconds", "elapsedraw", "limit-minutes", "nodes", "cores", "submit", "eligible"]
@@ -409,7 +414,7 @@ if __name__ == "__main__":
   ######################
   ### cpu efficiency ###
   ######################
-  s += "\n\n\n           CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
+  s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
   for cluster, name, partitions, xpu in cls:
     un = xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu)
     if not un.empty:
@@ -424,7 +429,7 @@ if __name__ == "__main__":
   #################################
   ### zero utilization on a GPU ###
   #################################
-  s += "\n\n\n    Zero utilization on a GPU (>1 hour jobs, ignoring running)"
+  s += "\n\n\n    Zero utilization on a GPU (2+ hour jobs, ignoring running)"
   for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
                                     ("della", "Della (GPU)", ("gpu",)), \
                                     ("traverse", "Traverse (GPU)", ("all",))]:
@@ -436,7 +441,7 @@ if __name__ == "__main__":
   ######################################
   ### zero utilization on a CPU node ###
   ######################################
-  s += "\n\n\n    Zero utilization on a CPU (>1 hour jobs, ignoring running)"
+  s += "\n\n\n    Zero utilization on a CPU (2+ hour jobs, ignoring running)"
   for cluster, name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
                                     ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
                                     ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
