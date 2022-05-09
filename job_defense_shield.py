@@ -409,7 +409,7 @@ if __name__ == "__main__":
   ####### consider jobs in the last N days only #######
   thres_days = 7
   df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
-  s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
+  s += f"\n\n\n            --- the next set of tables below is for the last {thres_days} days ---"
 
   ######################
   ### cpu efficiency ###
@@ -493,3 +493,4 @@ if __name__ == "__main__":
   s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
 
   send_email(s, "halverson@princeton.edu") if args.email else print(s)
+  send_email(s, "kabbey@princeton.edu")    if args.email else print(s)
