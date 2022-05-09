@@ -14,6 +14,7 @@ The software in this repo creates a report of problem users and problem jobs on 
 
 The script does not identify:
 + abuses of file storage or I/O  
++ problems with jobs or users on Adroit
 
 ### Notes for developers
 
