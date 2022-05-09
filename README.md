@@ -21,3 +21,12 @@ The script does not identify:
 - As Slurm partitions are added and removed the script should be updated  
 - dossier.py comes from [here](https://github.com/jdh4/tigergpu_visualization)
 - For jdh4, the git repo is /tigress/jdh4/utilities/job_defense_shield
+
+### How to use
+
+```bash
+$ wget https://raw.githubusercontent.com/jdh4/job_defense_shield/main/job_defense_shield.py
+$ wget https://raw.githubusercontent.com/jdh4/tigergpu_visualization/master/dossier.py
+$ module load anaconda3/2021.11
+$ python job_defense_shield.py
+```
