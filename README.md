@@ -15,6 +15,6 @@ The software in this repo creates a report of problem users and problem jobs on 
 The script does not protect against:
 + abuses of file storage or I/O  
 
-## Be Aware
+### Notes for developers
 
 - As partitions are added and removed the script should be updated.  
