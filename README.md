@@ -24,6 +24,8 @@ The script does not identify:
 
 ### How to use
 
+Run the commands below to execute the script:
+
 ```bash
 $ wget https://raw.githubusercontent.com/jdh4/job_defense_shield/main/job_defense_shield.py
 $ wget https://raw.githubusercontent.com/jdh4/tigergpu_visualization/master/dossier.py
