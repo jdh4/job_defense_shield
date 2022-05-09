@@ -17,5 +17,5 @@ The script does not identify:
 
 ### Notes for developers
 
-- As partitions are added and removed the script should be updated.  
+- As partitions are added and removed the script should be updated  
 - dossier.py comes from [here](https://github.com/jdh4/tigergpu_visualization)
