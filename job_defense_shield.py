@@ -308,7 +308,7 @@ def jobs_with_the_most_cores(df):
 def jobs_with_the_most_gpus(df):
   """Top 10 users with the highest number of GPUs in a job. Only one job per user is shown."""
   cols = ["jobid", "netid", "cluster", "gpus", "nodes", "cores", "state", "partition", "elapsed-hours", "start-date", "start", "admincomment", "elapsedraw"]
-  df = df[df.partition != "cryoem"]
+  df = df[(df.partition != "cryoem") & (df.netid != "cryoem")]
   g = df[cols].groupby("netid").apply(lambda d: d.iloc[d["gpus"].argmax()]).copy()
   g = g.sort_values("gpus", ascending=False)[:10].drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   g.state = g.state.apply(lambda x: JOBSTATES[x])
@@ -325,7 +325,7 @@ def longest_queue_times(raw):
   q["e-days"] = q["e-days"].astype("int64")
   cols = ["jobid", "netid", "cluster", "nodes", "cores", "qos", "partition", "s-days", "e-days"]
   q = q[cols].groupby("netid").apply(lambda d: d.iloc[d["s-days"].argmax()]).sort_values("s-days", ascending=False)
-  return q[q["s-days"] >= 4]
+  return q[q["s-days"] >= 4][:10]
 
 def add_dividers(df, title="", pre="\n\n\n"):
   rows = df.split("\n")
@@ -429,25 +429,31 @@ if __name__ == "__main__":
   #################################
   ### zero utilization on a GPU ###
   #################################
-  s += "\n\n\n    Zero utilization on a GPU (2+ hour jobs, ignoring running)"
+  first_hit = False
   for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
                                     ("della", "Della (GPU)", ("gpu",)), \
                                     ("traverse", "Traverse (GPU)", ("all",))]:
     zu = gpu_jobs_zero_util(df, cluster, partitions)
     if not zu.empty:
+      if not first_hit:
+        s += "\n\n\n    Zero utilization on a GPU (2+ hour jobs, ignoring running)"
+        first_hit = True
       df_str = zu.to_string(index=False, justify="center")
       s += add_dividers(df_str, title=name, pre="\n\n")
 
   ######################################
   ### zero utilization on a CPU node ###
   ######################################
-  s += "\n\n\n    Zero utilization on a CPU (2+ hour jobs, ignoring running)"
+  first_hit = False
   for cluster, name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
                                     ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
                                     ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
                                     ("stellar", "Stellar (AMD)", ("cimes",))]:
     zu = cpu_jobs_zero_util(df, cluster, partitions)
     if not zu.empty:
+      if not first_hit:
+        s += "\n\n\n    Zero utilization on a CPU (2+ hour jobs, ignoring running)"
+        first_hit = True
       df_str = zu.to_string(index=False, justify="center")
       s += add_dividers(df_str, title=name, pre="\n\n")
 
