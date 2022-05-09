@@ -12,9 +12,10 @@ The software in this repo creates a report of problem users and problem jobs on 
 + jobs that request more than the default memory but do not use it  
 + users (G1 and G2) with all failed jobs on the last day they submitted  
 
-The script does not protect against:
+The script does not identify:
 + abuses of file storage or I/O  
 
 ### Notes for developers
 
 - As partitions are added and removed the script should be updated.  
+- dossier.py comes from [here](https://github.com/jdh4/tigergpu_visualization)
