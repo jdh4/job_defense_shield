@@ -19,3 +19,4 @@ The script does not identify:
 
 - As partitions are added and removed the script should be updated  
 - dossier.py comes from [here](https://github.com/jdh4/tigergpu_visualization)
+- For jdh4, the git repo is /tigress/jdh4/utilities/job_defense_shield
