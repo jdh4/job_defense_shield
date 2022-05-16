@@ -32,3 +32,15 @@ $ wget https://raw.githubusercontent.com/jdh4/tigergpu_visualization/master/doss
 $ module load anaconda3/2021.11
 $ python job_defense_shield.py
 ```
+
+### Pandas Gotcha
+
+```
+>>> import pandas as pd
+>>> df = pd.DataFrame({"A":[1, 2, 3], "B":[4, 5, 6]})
+>>> df = df[df.A > 10]
+>>> df.empty
+True
+>>> df["C"] = df.apply(lambda row: row["A"] * row["B"], axis="columns")
+# ValueError: Wrong number of items passed 2, placement implies 1
+```
