@@ -46,4 +46,7 @@ $ python job_defense_shield.py
 True
 >>> df["C"] = df.apply(lambda row: row["A"] * row["B"], axis="columns")
 # ValueError: Wrong number of items passed 2, placement implies 1
+
+df["C"] = df.A.apply(round)  # this is okay
+>>>
 ```
