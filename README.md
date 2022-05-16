@@ -33,9 +33,9 @@ $ module load anaconda3/2021.11
 $ python job_defense_shield.py
 ```
 
-###  Gotcha
+###  Gotchas
 
-1. Some Traverse jobs are CPU onlly
+1. Some Traverse jobs are CPU only
 2. Pandas:
 
 ```
