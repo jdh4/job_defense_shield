@@ -195,6 +195,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
           (df.partition.isin(partitions))].copy()
   ce = ce[ce.admincomment != {}]  # ignore running jobs
   ce = ce.merge(pr, how="left", on="netid")
+  if ce.empty: return pd.DataFrame()  # prevents next line from failing
   if xpu == "cpu":
     ce[f"{xpu}-tuples"] = ce.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"]), axis="columns")
   else:
@@ -208,6 +209,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce = ce.sort_values(by=f"{xpu}-seconds-total", ascending=False).reset_index(drop=False)
   ce = ce.head(15)
   ce["eff(%)"] = 100.0 * ce[f"{xpu}-seconds-used"] / ce[f"{xpu}-seconds-total"]
+  if ce.empty: return pd.DataFrame()  # prevents next line from failing
   ce[f"{xpu}-hours"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / SECONDS_PER_HOUR), axis="columns")
   ce["coverage"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / row[f"{xpu}-seconds-all"], 2), axis="columns")
   ce["eff(%)"] = ce["eff(%)"].apply(lambda x: round(x))
@@ -237,7 +239,7 @@ def gpu_jobs_zero_util(df, cluster, partitions):
           util = d['nodes'][node]['gpu_utilization'][gpu]
           if float(util) == 0: ct += 1
     return ct
-  zu["gpus-unused"] = zu.apply(lambda row: gpus_with_zero_util(row["admincomment"]), axis="columns")
+  zu["gpus-unused"] = zu.admincomment.apply(gpus_with_zero_util)
   zu = zu[zu["gpus-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
   return zu[["netid", "gpus", "gpus-unused", "jobid", "state", "hours", "interactive", "start-date"]]
@@ -259,7 +261,7 @@ def cpu_jobs_zero_util(df, cluster, partitions):
       else:
         if float(cpu_time) == 0: ct += 1
     return ct
-  zu["nodes-unused"] = zu.apply(lambda row: cpu_nodes_with_zero_util(row["admincomment"]), axis="columns")
+  zu["nodes-unused"] = zu.admincomment.apply(cpu_nodes_with_zero_util)
   zu = zu[zu["nodes-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
   return zu[["netid", "nodes", "nodes-unused", "jobid", "state", "hours", "interactive", "start-date"]]
@@ -303,7 +305,7 @@ def multinode_gpu_fragmentation(df):
   m = df[cond1 | cond2][cols].copy()
   m.state = m.state.apply(lambda x: JOBSTATES[x])
   m = m.sort_values(["netid", "start"], ascending=[True, False]).drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
-  if m.empty: return pd.DataFrame()  # needed to prevent next line from failing?
+  if m.empty: return pd.DataFrame()  # prevents next line from failing
   m["eff(%)"] = m.apply(lambda row: gpu_efficiency(row["admincomment"], row["elapsedraw"], row["jobid"], row["cluster"], single=True) if row["admincomment"] != {} else "", axis="columns")
   cols = cols[:7] + ["hours", "eff(%)"]
   return m[cols]
@@ -335,6 +337,7 @@ def jobs_with_the_most_cores(df):
   c = df[cols].groupby("netid").apply(lambda d: d.iloc[d["cores"].argmax()]).copy()
   c = c.sort_values("cores", ascending=False)[:10].drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   c.state = c.state.apply(lambda x: JOBSTATES[x])
+  if c.empty: return pd.DataFrame()  # prevents next line from failing
   c["eff(%)"] = c.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"], single=True) if row["admincomment"] != {} else "", axis="columns")
   cols = cols[:8] + ["hours", "eff(%)"]
   return c[cols]
@@ -346,6 +349,7 @@ def jobs_with_the_most_gpus(df):
   g = df[cols].groupby("netid").apply(lambda d: d.iloc[d["gpus"].argmax()]).copy()
   g = g.sort_values("gpus", ascending=False)[:10].drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   g.state = g.state.apply(lambda x: JOBSTATES[x])
+  if g.empty: return pd.DataFrame()  # prevents next line from failing
   g["eff(%)"] = g.apply(lambda row: gpu_efficiency(row["admincomment"], row["elapsedraw"], row["jobid"], row["cluster"], single=True) if row["admincomment"] != {} else "", axis="columns")
   cols = cols[:8] + ["hours", "eff(%)"]
   return g[cols]
