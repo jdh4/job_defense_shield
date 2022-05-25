@@ -142,7 +142,7 @@ def datascience_node_violators(df):
   ds["memory-tuple"] = ds.admincomment.apply(cpu_memory_usage)
   ds["memory-used"]  = ds["memory-tuple"].apply(lambda x: x[0])
   ds["memory-alloc"] = ds["memory-tuple"].apply(lambda x: x[1])
-  fraction = 0.75
+  fraction = 0.8
   cascade_max_mem = 190
   ds = ds[ds["memory-used"] < fraction * cascade_max_mem]
   ds["cpu-hours"] = ds["cpu-hours"].apply(round).astype("int64")
@@ -211,6 +211,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce["eff(%)"] = 100.0 * ce[f"{xpu}-seconds-used"] / ce[f"{xpu}-seconds-total"]
   if ce.empty: return pd.DataFrame()  # prevents next line from failing
   ce[f"{xpu}-hours"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / SECONDS_PER_HOUR), axis="columns")
+  ce = ce[ce[f"{xpu}-seconds-all"] > 0]  # prevents next line from failing if cpu-only users in top 15 e.g., traverse
   ce["coverage"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / row[f"{xpu}-seconds-all"], 2), axis="columns")
   ce["eff(%)"] = ce["eff(%)"].apply(lambda x: round(x))
   ce["cores"] = ce["cores"].apply(lambda x: round(x, 1))
@@ -538,5 +539,8 @@ if __name__ == "__main__":
   df_str = longest_queue_times(raw).to_string(index=False, justify="center")
   s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
 
-  send_email(s, "halverson@princeton.edu") if args.email else print(s)
-  send_email(s, "kabbey@princeton.edu")    if args.email else print(s)
+  if args.email:
+    send_email(s, "halverson@princeton.edu")
+    send_email(s, "kabbey@princeton.edu")
+  else:
+    print(s)
