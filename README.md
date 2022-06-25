@@ -51,6 +51,18 @@ df["C"] = df.A.apply(round)  # this is okay
 >>>
 ```
 
+## conda
+
+```
+[jdh4@tigergpu ~]$ cat .condarc
+envs_dirs:
+- /home/jdh4/bin
+```
+
+```
+$ conda create --name jds-env numpy pandas blessed requests -c conda-forge -y
+```
+
 ## cron
 
 ```
