@@ -50,3 +50,10 @@ True
 df["C"] = df.A.apply(round)  # this is okay
 >>>
 ```
+
+## cron
+
+```
+[jdh4@tigergpu ~]$ crontab -l
+30 8 * * 1,4 /home/jdh4/bin/jds-env/bin/python -u -B /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --email > /dev/null 2>&1
+```
