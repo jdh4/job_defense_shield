@@ -1,3 +1,4 @@
 *.csv
 dossier.py
 __pycache__
+violations
