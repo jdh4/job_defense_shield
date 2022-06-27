@@ -266,101 +266,107 @@ def get_first_name(netid):
       first_name = f"Hi {line.split()[1]}"
   return first_name
 
-def emails_gpu_jobs_zero_util(df, cluster, partitions):
-  em = df[(df.cluster == cluster) & \
-          (df.elapsedraw >= SECONDS_PER_HOUR) & \
-          (df.elapsedraw < 3 * SECONDS_PER_HOUR) & \
+def emails_gpu_jobs_zero_util(df):
+  fltr = ((df.cluster == "della")    & (df.partition == "gpu")) | \
+         ((df.cluster == "tiger")    & (df.partition == "gpu")) | \
+         ((df.cluster == "traverse") & (df.partition == "all"))
+  em = df[fltr & \
+          (df.elapsedraw >= 1 * SECONDS_PER_HOUR) & \
+          (df.elapsedraw <  3 * SECONDS_PER_HOUR) & \
           (df.state == "RUNNING") & \
-          (df.gpus > 0) & \
-          (df.partition.isin(partitions))].copy()
-  if cluster == "della" or cluster == "traverse" or cluster == "tiger":
-    #breakpoint()
-    em["Hours"] = em.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-    em["jobstats"] = em.jobid.apply(lambda x: get_stats_for_running_job(x, cluster))
-    em["GPUs-Unused"] = em.jobstats.apply(gpus_with_zero_util)
-    em["GPU-Util"] = "0%"
-    em["interactive"] = em["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
-    msk = (em["interactive"]) & (em.gpus == 1) & (em["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
-    em = em[~msk]
-    em = em[em["GPUs-Unused"] > 0][["jobid", "netid", "cluster", "gpus", "GPUs-Unused", "GPU-Util", "Hours"]]
-    renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID",
-                 "netid":"NetID", "elapsed-hours":"Elapsed-Hours", "cluster":"Cluster"}
-    em.rename(columns=renamings, inplace=True)
-    for netid in em.NetID.unique():
-      vfile = f"/tigress/jdh4/utilities/job_defense_shield/violations/{netid}.violations"
-      last_write_date = datetime(1970, 1, 1).date()
-      if os.path.exists(vfile):
-        last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
-      if (last_write_date != datetime.now().date()):
-        s = f"{get_first_name(netid)},\n\n"
-        usr = em[em.NetID == netid]
-        if (usr.shape[0] == 1):
-          text = (
-          "You have a GPU job that has been running for more than 1 hour but\n"
-          "it appears to not be using the GPU(s):\n\n"
-          )
-          s += "\n".join(textwrap.wrap(text, width=80))
-        else:
-          text = (
-          "You have GPU jobs that have been running for more than 1 hour but\n"
-          "they appear to not be using the GPU(s):\n\n"
-          )
-          s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-        s += "\n\n"
+          (df.gpus > 0)].copy()
+  #print(em[["jobid", "cluster", "jobname", "limit-minutes"]])
+  em["Hours"] = em.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
+  em["jobstats"] = em.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]), axis='columns')
+  em["GPUs-Unused"] = em.jobstats.apply(gpus_with_zero_util)
+  em["GPU-Util"] = "0%"
+  em["interactive"] = em["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
+  msk = (em["interactive"]) & (em.gpus == 1) & (em["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
+  em = em[~msk]
+  em = em[em["GPUs-Unused"] > 0][["jobid", "netid", "cluster", "gpus", "GPUs-Unused", "GPU-Util", "Hours"]]
+  renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "netid":"NetID", "cluster":"Cluster"}
+  em.rename(columns=renamings, inplace=True)
+  #print(em)
+  for netid in em.NetID.unique():
+    vfile = f"/tigress/jdh4/utilities/job_defense_shield/violations/{netid}.violations"
+    last_write_date = datetime(1970, 1, 1).date()
+    if os.path.exists(vfile):
+      last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
+    if (last_write_date != datetime.now().date()):
+      s = f"{get_first_name(netid)},\n\n"
+      usr = em[em.NetID == netid]
+      if (usr.shape[0] == 1):
         text = (
-        'We measure the GPU utilization of each job every 30 seconds. All measurements for the job(s) above '
-        'have been reported as 0%. You can see this by running the "jobstats" command, for example:'
+        "You have a GPU job that has been running for more than 1 hour but\n"
+        "it appears to not be using the GPU(s):\n\n"
         )
         s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        s += f"     $ jobstats {usr.JobID.values[0]}"
-        s += "\n\n"
+      else:
         text = (
-        'If the GPU(s) are not being used then you need to take action now to resolve this issue. '
-        'Users that continually run GPU jobs that do not use the GPUs risk having their accounts temporarily suspended.'
+        "You have GPU jobs that have been running for more than 1 hour but\n"
+        "they appear to not be using the GPU(s):\n\n"
         )
         s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        text = (
-        'Toward resolving this issue please consult the documentation for the code that you are running. Is it GPU-enabled? '
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n"
-        s += textwrap.dedent("""
-        For general information about GPU computing and Slurm job statistics:
+      s += "\n\n"
+      s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+      s += "\n\n"
+      text = (
+      'We measure the GPU utilization of each job every 30 seconds. All measurements for the job(s) above '
+      'have been reported as 0%. You can see this by running the "jobstats" command, for example:'
+      )
+      s += "\n".join(textwrap.wrap(text, width=80))
+      s += "\n\n"
+      s += f"     $ jobstats {usr.JobID.values[0]}"
+      s += "\n\n"
+      text = (
+      'If the GPU(s) are not being used then you need to take action now to resolve this issue. '
+      'Wasting resources prevents other users from getting their work done and it causes your subsequent jobs to have a lower priority. '
+      'Users that continually underutilize the GPUs risk having their accounts suspended.'
+      )
+      s += "\n".join(textwrap.wrap(text, width=80))
+      s += "\n\n"
+      text = (
+      'Toward resolving this issue please consult the documentation for the code that you are running. Is it GPU-enabled? '
+      )
+      s += "\n".join(textwrap.wrap(text, width=80))
+      s += "\n"
+      s += textwrap.dedent("""
+      For general information about GPU computing and Slurm job statistics:
 
-             https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-             https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
-        """)
-        s += "\n"
-        text = (
-        'Please consider canceling the job(s) listed above using the "scancel" command, for example:'
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        s += f"     $ scancel {usr.JobID.values[0]}"
-        s += "\n"
-        s += textwrap.dedent(f"""
-        Add the following lines to your Slurm scripts to receive an email report after
-        each job finishes that includes GPU utilization information:
+           https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
+           https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
+      """)
+      s += "\n"
+      text = (
+      'Please consider canceling the job(s) listed above using the "scancel" command, for example:'
+      )
+      s += "\n".join(textwrap.wrap(text, width=80))
+      s += "\n\n"
+      s += f"     $ scancel {usr.JobID.values[0]}"
+      s += "\n"
+      s += textwrap.dedent(f"""
+      Add the following lines to your Slurm scripts to receive an email report with
+      GPU utilization information after each job finishes:
 
-             #SBATCH --mail-type=begin
-             #SBATCH --mail-type=end
-             #SBATCH --mail-user={netid}@princeton.edu
-        
-        Replying to this email will open a support ticket with CSES. Let us know if we
-        can be of help in resolving this matter.
-        """)
+           #SBATCH --mail-type=begin
+           #SBATCH --mail-type=end
+           #SBATCH --mail-user={netid}@princeton.edu
+      
+      Replying to this email will open a support ticket with CSES. Let us know if we
+      can be of help in resolving this matter.
+      """)
 
-        # send email and touch violation file
-        if args.email:
-          #send_email(s, f"{netid}@princeton.edu", subject="GPU jobs not using the GPUs", sender="cses@princeton.edu")
-          send_email(s, f"halverson@princeton.edu", subject="GPU jobs not using the GPUs", sender="cses@princeton.edu")
-          #send_email(s, f"stuli@princeton.edu", subject="GPU jobs not using the GPUs", sender="cses@princeton.edu")
-        with open(vfile, 'w') as f:
-          f.write("")
+      # send email and touch violation file
+      if args.email:
+        send_email(s, f"{netid}@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
+        send_email(s, "halverson@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
+        send_email(s, "stuli@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
+        send_email(s, "bill@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
+      else:
+        print(s)
+      with open(vfile, 'w') as f:
+        f.write("")
+  print("Exiting GPUs email routine")
   return None
 
 def gpu_jobs_zero_util(df, cluster, partitions):
@@ -596,6 +602,12 @@ if __name__ == "__main__":
   df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
   s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
 
+  ##########################################
+  ### zero utilization on a GPU by email ###
+  ##########################################
+  if args.gpus:
+    _ = emails_gpu_jobs_zero_util(df)
+
   #################################
   ### zero utilization on a GPU ###
   #################################
@@ -603,11 +615,6 @@ if __name__ == "__main__":
   for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
                                     ("della", "Della (GPU)", ("gpu",)), \
                                     ("traverse", "Traverse (GPU)", ("all",))]:
-    ############
-    ## emails ##
-    ############
-    if args.gpus:
-      emails_gpu_jobs_zero_util(df, cluster, partitions)
     ############
     zu = gpu_jobs_zero_util(df, cluster, partitions)
     if not zu.empty:
