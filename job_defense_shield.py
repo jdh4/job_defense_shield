@@ -332,7 +332,7 @@ def emails_gpu_jobs_zero_util(df):
         usr["GPU-Unused-Util"] = "0%"
         zero = (
         'We measure the utilization of each allocated GPU every 30 seconds. '
-        'All measurements for at least one of the GPUs used in the jobs above have been reported as 0%. '
+        'All measurements for at least one of the GPUs used in each of the jobs above have been reported as 0%. '
         'You can see this by running the "jobstats" command, for example:'
         )
 
@@ -366,7 +366,7 @@ def emails_gpu_jobs_zero_util(df):
       s += "\n".join(textwrap.wrap(text, width=80))
       s += "\n\n"
 
-      version = "GPU is" if single_job else "GPU(s) are"
+      version = "GPU is" if single_job and (not multi_gpu_jobs) else "GPU(s) are"
       text = (
       f'If the {version} not being used then you need to take action now to resolve this issue. '
        'Wasting resources prevents other users from getting their work done and it causes your subsequent jobs to have a lower priority. '
@@ -412,6 +412,8 @@ def emails_gpu_jobs_zero_util(df):
         send_email(s,  "halverson@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
         with open(vfile, 'w') as f:
           f.write("")
+        usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+        usr.to_csv(f"{vfile}.email.csv", mode="a", index=False, header=False)
       else:
         print(s)
   print("Exiting GPUs email routine")
