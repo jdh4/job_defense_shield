@@ -21,6 +21,28 @@ The script does not identify:
 ```
 $ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --files /tigress/jdh4/utilities/job_defense_shield/violations --email
 $ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --low-gpu-efficiencies --datascience --gpu-fragmentation --email
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --all --files /tigress/jdh4/utilities/job_defense_shield/violations --email
+```
+
+The data science nodes are checked once per day:
+
+```
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --files /tigress/jdh4/utilities/job_defense_shield/violations --datascience --email
+```
+
+## Which users are ignoring the automated emails?
+
+```
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --check
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --check-all
+```
+
+## What to do after writing to a user?
+
+The event must be logged so that when `--check` it does not suggest writing again to the user. The next line will write to the dataframe indicating that a new email is not needed:
+
+```
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --resolved ab1234 --violation zero-gpu
 ```
 
 ### Notes for developers
