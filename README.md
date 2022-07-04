@@ -19,7 +19,7 @@ The script does not identify:
 ## How to run
 
 ```
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --gpus --email
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --files /tigress/jdh4/utilities/job_defense_shield/violations --email
 $ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --low-gpu-efficiencies --datascience --gpu-fragmentation --email
 ```
 
