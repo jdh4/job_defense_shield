@@ -80,7 +80,9 @@ df["C"] = df.A.apply(round)  # this is okay
 >>>
 ```
 
-## conda
+## Installation
+
+You can run the script on `tigergpu` using the `jds-bin` in `/home/jdh4/bin`. The Conda environment was create in this way:
 
 ```
 [jdh4@tigergpu ~]$ cat .condarc
@@ -89,7 +91,14 @@ envs_dirs:
 ```
 
 ```
+$ module load anaconda3/2021.5
 $ conda create --name jds-env numpy pandas blessed requests -c conda-forge -y
+```
+
+The above leads to the shebang line as:
+
+```
+#!/home/jdh4/bin/jds-bin/python -u -B
 ```
 
 ## cron
