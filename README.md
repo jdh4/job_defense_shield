@@ -16,6 +16,13 @@ The script does not identify:
 + abuses of file storage or I/O  
 + problems with jobs or users on Adroit
 
+## How to run
+
+```
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --gpus --email
+$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --low-gpu-efficiencies --datascience --gpu-fragmentation --email
+```
+
 ### Notes for developers
 
 - As Slurm partitions are added and removed the script should be updated  
