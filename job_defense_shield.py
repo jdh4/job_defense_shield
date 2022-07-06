@@ -10,6 +10,7 @@ from datetime import datetime
 from datetime import timedelta
 import numpy as np
 import pandas as pd
+from pandas.tseries.holiday import USFederalHolidayCalendar
 
 # jobstats
 import json
@@ -284,7 +285,7 @@ def emails_gpu_jobs_zero_util(df):
   renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "netid":"NetID", "cluster":"Cluster"}
   em.rename(columns=renamings, inplace=True)
   for netid in em.NetID.unique():
-    vfile = f"/tigress/jdh4/utilities/job_defense_shield/violations/{netid}.violations"
+    vfile = f"/tigress/jdh4/utilities/job_defense_shield/violations/{netid}.violations.email.csv"
     last_write_date = datetime(1970, 1, 1).date()
     if os.path.exists(vfile):
       last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
@@ -332,7 +333,7 @@ def emails_gpu_jobs_zero_util(df):
         usr["GPU-Unused-Util"] = "0%"
         zero = (
         'We measure the utilization of each allocated GPU every 30 seconds. '
-        'All measurements for at least one of the GPUs used in each of the jobs above have been reported as 0%. '
+        'All measurements for at least one of the GPUs used in each job above have been reported as 0%. '
         'You can see this by running the "jobstats" command, for example:'
         )
 
@@ -406,14 +407,24 @@ def emails_gpu_jobs_zero_util(df):
       can be of help in resolving this matter.
       """)
 
-      # send email and touch violation file
-      if args.email:
-        send_email(s,   f"{netid}@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
-        send_email(s,  "halverson@princeton.edu", subject="GPU jobs with zero GPU utilization", sender="cses@princeton.edu")
-        with open(vfile, 'w') as f:
-          f.write("")
+      # send email and append violation file
+      date_today = datetime.now().strftime("%Y-%m-%d")
+      cal = USFederalHolidayCalendar()
+      us_holiday = date_today in cal.holidays()
+      pu_holidays  = ["2022-07-05", "2022-11-25", "2022-12-23", "2022-12-26", "2022-12-30", "2023-01-02",
+                      "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19"]
+      pu_holiday = date_today in pu_holidays
+      if args.email and not us_holiday and not pu_holiday:
+        send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
+        send_email(s,  "halverson@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
         usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
-        usr.to_csv(f"{vfile}.email.csv", mode="a", index=False, header=False)
+        if "GPU-Util"        in usr.columns: usr.drop(columns=["GPU-Util"],        inplace=True)
+        if "GPU-Unused-Util" in usr.columns: usr.drop(columns=["GPU-Unused-Util"], inplace=True)
+        if os.path.exists(vfile):
+          usr.to_csv(vfile, mode="a", index=False, header=False)
+          # read then append then drop_duplicates by jobid then write
+        else:
+          usr.to_csv(vfile, mode="a", index=False, header=True)
       else:
         print(s)
   print("Exiting GPUs email routine")
