@@ -2,8 +2,10 @@
 
 import argparse
 import os
+import sys
 import time
 import math
+import glob
 import subprocess
 import textwrap
 from datetime import datetime
@@ -123,6 +125,17 @@ def add_new_and_derived_fields(df):
   df["admincomment"] = df["admincomment"].apply(get_stats_dict)
   return df
 
+def get_first_name(netid):
+  cmd = f"ldapsearch -x uid={netid} displayname"
+  output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=5, text=True, check=True)
+  lines = output.stdout.split('\n')
+  for line in lines:
+    if line.startswith("displayname:"):
+      full_name = line.replace("displayname:", "").strip()
+      if full_name.replace(".", "").replace(",", "").replace(" ", "").replace("-", "").isalpha():
+        return f"Hi {full_name.split()[0]}"
+  return "Hello"
+
 def cpu_memory_usage(d):
   total = 0
   total_used = 0
@@ -224,6 +237,43 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   filters = (ce["eff(%)"] < eff_thres) & (ce["proportion(%)"] >= 4)
   ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
   ce.index += 1
+
+  #######################
+  ## EMAIL
+  #######################
+  if 1:
+  #if args.email:
+    for netid in ce.netid:
+      vfile = f"{args.files}/low_xpu_efficiency/{netid}.email.csv"
+      #breakpoint()
+      last_write_date = datetime(1970, 1, 1)
+      if os.path.exists(vfile):
+        last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
+      if (datetime.now().timestamp() - last_write_date.timestamp() >= 6 * HOURS_PER_DAY * SECONDS_PER_HOUR):
+        usr = ce[ce.netid == netid].copy()
+        #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
+        cols = ["netid", f"{xpu}-hours", "proportion(%)", "eff(%)"]
+        renamings = {"eff(%)":"Efficiency(%)", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
+                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours"}
+        usr = usr[cols].rename(columns=renamings)
+        s = f"{get_first_name(netid)},\n\n"
+        s += "\n\n"
+        s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+        s += "\n\n"
+        if cluster == "della": send_email(s, "halverson@princeton.edu", subject=f"Low {xpu.upper()} utilization on {cluster}", sender="cses@princeton.edu")
+        usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+        #if "GPU-Util"        in usr.columns: usr.drop(columns=["GPU-Util"],        inplace=True)
+        #if "GPU-Unused-Util" in usr.columns: usr.drop(columns=["GPU-Unused-Util"], inplace=True)
+        if os.path.exists(vfile):
+          curr = pd.read_csv(vfile)
+          curr = pd.concat([curr, usr]).drop_duplicates()
+          curr.to_csv(vfile, index=False, header=True)
+        else:
+          usr.to_csv(vfile, index=False, header=True)
+      else:
+        print(s)
+  print("Exiting low efficiency email routine")
+  #######################
   return ce
 
 def get_stats_for_running_job(jobid, cluster):
@@ -256,16 +306,6 @@ def gpus_with_zero_util(d):
 #prev = pd.read_csv(vfile)
 #thisuser = thisuser.append(prev).drop_duplicates(ignore_index=True)
 #thisuser.to_csv(vfile, index=False)
-
-def get_first_name(netid):
-  cmd = f"ldapsearch -x uid={netid} displayname"
-  output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=5, text=True, check=True)
-  lines = output.stdout.split('\n')
-  first_name = "Hello"
-  for line in lines:
-    if line.startswith("displayname:") and "=" not in line:
-      first_name = f"Hi {line.split()[1]}"
-  return first_name
 
 def emails_gpu_jobs_zero_util(df):
   fltr = ((df.cluster == "della")    & (df.partition == "gpu")) | \
@@ -421,10 +461,11 @@ def emails_gpu_jobs_zero_util(df):
         if "GPU-Util"        in usr.columns: usr.drop(columns=["GPU-Util"],        inplace=True)
         if "GPU-Unused-Util" in usr.columns: usr.drop(columns=["GPU-Unused-Util"], inplace=True)
         if os.path.exists(vfile):
-          usr.to_csv(vfile, mode="a", index=False, header=False)
-          # read then append then drop_duplicates by jobid then write
+          curr = pd.read_csv(vfile)
+          curr = pd.concat([curr, usr]).drop_duplicates()
+          curr.to_csv(vfile, index=False, header=True)
         else:
-          usr.to_csv(vfile, mode="a", index=False, header=True)
+          usr.to_csv(vfile, index=False, header=True)
       else:
         print(s)
   print("Exiting GPUs email routine")
@@ -576,6 +617,41 @@ def add_dividers(df, title="", pre="\n\n\n"):
     rows.insert(2, "-" * len(divider))
   return pre + "\n".join(rows)
 
+def print_report_of_users_with_continual_underutilization():
+  files = glob.glob(f"{args.files}/*.csv")
+  if len(files) == 0:
+    print("No underutilization files found.")
+    return None
+  today = datetime.now().date()
+  if args.zero_gpu_utilization:
+    print("=====================================================")
+    print("           ZERO GPU UTILIZATION EMAILS SENT")
+    print("=====================================================")
+    print("                                                  today")
+    print("                                                    |")
+    print("                                                    V")
+    for f in files:
+      netid = f.split("/")[-1].split(".")[0]
+      df = pd.read_csv(f)
+      df["when"] = df.email_sent.apply(lambda x: datetime.strptime(x, "%m/%d/%Y %H:%M").date())
+      hits = df.when.unique()
+      row = [today - timedelta(days=i) in hits for i in range(30)]
+      s = " " * (8 - len(netid)) + netid + "@princeton.edu "
+      s += ''.join(["X" if r else "_" for r in row])[::-1]
+      print(s)
+  print("\n=====================================================")
+  text = (
+          "\nRequestor: <>@princeton.edu\n"
+          "Hi <>,\n"
+          "You have been sent multiple emails over the last severals days about zero GPU utilization."
+          "At this time you need to either (1) resolve the issue, (2) ask us to help you resolve "
+          "the issue, or (3) stop running these jobs."
+          "If you fail to take action then we will be forced to suspend your account and notify"
+          "your sponsor. The GPUs are valuable resources."
+      )
+  print("\n".join(textwrap.wrap(text, width=80, replace_whitespace=False)))
+  return None
+ 
 
 if __name__ == "__main__":
 
@@ -584,14 +660,24 @@ if __name__ == "__main__":
                       help='Create report over N previous days from now (default: 14)')
   parser.add_argument('--email', action='store_true', default=False,
                       help='Send output via email')
-  parser.add_argument('--gpus', action='store_true', default=False,
-                      help='Send output via email about unused GPUs')
+  parser.add_argument('--zero-gpu-utilization', action='store_true', default=False,
+                      help='Identify running GPU jobs with zero utilization')
+  parser.add_argument('--low-xpu-utilization', action='store_true', default=False,
+                      help='Identify users with low CPU/GPU utilization')
+  parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
+                      help='Path to the underutilization files')
+  parser.add_argument('--check', action='store_true', default=False,
+                      help='Create report of users who may be ignoring the automated emails')
   args = parser.parse_args()
 
   # pandas display settings
   pd.set_option("display.max_rows", None)
   pd.set_option("display.max_columns", None)
   pd.set_option("display.width", 1000)
+
+  if args.check:
+    _ = print_report_of_users_with_continual_underutilization()
+    sys.exit()
 
   # convert slurm timestamps to seconds
   os.environ["SLURM_TIME_FORMAT"] = "%s"
@@ -666,7 +752,7 @@ if __name__ == "__main__":
   ##########################################
   ### zero utilization on a GPU by email ###
   ##########################################
-  if args.gpus:
+  if args.zero_gpu_utilization:
     _ = emails_gpu_jobs_zero_util(df)
 
   #################################
@@ -744,10 +830,12 @@ if __name__ == "__main__":
   df_str = longest_queue_times(raw).to_string(index=False, justify="center")
   s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
 
-  if args.email and (not args.gpus):
+  if args.email and (not args.zero_gpu_utilization):
     send_email(s, "halverson@princeton.edu")
     send_email(s, "kabbey@princeton.edu")
-  elif args.gpus:
+  elif args.zero_gpu_utilization:
     pass
   else:
     print(s)
+
+  print(datetime.now())
