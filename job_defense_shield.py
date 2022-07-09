@@ -233,37 +233,68 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce["coverage"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / row[f"{xpu}-seconds-all"], 2), axis="columns")
   ce["eff(%)"] = ce["eff(%)"].apply(lambda x: round(x))
   ce["cores"] = ce["cores"].apply(lambda x: round(x, 1))
-  eff_thres = 70 if xpu == "cpu" else 20
+  eff_thres = 60 if xpu == "cpu" else 15
   filters = (ce["eff(%)"] < eff_thres) & (ce["proportion(%)"] >= 4)
   ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
   ce.index += 1
 
-  #######################
-  ## EMAIL
-  #######################
-  if 1:
-  #if args.email:
+  ###########
+  ## EMAIL ##
+  ###########
+  if args.email:
     for netid in ce.netid:
       vfile = f"{args.files}/low_xpu_efficiency/{netid}.email.csv"
-      #breakpoint()
       last_write_date = datetime(1970, 1, 1)
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
       if (datetime.now().timestamp() - last_write_date.timestamp() >= 6 * HOURS_PER_DAY * SECONDS_PER_HOUR):
         usr = ce[ce.netid == netid].copy()
-        #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
         cols = ["netid", f"{xpu}-hours", "proportion(%)", "eff(%)"]
         renamings = {"eff(%)":"Efficiency(%)", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
                      "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours"}
         usr = usr[cols].rename(columns=renamings)
         s = f"{get_first_name(netid)},\n\n"
         s += "\n\n"
+        s += "You are heavy user.\n"
         s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
         s += "\n\n"
-        if cluster == "della": send_email(s, "halverson@princeton.edu", subject=f"Low {xpu.upper()} utilization on {cluster}", sender="cses@princeton.edu")
+        s += "\n"
+        s += textwrap.dedent(f"""
+        Run the jobstats command 
+             https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
+
+        The most common reasons for low CPU efficiency are:
+
+             1. Using too many CPU-cores for parallel jobs. You can find the optimal number
+                of CPU-cores by performing a scaling analysis:
+                https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
+
+             2. Writing or reading files to/from the /tigress or /projects storage systems.
+                Job output should be written to /scratch/gpfs/{netid} which is a much
+                faster filesystem. For more on the filesystems:
+                https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
+
+             3. Slow MPI calls. Make sure you are using an environment module
+                and not MPICH from a Conda install.
+
+        Consult the documentation or write to mailing list of the code for additional
+        reasons for low {xpu.upper()} efficiency.
+        """)
+        s += "\n"
+        s += textwrap.dedent(f"""
+        Add the following lines to your Slurm scripts to receive an email report with
+        {xpu.upper()} utilization information after each job finishes:
+
+             #SBATCH --mail-type=begin
+             #SBATCH --mail-type=end
+             #SBATCH --mail-user={netid}@princeton.edu
+        
+        Replying to this email will open a support ticket with CSES. Let us know if we
+        can be of help in resolving this matter.
+        """)
+        send_email(s, "halverson@princeton.edu", subject=f"Low {xpu.upper()} utilization on {cluster}", sender="cses@princeton.edu")
+        #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
         usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
-        #if "GPU-Util"        in usr.columns: usr.drop(columns=["GPU-Util"],        inplace=True)
-        #if "GPU-Unused-Util" in usr.columns: usr.drop(columns=["GPU-Unused-Util"], inplace=True)
         if os.path.exists(vfile):
           curr = pd.read_csv(vfile)
           curr = pd.concat([curr, usr]).drop_duplicates()
@@ -273,7 +304,8 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
       else:
         print(s)
   print("Exiting low efficiency email routine")
-  #######################
+  ###########
+
   return ce
 
 def get_stats_for_running_job(jobid, cluster):
@@ -658,14 +690,20 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Slurm job alerts')
   parser.add_argument('-d', '--days', type=int, default=14, metavar='N',
                       help='Create report over N previous days from now (default: 14)')
-  parser.add_argument('--email', action='store_true', default=False,
-                      help='Send output via email')
+  parser.add_argument('--zero-cpu-utilization', action='store_true', default=False,
+                      help='Identify CPU jobs with zero utilization')
   parser.add_argument('--zero-gpu-utilization', action='store_true', default=False,
                       help='Identify running GPU jobs with zero utilization')
-  parser.add_argument('--low-xpu-utilization', action='store_true', default=False,
-                      help='Identify users with low CPU/GPU utilization')
+  parser.add_argument('--low-xpu-efficiency', action='store_true', default=False,
+                      help='Identify users with low CPU/GPU efficiency')
+  parser.add_argument('--datascience', action='store_true', default=False,
+                      help='Identify users that unjustly used the datascience nodes')
+  parser.add_argument('--low-time-efficiency', action='store_true', default=False,
+                      help='Identify users that are over-allocating CPU/GPU time')
   parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
                       help='Path to the underutilization files')
+  parser.add_argument('--email', action='store_true', default=False,
+                      help='Send output via email')
   parser.add_argument('--check', action='store_true', default=False,
                       help='Create report of users who may be ignoring the automated emails')
   args = parser.parse_args()
@@ -712,9 +750,6 @@ if __name__ == "__main__":
   s += f"Total users: {raw.netid.unique().size}\n"
   s += f"Total jobs:  {raw.shape[0]}\n\n"
 
-  ####################################
-  ### used allocated cpu/gpu hours ###
-  ####################################
   cls = (("della", "Della (CPU)", ("cpu", "datasci", "physics"), "cpu"), \
          ("della", "Della (GPU)", ("gpu",), "gpu"), \
          ("stellar", "Stellar (AMD)", ("bigmem", "cimes"), "cpu"), \
@@ -722,27 +757,32 @@ if __name__ == "__main__":
          ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"), \
          ("tiger", "TigerGPU", ("gpu",), "gpu"), \
          ("traverse", "Traverse (GPU)", ("all",), "gpu"))
-  s += "           Unused allocated CPU/GPU-Hours (of COMPLETED 2+ hour jobs)"
-  for cluster, name, partitions, xpu in cls:
-    un = unused_allocated_hours_of_completed(df, cluster, partitions, xpu)
-    if not un.empty:
-      df_str = un.to_string(index=True, justify="center")
-      s += add_dividers(df_str, title=name, pre="\n\n")
+  if args.low_time_efficiency:
+    ####################################
+    ### used allocated cpu/gpu hours ###
+    ####################################
+    s += "           Unused allocated CPU/GPU-Hours (of COMPLETED 2+ hour jobs)"
+    for cluster, name, partitions, xpu in cls:
+      un = unused_allocated_hours_of_completed(df, cluster, partitions, xpu)
+      if not un.empty:
+        df_str = un.to_string(index=True, justify="center")
+        s += add_dividers(df_str, title=name, pre="\n\n")
 
   ####### consider jobs in the last N days only #######
   thres_days = 7
   df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
   s += f"\n\n\n            --- the next set of tables below is for the last {thres_days} days ---"
 
-  ##########################
-  ### cpu/gpu efficiency ###
-  ##########################
-  s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
-  for cluster, name, partitions, xpu in cls:
-    un = xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu)
-    if not un.empty:
-      df_str = un.to_string(index=True, justify="center")
-      s += add_dividers(df_str, title=name, pre="\n\n")
+  if args.low_xpu_efficiency:
+    ##########################
+    ### cpu/gpu efficiency ###
+    ##########################
+    s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
+    for cluster, name, partitions, xpu in cls:
+      un = xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu)
+      if not un.empty:
+        df_str = un.to_string(index=True, justify="center")
+        s += add_dividers(df_str, title=name, pre="\n\n")
 
   ####### consider jobs in the last N days only #######
   thres_days = 3
@@ -755,37 +795,38 @@ if __name__ == "__main__":
   if args.zero_gpu_utilization:
     _ = emails_gpu_jobs_zero_util(df)
 
-  #################################
-  ### zero utilization on a GPU ###
-  #################################
-  first_hit = False
-  for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
-                                    ("della", "Della (GPU)", ("gpu",)), \
-                                    ("traverse", "Traverse (GPU)", ("all",))]:
-    ############
-    zu = gpu_jobs_zero_util(df, cluster, partitions)
-    if not zu.empty:
-      if not first_hit:
-        s += "\n\n\n    Zero utilization on a GPU (1+ hour jobs, ignoring running)"
-        first_hit = True
-      df_str = zu.to_string(index=False, justify="center")
-      s += add_dividers(df_str, title=name, pre="\n\n")
+    #################################
+    ### zero utilization on a GPU ###
+    #################################
+    first_hit = False
+    for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
+                                      ("della", "Della (GPU)", ("gpu",)), \
+                                      ("traverse", "Traverse (GPU)", ("all",))]:
+      ############
+      zu = gpu_jobs_zero_util(df, cluster, partitions)
+      if not zu.empty:
+        if not first_hit:
+          s += "\n\n\n    Zero utilization on a GPU (1+ hour jobs, ignoring running)"
+          first_hit = True
+        df_str = zu.to_string(index=False, justify="center")
+        s += add_dividers(df_str, title=name, pre="\n\n")
 
-  ######################################
-  ### zero utilization on a CPU node ###
-  ######################################
-  first_hit = False
-  for cluster, name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
-                                    ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
-                                    ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
-                                    ("stellar", "Stellar (AMD)", ("cimes",))]:
-    zu = cpu_jobs_zero_util(df, cluster, partitions)
-    if not zu.empty:
-      if not first_hit:
-        s += "\n\n\n    Zero utilization on a CPU (2+ hour jobs, ignoring running)"
-        first_hit = True
-      df_str = zu.to_string(index=False, justify="center")
-      s += add_dividers(df_str, title=name, pre="\n\n")
+  if args.zero_cpu_utilization:
+    ######################################
+    ### zero utilization on a CPU node ###
+    ######################################
+    first_hit = False
+    for cluster, name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
+                                      ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
+                                      ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
+                                      ("stellar", "Stellar (AMD)", ("cimes",))]:
+      zu = cpu_jobs_zero_util(df, cluster, partitions)
+      if not zu.empty:
+        if not first_hit:
+          s += "\n\n\n    Zero utilization on a CPU (2+ hour jobs, ignoring running)"
+          first_hit = True
+        df_str = zu.to_string(index=False, justify="center")
+        s += add_dividers(df_str, title=name, pre="\n\n")
 
   #####################
   ### fragmentation ###
@@ -800,13 +841,14 @@ if __name__ == "__main__":
     df_str = fg.to_string(index=False, justify="center")
     s += add_dividers(df_str, title="Multinode GPU jobs with fragmentation (all jobs, 2+ hours)")
 
-  ###################
-  ### datascience ###
-  ###################
-  ds = datascience_node_violators(df)
-  if not ds.empty:
-    df_str = ds.to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="Datascience jobs that didn't need to be (all jobs, 2+ hours)", pre="\n\n\n")
+  if args.datascience:
+    ###################
+    ### datascience ###
+    ###################
+    ds = datascience_node_violators(df)
+    if not ds.empty:
+      df_str = ds.to_string(index=False, justify="center")
+      s += add_dividers(df_str, title="Datascience jobs that didn't need to be (all jobs, 2+ hours)", pre="\n\n\n")
 
   ##############################
   ### last jobs are failures ###
@@ -830,11 +872,10 @@ if __name__ == "__main__":
   df_str = longest_queue_times(raw).to_string(index=False, justify="center")
   s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
 
-  if args.email and (not args.zero_gpu_utilization):
-    send_email(s, "halverson@princeton.edu")
-    send_email(s, "kabbey@princeton.edu")
-  elif args.zero_gpu_utilization:
+  if args.email:
     pass
+    #send_email(s, "halverson@princeton.edu")
+    #send_email(s, "kabbey@princeton.edu")
   else:
     print(s)
 
