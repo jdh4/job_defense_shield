@@ -19,6 +19,12 @@ import json
 import gzip
 import base64
 
+from efficiency import get_stats_dict
+from efficiency import cpu_efficiency
+from efficiency import gpu_efficiency
+from efficiency import cpu_memory_usage
+from efficiency import num_gpus_with_zero_util
+
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -102,14 +108,7 @@ def gpus_per_job(tres):
 def is_gpu_job(tres):
   return 1 if "gres/gpu=" in tres and not "gres/gpu=0" in tres else 0
 
-def get_stats_dict(x):
-  if not x or pd.isna(x) or x == "JS1:Short" or x == "JS1:None":
-    return {}
-  else:
-    return json.loads(gzip.decompress(base64.b64decode(x[4:])))
-
 def add_new_and_derived_fields(df):
-  # new and derived fields
   df["gpus"] = df.alloctres.apply(gpus_per_job)
   df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
   df["gpu-job"] = df.alloctres.apply(is_gpu_job)
@@ -136,77 +135,153 @@ def get_first_name(netid):
         return f"Hi {full_name.split()[0]}"
   return "Hello"
 
-def cpu_memory_usage(d):
-  total = 0
-  total_used = 0
-  for node in d['nodes']:
-    try:
-      used  = d['nodes'][node]['used_memory']
-      alloc = d['nodes'][node]['total_memory']
-    except:
-      print("used_memory not found")
-      return (0, 0)
-    else:
-      total += alloc
-      total_used += used
-  return (round(total_used / 1024**3), round(total / 1024**3))
+def large_memory_needed(usage, account, safety=1.0):
+  cascade_max_mem = safety * 190
+  physics_max_mem = safety * 380
+  if (usage >= cascade_max_mem and account != "physics") or (usage >= physics_max_mem and account == "physics"):
+    return "Yes"
+  else:
+    return "No"
 
 def datascience_node_violators(df):
   ds = df[(df.cluster == "della") & 
           (df.partition == "datasci") & 
-          pd.notna(df["cpu-seconds"]) &
-          (df["elapsed-hours"] >= 2)].copy()
-  ds = ds[ds.admincomment != {}]  # ignore running jobs
-  ds["memory-tuple"] = ds.admincomment.apply(cpu_memory_usage)
+          (df["elapsed-hours"] >= 1)].copy()
+  #ds["admincomment"] = ds.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]) if row["admincomment"] == {} else row["admincomment"], axis='columns')
+  ds = ds[ds.admincomment != {}]
+  ds["memory-tuple"] = ds.apply(lambda row: cpu_memory_usage(row["admincomment"], row["jobid"], row["cluster"]), axis="columns")
   ds["memory-used"]  = ds["memory-tuple"].apply(lambda x: x[0])
   ds["memory-alloc"] = ds["memory-tuple"].apply(lambda x: x[1])
-  fraction = 0.8
-  cascade_max_mem = 190
-  ds = ds[ds["memory-used"] < fraction * cascade_max_mem]
-  ds["cpu-hours"] = ds["cpu-hours"].apply(round).astype("int64")
-  ds.state = ds.state.apply(lambda x: JOBSTATES[x])
-  cols = ["netid", "jobid", "state", "memory-used", "memory-alloc", "elapsed-hours", "cores", "account"]
+  ds["Large-Memory-Needed?"] = ds.apply(lambda row: large_memory_needed(row["memory-used"], row["account"]), axis="columns")
+  ds["within-safety"] = ds.apply(lambda row: True if large_memory_needed(row["memory-used"], row["account"], safety=0.8) == "Yes" else False, axis="columns")
+  #ds["cpu-hours"] = ds["cpu-hours"].apply(round).astype("int64")
+  #ds.state = ds.state.apply(lambda x: JOBSTATES[x])
+
+  ### EMAIL
+  if 1 or args.email:
+    for netid in np.sort(ds.netid.unique()):
+      usr = ds[ds.netid == netid].copy()
+      total_jobs = usr.shape[0]
+      bad_jobs           = usr[usr["Large-Memory-Needed?"] == "No"].shape[0]
+      jobs_within_safety = usr[usr["within-safety"]].shape[0]
+      max_cores = 40 if usr.account.str.contains("physics").size else 32
+      too_many_cores = usr[usr.cores > max_cores].shape[0]
+      if bad_jobs > 0:
+        vfile = f"{args.files}/datascience/{netid}.email.csv"
+        last_write_date = datetime(1970, 1, 1)
+        if os.path.exists(vfile):
+          last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
+        s = f"{get_first_name(netid)},\n\n"
+        usr["memory-used"]  = usr["memory-used"].apply(lambda x: f"{x} GB")
+        usr["memory-alloc"] = usr["memory-alloc"].apply(lambda x: f"{x} GB")
+        max_mem = "380 GB" if "physics" in usr.account.unique().tolist() else "190 GB"
+        if (datetime.now().timestamp() - last_write_date.timestamp() >= 7 * HOURS_PER_DAY * SECONDS_PER_HOUR):
+          cols = ["jobid", "netid", "memory-used", "memory-alloc", "Large-Memory-Needed?", "elapsed-hours"]
+          renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "netid":"NetID", "memory-used":"Memory-Used", \
+                       "cpu-hours":"CPU-hours", "memory-alloc":"Memory-Allocated"}
+          usr = usr[cols].rename(columns=renamings)
+          s += "Below are jobs that ran on the large-memory (datascience) nodes on Della in the "
+          s += "\npast 7 days:"
+          s += "\n\n"
+          s += "\n".join([3 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+          s += "\n"
+          if bad_jobs == total_jobs and jobs_within_safety == 0:
+            s += textwrap.dedent(f"""
+            The large-memory nodes should only be used for jobs that require {max_mem} or more.
+            It appears that none of the jobs above needed one of these nodes. For future jobs,
+            please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
+            overall memory requirement is less than {max_mem}. You should use the smallest value
+            possible but include an extra 20% for safety. For more info:
+
+               https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+            Users that continually run jobs on the large-memory nodes without justification
+            risk losing access to these nodes since it prevents others from getting their
+            work done.
+            """)
+          elif bad_jobs == total_jobs and jobs_within_safety != 0:
+            s += textwrap.dedent(f"""
+            The large-memory nodes should only be used for jobs that require {max_mem} or more.
+            It appears that none of the jobs above needed one of these nodes. However, some job(s)
+            were within 20% of the threshold value. If possible please lower the value of the
+            --mem-per-cpu or --mem Slurm directive so that the overall memory requirement of
+            the job is less than {max_mem}. You should use the smallest value possible but include
+            an extra 20% for safety. For more info:
+
+               https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+            Users that continually run jobs on the large-memory nodes without justification
+            risk losing access to these nodes since it prevents others from getting their
+            work done.
+            """)
+          else:
+            s += textwrap.dedent(f"""
+            The large-memory nodes should only be used for jobs that require {max_mem} or more.
+            It appears that some of the jobs above did not need these nodes. Whenever possible
+            please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
+            overall memory requirement of the job is less than {max_mem}. You should use the
+            smallest value possible but include an extra 20% for safety. For more info:
+
+               https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+            Users that continually run jobs on the large-memory nodes without justification
+            risk losing access to these nodes since it prevents others from getting their
+            work done.
+            """)
+
+          if too_many_cores:
+            s += "\n"
+            text = (
+                   f"You have job(s) that requested more than {max_cores} CPU-cores. This may be the reason why "
+                   f"your job(s) ran on the large-memory nodes. If so then please use at most {max_cores} CPU-cores "
+                    "per job to avoid running jobs on the large-memory nodes."
+                   )
+            s += "\n".join(textwrap.wrap(text, width=80))
+            s += "\n"
+
+          s += textwrap.dedent(f"""
+          Add the following lines to your Slurm scripts to receive an email report with
+          memory usage information after each job finishes:
+
+             #SBATCH --mail-type=begin
+             #SBATCH --mail-type=end
+             #SBATCH --mail-user={netid}@princeton.edu
+          
+          Replying to this email will open a support ticket with CSES. Let us know if we
+          can be of help in resolving this matter.
+          """)
+
+          # send email and append violation file
+          date_today = datetime.now().strftime("%Y-%m-%d")
+          cal = USFederalHolidayCalendar()
+          us_holiday = date_today in cal.holidays()
+          pu_holidays  = ["2022-07-05", "2022-11-25", "2022-12-23", "2022-12-26", "2022-12-30", "2023-01-02",
+                          "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19"]
+          pu_holiday = date_today in pu_holidays
+          if args.email and not us_holiday and not pu_holiday:
+            #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
+            send_email(s,  "halverson@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
+            usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+            if os.path.exists(vfile):
+              curr = pd.read_csv(vfile)
+              curr = pd.concat([curr, usr]).drop_duplicates()
+              curr.to_csv(vfile, index=False, header=True)
+            else:
+              usr.to_csv(vfile, index=False, header=True)
+          else:
+            print(s)
+  ## EMAIL END
+
+  cols = ["netid", "jobid", "state", "memory-used", "memory-alloc", "elapsed-hours", "cores", "account", "Large-Memory-Needed?"]
   return ds[cols].sort_values(by="memory-used", ascending=False)
 
-def cpu_efficiency(d, elapsedraw, single=False):
-  total = 0
-  total_used = 0
-  for node in d['nodes']:
-    try:
-      used  = d['nodes'][node]['total_time']
-      cores = d['nodes'][node]['cpus']
-    except:
-      print("total_time not found")
-      return (0, 1)  # dummy values that avoid division by zero later
-    else:
-      alloc = elapsedraw * cores  # equal to cputimeraw
-      total += alloc
-      total_used += used
-  return round(100 * total_used / total, 1) if single else (total_used, total)
-
-def gpu_efficiency(d, elapsedraw, jobid, cluster, single=False):
-  total = 0
-  total_used = 0
-  for node in d['nodes']:
-    try:
-      gpus = list(d['nodes'][node]['gpu_utilization'].keys())
-    except:
-      #print(jobid, d['nodes'][node])
-      print(f"gpu_utilization not found for {jobid} on {cluster}")
-      return 0 if single else (0, 1)  # dummy values that avoid division by zero later
-    else:
-      for gpu in gpus:
-        util = d['nodes'][node]['gpu_utilization'][gpu]
-        total      += elapsedraw
-        total_used += elapsedraw * (float(util) / 100)
-  return round(100 * total_used / total, 1) if single else (total_used, total)
-
 def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
-  # compute proportion using all much data as possible
+  # compute proportion using as much data as possible
   pr = df[(df.cluster == cluster) & (df.partition.isin(partitions)) & pd.notna(df[f"{xpu}-seconds"])].copy()
   pr = pr.groupby("netid").agg({f"{xpu}-seconds":np.sum}).reset_index(drop=False)
   pr["proportion(%)"] = pr[f"{xpu}-seconds"].apply(lambda x: round(100 * x / pr[f"{xpu}-seconds"].sum()))
   pr = pr.rename(columns={f"{xpu}-seconds":f"{xpu}-seconds-all"}).sort_values(by=f"{xpu}-seconds-all", ascending=False)
+
   # 2nd dataframe based on admincomment
   ce = df[(df.cluster == cluster) & \
           (df["elapsedraw"] >= 0.5 * SECONDS_PER_HOUR) & \
@@ -247,14 +322,15 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
       last_write_date = datetime(1970, 1, 1)
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
+      s = f"{get_first_name(netid)},\n\n"
       if (datetime.now().timestamp() - last_write_date.timestamp() >= 6 * HOURS_PER_DAY * SECONDS_PER_HOUR):
         usr = ce[ce.netid == netid].copy()
         cols = ["netid", f"{xpu}-hours", "proportion(%)", "eff(%)"]
         renamings = {"eff(%)":"Efficiency(%)", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
                      "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours"}
         usr = usr[cols].rename(columns=renamings)
-        s = f"{get_first_name(netid)},\n\n"
         s += "\n\n"
+        # make period clear and number of jobs and rank
         s += "You are heavy user.\n"
         s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
         s += "\n\n"
@@ -274,8 +350,9 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
                 faster filesystem. For more on the filesystems:
                 https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
 
-             3. Slow MPI calls. Make sure you are using an environment module
+             3. Slow MPI calls potentially due to load imbalance. Make sure you are using an environment module
                 and not MPICH from a Conda install.
+             4. Are you using srun in place of mpirun? Binding to cores instead of NUMA nodes.
 
         Consult the documentation or write to mailing list of the code for additional
         reasons for low {xpu.upper()} efficiency.
@@ -321,20 +398,6 @@ def get_stats_for_running_job(jobid, cluster):
   time.sleep(0.5)
   return eval(stats.report_job_json(False))
 
-def gpus_with_zero_util(d):
-  ct = 0
-  for node in d['nodes']:
-    try:
-      gpus = list(d['nodes'][node]['gpu_utilization'].keys())
-    except:
-      print(f"gpu_utilization not found: node is {node}")
-      return 0
-    else:
-      for gpu in gpus:
-        util = d['nodes'][node]['gpu_utilization'][gpu]
-        if float(util) == 0: ct += 1
-  return ct
-
 #prev = pd.read_csv(vfile)
 #thisuser = thisuser.append(prev).drop_duplicates(ignore_index=True)
 #thisuser.to_csv(vfile, index=False)
@@ -349,7 +412,7 @@ def emails_gpu_jobs_zero_util(df):
           (df.state == "RUNNING") & \
           (df.gpus > 0)].copy()
   em["jobstats"] = em.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]), axis='columns')
-  em["GPUs-Unused"] = em.jobstats.apply(gpus_with_zero_util)
+  em["GPUs-Unused"] = em.jobstats.apply(num_gpus_with_zero_util)
   em["interactive"] = em["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
   msk = (em["interactive"]) & (em.gpus == 1) & (em["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
   em = em[~msk]
@@ -509,7 +572,7 @@ def gpu_jobs_zero_util(df, cluster, partitions):
           (df.partition.isin(partitions))].copy()
   zu = zu[zu.admincomment != {}]  # ignore running jobs
   zu["interactive"] = zu["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
-  zu["gpus-unused"] = zu.admincomment.apply(gpus_with_zero_util)
+  zu["gpus-unused"] = zu.admincomment.apply(num_gpus_with_zero_util)
   zu = zu[zu["gpus-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
   return zu[["netid", "gpus", "gpus-unused", "jobid", "state", "hours", "interactive", "start-date"]]
@@ -769,9 +832,9 @@ if __name__ == "__main__":
         s += add_dividers(df_str, title=name, pre="\n\n")
 
   ####### consider jobs in the last N days only #######
-  thres_days = 7
-  df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
-  s += f"\n\n\n            --- the next set of tables below is for the last {thres_days} days ---"
+  #thres_days = 7
+  #df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
+  #s += f"\n\n\n            --- the next set of tables below is for the last {thres_days} days ---"
 
   if args.low_xpu_efficiency:
     ##########################
@@ -785,9 +848,9 @@ if __name__ == "__main__":
         s += add_dividers(df_str, title=name, pre="\n\n")
 
   ####### consider jobs in the last N days only #######
-  thres_days = 3
-  df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
-  s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
+  #thres_days = 3
+  #df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
+  #s += f"\n\n\n            --- everything below is for the last {thres_days} days ---"
 
   ##########################################
   ### zero utilization on a GPU by email ###
@@ -828,18 +891,19 @@ if __name__ == "__main__":
         df_str = zu.to_string(index=False, justify="center")
         s += add_dividers(df_str, title=name, pre="\n\n")
 
-  #####################
-  ### fragmentation ###
-  #####################
-  fg = multinode_cpu_fragmentation(df)
-  if not fg.empty:
-    df_str = fg.to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n")
-    
-  fg = multinode_gpu_fragmentation(df)
-  if not fg.empty:
-    df_str = fg.to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="Multinode GPU jobs with fragmentation (all jobs, 2+ hours)")
+  if False:
+    #####################
+    ### fragmentation ###
+    #####################
+    fg = multinode_cpu_fragmentation(df)
+    if not fg.empty:
+      df_str = fg.to_string(index=False, justify="center")
+      s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n")
+      
+    fg = multinode_gpu_fragmentation(df)
+    if not fg.empty:
+      df_str = fg.to_string(index=False, justify="center")
+      s += add_dividers(df_str, title="Multinode GPU jobs with fragmentation (all jobs, 2+ hours)")
 
   if args.datascience:
     ###################
@@ -848,29 +912,32 @@ if __name__ == "__main__":
     ds = datascience_node_violators(df)
     if not ds.empty:
       df_str = ds.to_string(index=False, justify="center")
-      s += add_dividers(df_str, title="Datascience jobs that didn't need to be (all jobs, 2+ hours)", pre="\n\n\n")
+      s += add_dividers(df_str, title="Datascience jobs that didn't need to be (all jobs, 1+ hours)", pre="\n\n\n")
 
-  ##############################
-  ### last jobs are failures ###
-  ##############################
-  fl = recent_jobs_all_failures(df)
-  if not fl.empty:
-    df_str = fl.to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="All jobs failed on last day (4+ jobs)")
+  if False:
+    ##############################
+    ### last jobs are failures ###
+    ##############################
+    fl = recent_jobs_all_failures(df)
+    if not fl.empty:
+      df_str = fl.to_string(index=False, justify="center")
+      s += add_dividers(df_str, title="All jobs failed on last day (4+ jobs)")
 
-  ##############################
-  ### large cpu and gpu jobs ###
-  ##############################
-  df_str = jobs_with_the_most_cores(df).to_string(index=False, justify="center")
-  s += add_dividers(df_str, title="Jobs with the most CPU-cores (1 job per user)")
-  df_str = jobs_with_the_most_gpus(df).to_string(index=False, justify="center")
-  s += add_dividers(df_str, title="Jobs with the most GPUs (1 job per user, ignoring cryoem)")
+  if False:
+    ##############################
+    ### large cpu and gpu jobs ###
+    ##############################
+    df_str = jobs_with_the_most_cores(df).to_string(index=False, justify="center")
+    s += add_dividers(df_str, title="Jobs with the most CPU-cores (1 job per user)")
+    df_str = jobs_with_the_most_gpus(df).to_string(index=False, justify="center")
+    s += add_dividers(df_str, title="Jobs with the most GPUs (1 job per user, ignoring cryoem)")
 
-  ###########################
-  ### longest queue times ###
-  ###########################
-  df_str = longest_queue_times(raw).to_string(index=False, justify="center")
-  s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
+  if False:
+    ###########################
+    ### longest queue times ###
+    ###########################
+    df_str = longest_queue_times(raw).to_string(index=False, justify="center")
+    s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
 
   if args.email:
     pass
