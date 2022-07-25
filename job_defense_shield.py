@@ -156,6 +156,12 @@ def datascience_node_violators(df):
   ds["within-safety"] = ds.apply(lambda row: True if large_memory_needed(row["memory-used"], row["account"], safety=0.8) == "Yes" else False, axis="columns")
   #ds["cpu-hours"] = ds["cpu-hours"].apply(round).astype("int64")
   #ds.state = ds.state.apply(lambda x: JOBSTATES[x])
+  #ds = ds[ds.partition != "datasci"]
+  #ds = ds[ds.partition != "gpu"]
+  #print(ds[(ds["memory-alloc"] > 190) & (ds["memory-alloc"] < 380)][["netid", "jobid", "account", "memory-alloc"]])
+  #print(ds[(ds["memory-alloc"] < 190) & (ds["cores"] > 40)][["netid", "jobid", "account", "memory-alloc"]])
+  #print(ds[(ds["memory-alloc"] < 190)][["netid", "jobid", "account", "memory-alloc"]])
+  #import sys; sys.exit()
 
   ### EMAIL
   if 1 or args.email:
@@ -166,7 +172,7 @@ def datascience_node_violators(df):
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
       max_cores = 40 if usr.account.str.contains("physics").size else 32
       too_many_cores = usr[usr.cores > max_cores].shape[0]
-      if bad_jobs > 0:
+      if bad_jobs > 0 and netid in ("elmassry", "vincenzi", "hongwanl", "achew", "kirylp"):
         vfile = f"{args.files}/datascience/{netid}.email.csv"
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
@@ -220,7 +226,9 @@ def datascience_node_violators(df):
             It appears that some of the jobs above did not need these nodes. Whenever possible
             please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
             overall memory requirement of the job is less than {max_mem}. You should use the
-            smallest value possible but include an extra 20% for safety. For more info:
+            smallest value possible but include an extra 20% for safety. We understand that
+            for some jobs it can be very difficult or impossible to estimate the memory
+            requirements. For more info on Slurm and CPU memory:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
@@ -261,6 +269,7 @@ def datascience_node_violators(df):
           if args.email and not us_holiday and not pu_holiday:
             #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
             send_email(s,  "halverson@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
+            send_email(s,  "bill@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
             if os.path.exists(vfile):
               curr = pd.read_csv(vfile)
@@ -290,7 +299,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce = ce.merge(pr, how="left", on="netid")
   if ce.empty: return pd.DataFrame()  # prevents next line from failing
   if xpu == "cpu":
-    ce[f"{xpu}-tuples"] = ce.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"]), axis="columns")
+    ce[f"{xpu}-tuples"] = ce.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"], row["jobid"], row["cluster"]), axis="columns")
   else:
     ce[f"{xpu}-tuples"] = ce.apply(lambda row: gpu_efficiency(row["admincomment"], row["elapsedraw"], row["jobid"], row["cluster"]), axis="columns")
   ce[f"{xpu}-seconds-used"]  = ce[f"{xpu}-tuples"].apply(lambda x: x[0])
@@ -382,13 +391,12 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
         print(s)
   print("Exiting low efficiency email routine")
   ###########
-
   return ce
 
 def get_stats_for_running_job(jobid, cluster):
   import importlib.machinery
   import importlib.util
-  print(jobid, cluster)
+  print("jobid:", jobid, "cluster:", cluster)
   cluster = cluster.replace("tiger", "tiger2")
   loader = importlib.machinery.SourceFileLoader('jobstats', '/home/jdh4/.local/bin/jobstats') # until remove args.simple
   spec = importlib.util.spec_from_loader('jobstats', loader)
@@ -397,10 +405,6 @@ def get_stats_for_running_job(jobid, cluster):
   stats = mymodule.JobStats(jobid=jobid, cluster=cluster)
   time.sleep(0.5)
   return eval(stats.report_job_json(False))
-
-#prev = pd.read_csv(vfile)
-#thisuser = thisuser.append(prev).drop_duplicates(ignore_index=True)
-#thisuser.to_csv(vfile, index=False)
 
 def emails_gpu_jobs_zero_util(df):
   fltr = ((df.cluster == "della")    & (df.partition == "gpu")) | \
@@ -671,7 +675,7 @@ def jobs_with_the_most_cores(df):
   c = c.sort_values("cores", ascending=False)[:10].drop(columns=["start"]).rename(columns={"elapsed-hours":"hours"})
   c.state = c.state.apply(lambda x: JOBSTATES[x])
   if c.empty: return pd.DataFrame()  # prevents next line from failing
-  c["eff(%)"] = c.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"], single=True) if row["admincomment"] != {} else "", axis="columns")
+  c["eff(%)"] = c.apply(lambda row: cpu_efficiency(row["admincomment"], row["elapsedraw"], row["jobid"], row["cluster"], single=True) if row["admincomment"] != {} else "", axis="columns")
   cols = cols[:8] + ["hours", "eff(%)"]
   return c[cols]
 
