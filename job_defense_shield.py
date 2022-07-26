@@ -1,4 +1,4 @@
-#!/home/jdh4/bin/jds-env/bin/python -u -B
+#!/home/jdh4/bin/jds-env/bin/python -uB
 
 import argparse
 import os
@@ -164,15 +164,17 @@ def datascience_node_violators(df):
   #import sys; sys.exit()
 
   ### EMAIL
-  if 1 or args.email:
+  if args.email:
     for netid in np.sort(ds.netid.unique()):
       usr = ds[ds.netid == netid].copy()
       total_jobs = usr.shape[0]
       bad_jobs           = usr[usr["Large-Memory-Needed?"] == "No"].shape[0]
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
-      max_cores = 40 if usr.account.str.contains("physics").size else 32
-      too_many_cores = usr[usr.cores > max_cores].shape[0]
-      if bad_jobs > 0 and netid in ("elmassry", "vincenzi", "hongwanl", "achew", "kirylp"):
+      #max_cores = 40 if usr.account.str.contains("physics").size else 32
+      #too_many_cores = usr[usr.cores > max_cores].shape[0]
+      # and netid in ("elmassry", "vincenzi", "hongwanl", "achew", "kirylp"):
+      if bad_jobs > 0:
+        # TDO: create datascience if needed
         vfile = f"{args.files}/datascience/{netid}.email.csv"
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
@@ -237,15 +239,15 @@ def datascience_node_violators(df):
             work done.
             """)
 
-          if too_many_cores:
-            s += "\n"
-            text = (
-                   f"You have job(s) that requested more than {max_cores} CPU-cores. This may be the reason why "
-                   f"your job(s) ran on the large-memory nodes. If so then please use at most {max_cores} CPU-cores "
-                    "per job to avoid running jobs on the large-memory nodes."
-                   )
-            s += "\n".join(textwrap.wrap(text, width=80))
-            s += "\n"
+          #if too_many_cores:
+          #  s += "\n"
+          #  text = (
+          #         f"You have job(s) that requested more than {max_cores} CPU-cores. This may be the reason why "
+          #         f"your job(s) ran on the large-memory nodes. If so then please use at most {max_cores} CPU-cores "
+          #          "per job to avoid running jobs on the large-memory nodes."
+          #         )
+          #  s += "\n".join(textwrap.wrap(text, width=80))
+          #  s += "\n"
 
           s += textwrap.dedent(f"""
           Add the following lines to your Slurm scripts to receive an email report with
@@ -269,7 +271,6 @@ def datascience_node_violators(df):
           if args.email and not us_holiday and not pu_holiday:
             #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
             send_email(s,  "halverson@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
-            send_email(s,  "bill@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
             if os.path.exists(vfile):
               curr = pd.read_csv(vfile)
@@ -865,18 +866,18 @@ if __name__ == "__main__":
     #################################
     ### zero utilization on a GPU ###
     #################################
-    first_hit = False
-    for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
-                                      ("della", "Della (GPU)", ("gpu",)), \
-                                      ("traverse", "Traverse (GPU)", ("all",))]:
+    #first_hit = False
+    #for cluster, name, partitions in [("tiger", "TigerGPU", ("gpu",)), \
+    #                                  ("della", "Della (GPU)", ("gpu",)), \
+    #                                  ("traverse", "Traverse (GPU)", ("all",))]:
       ############
-      zu = gpu_jobs_zero_util(df, cluster, partitions)
-      if not zu.empty:
-        if not first_hit:
-          s += "\n\n\n    Zero utilization on a GPU (1+ hour jobs, ignoring running)"
-          first_hit = True
-        df_str = zu.to_string(index=False, justify="center")
-        s += add_dividers(df_str, title=name, pre="\n\n")
+    #  zu = gpu_jobs_zero_util(df, cluster, partitions)
+    #  if not zu.empty:
+    #    if not first_hit:
+    #      s += "\n\n\n    Zero utilization on a GPU (1+ hour jobs, ignoring running)"
+    #      first_hit = True
+    #    df_str = zu.to_string(index=False, justify="center")
+    #    s += add_dividers(df_str, title=name, pre="\n\n")
 
   if args.zero_cpu_utilization:
     ######################################
