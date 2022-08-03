@@ -33,8 +33,8 @@ $ /home/jdh4/bin/jds-bin/python job_defense_shield.py --files /tigress/jdh4/util
 ## Which users are ignoring the automated emails?
 
 ```
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --check
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --check-all
+$ /home/jdh4/bin/jds-env/bin/python /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check --zero-gpu-utilization
+$ /home/jdh4/bin/jds-env/bin/python /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check-all
 ```
 
 ## What to do after writing to a user?

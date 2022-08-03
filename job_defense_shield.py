@@ -149,6 +149,7 @@ def datascience_node_violators(df):
           (df["elapsed-hours"] >= 1)].copy()
   #ds["admincomment"] = ds.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]) if row["admincomment"] == {} else row["admincomment"], axis='columns')
   ds = ds[ds.admincomment != {}]
+  ds = ds[ds.state != "OUT_OF_MEMORY"]
   ds["memory-tuple"] = ds.apply(lambda row: cpu_memory_usage(row["admincomment"], row["jobid"], row["cluster"]), axis="columns")
   ds["memory-used"]  = ds["memory-tuple"].apply(lambda x: x[0])
   ds["memory-alloc"] = ds["memory-tuple"].apply(lambda x: x[1])
@@ -170,9 +171,9 @@ def datascience_node_violators(df):
       total_jobs = usr.shape[0]
       bad_jobs           = usr[usr["Large-Memory-Needed?"] == "No"].shape[0]
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
-      #max_cores = 40 if usr.account.str.contains("physics").size else 32
+      is_physics = "physics" in usr.account.unique().tolist()
+      #max_cores = 40 if is_physics else 32
       #too_many_cores = usr[usr.cores > max_cores].shape[0]
-      # and netid in ("elmassry", "vincenzi", "hongwanl", "achew", "kirylp"):
       if bad_jobs > 0:
         # TDO: create datascience if needed
         vfile = f"{args.files}/datascience/{netid}.email.csv"
@@ -182,7 +183,8 @@ def datascience_node_violators(df):
         s = f"{get_first_name(netid)},\n\n"
         usr["memory-used"]  = usr["memory-used"].apply(lambda x: f"{x} GB")
         usr["memory-alloc"] = usr["memory-alloc"].apply(lambda x: f"{x} GB")
-        max_mem = "380 GB" if "physics" in usr.account.unique().tolist() else "190 GB"
+        max_mem = "380 GB" if is_physics else "190 GB"
+
         if (datetime.now().timestamp() - last_write_date.timestamp() >= 7 * HOURS_PER_DAY * SECONDS_PER_HOUR):
           cols = ["jobid", "netid", "memory-used", "memory-alloc", "Large-Memory-Needed?", "elapsed-hours"]
           renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "netid":"NetID", "memory-used":"Memory-Used", \
@@ -199,7 +201,8 @@ def datascience_node_violators(df):
             It appears that none of the jobs above needed one of these nodes. For future jobs,
             please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
             overall memory requirement is less than {max_mem}. You should use the smallest value
-            possible but include an extra 20% for safety. For more info:
+            possible but include an extra 20% for safety. For more information on Slurm and
+            CPU memory:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
@@ -214,7 +217,7 @@ def datascience_node_violators(df):
             were within 20% of the threshold value. If possible please lower the value of the
             --mem-per-cpu or --mem Slurm directive so that the overall memory requirement of
             the job is less than {max_mem}. You should use the smallest value possible but include
-            an extra 20% for safety. For more info:
+            an extra 20% for safety. For more information on Slurm and CPU memory:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
@@ -228,15 +231,14 @@ def datascience_node_violators(df):
             It appears that some of the jobs above did not need these nodes. Whenever possible
             please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
             overall memory requirement of the job is less than {max_mem}. You should use the
-            smallest value possible but include an extra 20% for safety. We understand that
-            for some jobs it can be very difficult or impossible to estimate the memory
-            requirements. For more info on Slurm and CPU memory:
+            smallest value possible but include an extra 20% for safety.
+
+            We understand that for some jobs it can be very difficult or impossible to estimate
+            the memory requirements. For those jobs please disregard this email.
+
+            For more information on Slurm and CPU memory:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
-
-            Users that continually run jobs on the large-memory nodes without justification
-            risk losing access to these nodes since it prevents others from getting their
-            work done.
             """)
 
           #if too_many_cores:
@@ -249,6 +251,16 @@ def datascience_node_violators(df):
           #  s += "\n".join(textwrap.wrap(text, width=80))
           #  s += "\n"
 
+          # if a physics user does not specify -p physics and they request more than 194G then it will go to datascience
+          if is_physics and usr[usr["memory-alloc"] < 380].shape[0]:
+            s += textwrap.dedent(f"""
+            Your Slurm account is physics. This means that you have acccess to nodes with 380 GB
+            of memory that are not available to other users. To access these nodes add the
+            following line to your Slurm scripts: 
+            
+               #SBATCH --partition=physics
+            """)
+        
           s += textwrap.dedent(f"""
           Add the following lines to your Slurm scripts to receive an email report with
           memory usage information after each job finishes:
@@ -258,7 +270,7 @@ def datascience_node_violators(df):
              #SBATCH --mail-user={netid}@princeton.edu
           
           Replying to this email will open a support ticket with CSES. Let us know if we
-          can be of help in resolving this matter.
+          can be of help.
           """)
 
           # send email and append violation file
@@ -269,7 +281,7 @@ def datascience_node_violators(df):
                           "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19"]
           pu_holiday = date_today in pu_holidays
           if args.email and not us_holiday and not pu_holiday:
-            #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
+            send_email(s,   f"{netid}@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             send_email(s,  "halverson@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
             if os.path.exists(vfile):
@@ -502,7 +514,7 @@ def emails_gpu_jobs_zero_util(df):
       s += "\n\n"
 
       text = (
-      'For more detailed information follow the link at the bottom of the "jobstats" output.'
+      'Follow the link at the bottom of the "jobstats" output for more detailed information.'
       )
       s += "\n".join(textwrap.wrap(text, width=80))
       s += "\n\n"
@@ -718,7 +730,7 @@ def add_dividers(df, title="", pre="\n\n\n"):
   return pre + "\n".join(rows)
 
 def print_report_of_users_with_continual_underutilization():
-  files = glob.glob(f"{args.files}/*.csv")
+  files = sorted(glob.glob(f"{args.files}/*.csv"))
   if len(files) == 0:
     print("No underutilization files found.")
     return None

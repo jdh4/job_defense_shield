@@ -1,4 +1,5 @@
 *.csv
+*.log
 dossier.py
 __pycache__
 violations
