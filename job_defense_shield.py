@@ -144,25 +144,17 @@ def large_memory_needed(usage, account, safety=1.0):
     return "No"
 
 def datascience_node_violators(df):
-  ds = df[(df.cluster == "della") & 
-          (df.partition == "datasci") & 
+  ds = df[(df.cluster == "della") &
+          (df.partition == "datasci") &
+          (df.state != "OUT_OF_MEMORY") &
+          (df.admincomment != {}) &
           (df["elapsed-hours"] >= 1)].copy()
-  #ds["admincomment"] = ds.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]) if row["admincomment"] == {} else row["admincomment"], axis='columns')
-  ds = ds[ds.admincomment != {}]
-  ds = ds[ds.state != "OUT_OF_MEMORY"]
+
   ds["memory-tuple"] = ds.apply(lambda row: cpu_memory_usage(row["admincomment"], row["jobid"], row["cluster"]), axis="columns")
   ds["memory-used"]  = ds["memory-tuple"].apply(lambda x: x[0])
   ds["memory-alloc"] = ds["memory-tuple"].apply(lambda x: x[1])
   ds["Large-Memory-Needed?"] = ds.apply(lambda row: large_memory_needed(row["memory-used"], row["account"]), axis="columns")
   ds["within-safety"] = ds.apply(lambda row: True if large_memory_needed(row["memory-used"], row["account"], safety=0.8) == "Yes" else False, axis="columns")
-  #ds["cpu-hours"] = ds["cpu-hours"].apply(round).astype("int64")
-  #ds.state = ds.state.apply(lambda x: JOBSTATES[x])
-  #ds = ds[ds.partition != "datasci"]
-  #ds = ds[ds.partition != "gpu"]
-  #print(ds[(ds["memory-alloc"] > 190) & (ds["memory-alloc"] < 380)][["netid", "jobid", "account", "memory-alloc"]])
-  #print(ds[(ds["memory-alloc"] < 190) & (ds["cores"] > 40)][["netid", "jobid", "account", "memory-alloc"]])
-  #print(ds[(ds["memory-alloc"] < 190)][["netid", "jobid", "account", "memory-alloc"]])
-  #import sys; sys.exit()
 
   ### EMAIL
   if args.email:
@@ -172,8 +164,7 @@ def datascience_node_violators(df):
       bad_jobs           = usr[usr["Large-Memory-Needed?"] == "No"].shape[0]
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
       is_physics = "physics" in usr.account.unique().tolist()
-      #max_cores = 40 if is_physics else 32
-      #too_many_cores = usr[usr.cores > max_cores].shape[0]
+      small_physics = usr[usr["memory-alloc"] < 380].shape[0]
       if bad_jobs > 0:
         # TDO: create datascience if needed
         vfile = f"{args.files}/datascience/{netid}.email.csv"
@@ -200,10 +191,12 @@ def datascience_node_violators(df):
             The large-memory nodes should only be used for jobs that require {max_mem} or more.
             It appears that none of the jobs above needed one of these nodes. For future jobs,
             please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
-            overall memory requirement is less than {max_mem}. You should use the smallest value
-            possible but include an extra 20% for safety. For more information on Slurm and
-            CPU memory:
+            overall memory requirement of each job is less than {max_mem}. You should use the
+            smallest value possible but include an extra 20% for safety.
 
+            For more information on the large-memory nodes and allocating CPU memory:
+
+               https://researchcomputing.princeton.edu/systems/della#large_memory
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
             Users that continually run jobs on the large-memory nodes without justification
@@ -216,9 +209,12 @@ def datascience_node_violators(df):
             It appears that none of the jobs above needed one of these nodes. However, some job(s)
             were within 20% of the threshold value. If possible please lower the value of the
             --mem-per-cpu or --mem Slurm directive so that the overall memory requirement of
-            the job is less than {max_mem}. You should use the smallest value possible but include
-            an extra 20% for safety. For more information on Slurm and CPU memory:
+            each job is less than {max_mem}. You should use the smallest value possible but include
+            an extra 20% for safety.
 
+            For more information on the large-memory nodes and allocating CPU memory:
+
+               https://researchcomputing.princeton.edu/systems/della#large_memory
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
             Users that continually run jobs on the large-memory nodes without justification
@@ -230,33 +226,24 @@ def datascience_node_violators(df):
             The large-memory nodes should only be used for jobs that require {max_mem} or more.
             It appears that some of the jobs above did not need these nodes. Whenever possible
             please lower the value of the --mem-per-cpu or --mem Slurm directive so that the
-            overall memory requirement of the job is less than {max_mem}. You should use the
+            overall memory requirement of each job is less than {max_mem}. You should use the
             smallest value possible but include an extra 20% for safety.
 
             We understand that for some jobs it can be very difficult or impossible to estimate
             the memory requirements. For those jobs please disregard this email.
 
-            For more information on Slurm and CPU memory:
+            For more information on the large-memory nodes and allocating CPU memory:
 
+               https://researchcomputing.princeton.edu/systems/della#large_memory
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
             """)
 
-          #if too_many_cores:
-          #  s += "\n"
-          #  text = (
-          #         f"You have job(s) that requested more than {max_cores} CPU-cores. This may be the reason why "
-          #         f"your job(s) ran on the large-memory nodes. If so then please use at most {max_cores} CPU-cores "
-          #          "per job to avoid running jobs on the large-memory nodes."
-          #         )
-          #  s += "\n".join(textwrap.wrap(text, width=80))
-          #  s += "\n"
-
           # if a physics user does not specify -p physics and they request more than 194G then it will go to datascience
-          if is_physics and usr[usr["memory-alloc"] < 380].shape[0]:
+          if is_physics and small_physics:
             s += textwrap.dedent(f"""
             Your Slurm account is physics. This means that you have acccess to nodes with 380 GB
-            of memory that are not available to other users. To access these nodes add the
-            following line to your Slurm scripts: 
+            of memory that are not available to other users. Please add the following line to
+            your Slurm scripts:
             
                #SBATCH --partition=physics
             """)
@@ -437,7 +424,7 @@ def emails_gpu_jobs_zero_util(df):
   renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "netid":"NetID", "cluster":"Cluster"}
   em.rename(columns=renamings, inplace=True)
   for netid in em.NetID.unique():
-    vfile = f"/tigress/jdh4/utilities/job_defense_shield/violations/{netid}.violations.email.csv"
+    vfile = f"{args.files}/zero_gpu_utilization/{netid}.violations.email.csv"
     last_write_date = datetime(1970, 1, 1).date()
     if os.path.exists(vfile):
       last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
@@ -729,13 +716,13 @@ def add_dividers(df, title="", pre="\n\n\n"):
     rows.insert(2, "-" * len(divider))
   return pre + "\n".join(rows)
 
-def print_report_of_users_with_continual_underutilization():
-  files = sorted(glob.glob(f"{args.files}/*.csv"))
+def print_report_of_users_with_continual_underutilization(mydir):
+  files = sorted(glob.glob(f"{args.files}/{mydir}/*.csv"))
   if len(files) == 0:
     print("No underutilization files found.")
     return None
   today = datetime.now().date()
-  if args.zero_gpu_utilization:
+  if 1 or args.zero_gpu_utilization:
     print("=====================================================")
     print("           ZERO GPU UTILIZATION EMAILS SENT")
     print("=====================================================")
@@ -747,7 +734,7 @@ def print_report_of_users_with_continual_underutilization():
       df = pd.read_csv(f)
       df["when"] = df.email_sent.apply(lambda x: datetime.strptime(x, "%m/%d/%Y %H:%M").date())
       hits = df.when.unique()
-      row = [today - timedelta(days=i) in hits for i in range(30)]
+      row = [today - timedelta(days=i) in hits for i in range(45)]
       s = " " * (8 - len(netid)) + netid + "@princeton.edu "
       s += ''.join(["X" if r else "_" for r in row])[::-1]
       print(s)
@@ -794,7 +781,10 @@ if __name__ == "__main__":
   pd.set_option("display.width", 1000)
 
   if args.check:
-    _ = print_report_of_users_with_continual_underutilization()
+    if args.datascience:
+      _ = print_report_of_users_with_continual_underutilization("datascience")
+    if args.zero_gpu_utilization:
+      _ = print_report_of_users_with_continual_underutilization("zero_gpu_utilization")
     sys.exit()
 
   # convert slurm timestamps to seconds
