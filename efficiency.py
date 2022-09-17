@@ -59,6 +59,22 @@ def cpu_memory_usage(d, jobid, cluster):
   if total_used > total: print("CPU memory:", jobid, cluster, total_used, total, flush=True)
   return (round(total_used / 1024**3), round(total / 1024**3))
 
+def max_cpu_memory_used_per_node(d, jobid, cluster):
+  total = 0
+  total_used = 0
+  mem_per_node = []
+  for node in d['nodes']:
+    try:
+      used  = d['nodes'][node]['used_memory']
+      alloc = d['nodes'][node]['total_memory']
+    except:
+      print("used_memory not found")
+      return (0, 0)
+    else:
+      mem_per_node.append(used)
+    if used > alloc: print("CPU memory:", jobid, cluster, total_used, total, flush=True)
+  return round(max(mem_per_node) / 1024**3)
+
 def num_gpus_with_zero_util(d):
   ct = 0
   for node in d['nodes']:
