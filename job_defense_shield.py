@@ -858,7 +858,7 @@ def print_report_of_users_with_continual_underutilization(mydir):
     print("No underutilization files found.")
     return None
   today = datetime.now().date()
-  day_ticks = 60
+  day_ticks = 30
   if 1 or args.zero_gpu_utilization:
     print("=====================================================")
     print("           ZERO GPU UTILIZATION EMAILS SENT")
@@ -875,7 +875,7 @@ def print_report_of_users_with_continual_underutilization(mydir):
       row = [today - timedelta(days=i) in hits for i in range(day_ticks)]
       s = " " * (8 - len(netid)) + netid + "@princeton.edu "
       s += ''.join(["X" if r else "_" for r in row])[::-1]
-      print(s)
+      if "X" in s: print(s)
   print("\n=====================================================")
   text = (
           "\nRequestor: <>@princeton.edu\n"
