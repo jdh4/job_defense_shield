@@ -256,6 +256,10 @@ def datascience_node_violators(df):
              #SBATCH --mail-type=begin
              #SBATCH --mail-type=end
              #SBATCH --mail-user={netid}@princeton.edu
+
+          One can also see memory usage information by using the following command:
+
+             $ jobstats {usr.JobID.values[0]}
           
           Replying to this email will open a support ticket with CSES. Let us know if we
           can be of help.
@@ -399,7 +403,7 @@ def get_stats_for_running_job(jobid, cluster):
   import importlib.util
   print("jobid:", jobid, "cluster:", cluster)
   cluster = cluster.replace("tiger", "tiger2")
-  loader = importlib.machinery.SourceFileLoader('jobstats', '/home/jdh4/.local/bin/jobstats') # until remove args.simple
+  loader = importlib.machinery.SourceFileLoader('jobstats', '/usr/local/bin/jobstats')
   spec = importlib.util.spec_from_loader('jobstats', loader)
   mymodule = importlib.util.module_from_spec(spec)
   loader.exec_module(mymodule)
