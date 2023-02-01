@@ -43,6 +43,24 @@ def gpu_efficiency(d, elapsedraw, jobid, cluster, single=False):
   if total_used > total: print("GPU efficiency:", jobid, cluster, total_used, total, flush=True)
   return round(100 * total_used / total, 1) if single else (total_used, total)
 
+def gpu_memory_usage_eff_tuples(d, jobid, cluster):
+  all_gpus = []
+  for node in d['nodes']:
+    try:
+      used  = d['nodes'][node]['gpu_used_memory']
+      alloc = d['nodes'][node]['gpu_total_memory']
+      util  = d['nodes'][node]['gpu_utilization']
+    except:
+      print("GPU memory trouble:", jobid, cluster, flush=True)
+      return [(0, 0, 0)]
+    else:
+      assert sorted(list(used.keys())) == sorted(list(alloc.keys())), "keys do not match"
+      for g in used.keys():
+        all_gpus.append((round(used[g] / 1024**3, 1), round(alloc[g] / 1024**3, 1), float(util[g])))
+        if used[g] > alloc[g]: print("GPU memory:", jobid, cluster, used[g], alloc[g], flush=True)
+        if util[g] > 100 or util[g] < 0: print("GPU util:", jobid, cluster, util[g], flush=True)
+  return all_gpus
+
 def cpu_memory_usage(d, jobid, cluster):
   total = 0
   total_used = 0

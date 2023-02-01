@@ -13,6 +13,7 @@ from datetime import timedelta
 import numpy as np
 import pandas as pd
 from pandas.tseries.holiday import USFederalHolidayCalendar
+from abc import abstractmethod
 
 # jobstats
 import json
@@ -23,6 +24,7 @@ from efficiency import get_stats_dict
 from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
 from efficiency import cpu_memory_usage
+from efficiency import gpu_memory_usage_eff_tuples
 from efficiency import num_gpus_with_zero_util
 from efficiency import max_cpu_memory_used_per_node
 
@@ -337,15 +339,16 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
       s = f"{get_first_name(netid)},\n\n"
-      if (datetime.now().timestamp() - last_write_date.timestamp() >= 6 * HOURS_PER_DAY * SECONDS_PER_HOUR):
+      if (datetime.now().timestamp() - last_write_date.timestamp() >= 7 * HOURS_PER_DAY * SECONDS_PER_HOUR):
         usr = ce[ce.netid == netid].copy()
-        cols = ["netid", f"{xpu}-hours", "proportion(%)", "eff(%)"]
+        cols = ["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs"]
         renamings = {"eff(%)":"Efficiency(%)", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
-                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours"}
+                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours", "jobs":"Jobs"}
         usr = usr[cols].rename(columns=renamings)
         s += "\n\n"
         # make period clear and number of jobs and rank
-        s += "You are heavy user.\n"
+        s += "Over the last 14 days you are one of the heaviest users of {cluster} yet your {xpu.upper()} efficiency\n"
+        s += "is low:\n"
         s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
         s += "\n\n"
         s += "\n"
@@ -892,7 +895,183 @@ def print_report_of_users_with_continual_underutilization(mydir):
       )
   print("\n".join(textwrap.wrap(text, width=80, replace_whitespace=False)))
   return None
- 
+
+
+class Alert:
+  """Base class for all alerts."""
+  def __init__(self, df, days_between_emails, violation, vpath, subject):
+      self.df = df
+      self.days_between_emails = days_between_emails
+      self.violation = violation
+      self.vpath = vpath
+      self.subject = subject
+      self._filter_and_add_new_fields()
+
+  @abstractmethod
+  def _filter_and_add_new_fields(self):
+      """Filter the dataframe and add new fields.
+
+      Returns:
+          None
+      """
+
+  @abstractmethod
+  def send_emails(self):
+      """Send an email to the user.
+
+      Returns:
+          None
+      """
+
+  def update_violation_log(self):
+      if not os.path.exists(f"{self.vpath}/{self.violation}"):
+          os.mkdir(f"{self.vpath}/{self.violation}")
+      for user in self.df.netid.unique():
+          vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+          last_write_date = datetime(1970, 1, 1)
+          if os.path.exists(vfile):
+              last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
+          if (datetime.now().timestamp() - last_write_date.timestamp() >= self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR):
+              usr = self.df[self.df.netid == user].copy()
+              usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+              vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+              if os.path.exists(vfile):
+                  curr = pd.read_csv(vfile)
+                  curr = pd.concat([curr, usr]).drop_duplicates()
+                  curr.to_csv(vfile, index=False, header=True)
+              else:
+                  usr.to_csv(vfile, index=False, header=True)
+
+  @staticmethod
+  def is_work_day(date_today) -> bool:
+      """Determine if today is a normal work day."""
+      cal = USFederalHolidayCalendar()
+      us_holiday = date_today in cal.holidays()
+      pu_holidays = ["2023-05-29", "2023-06-16", "2023-07-04", 
+                     "2023-09-04", "2023-11-23", "2023-11-24",
+                     "2023-12-26", "2024-01-02", "2024-01-15"]
+      pu_holiday = date_today in pu_holidays
+      num_day = datetime.strptime(date_today, "%Y-%m-%d").weekday()
+      return (not us_holiday) and (not pu_holiday) and (num_day < 5)
+
+  def __len__(self):
+      return self.df.shape[0]
+
+  def __str__(self):
+      return self.df.to_string()
+
+
+class MultiInstanceGPU(Alert):
+  def __init__(self, df, days_between_emails, violation, vpath, subject):
+      super().__init__(df, days_between_emails, violation, vpath, subject)
+  def _filter_and_add_new_fields(self):
+      # add new instance variable in next line
+      self.mig_users = set(self.df[self.df.partition == "mig"]["netid"])
+      self.df = self.df[(self.df.cluster == "della") &
+                        (self.df.partition == "gpu") &
+                        (self.df.cores == 1) &
+                        (self.df.gpus == 1) &
+                        (self.df.admincomment != {}) &
+                        (self.df.state != "OUT_OF_MEMORY") &
+                        (self.df["elapsed-hours"] >= 1)].copy()
+      self.df["gpu-memused-memalloc-eff"] = self.df.apply(lambda row:
+                                            gpu_memory_usage_eff_tuples(row["admincomment"],
+                                                                        row["jobid"],
+                                                                        row["cluster"]),
+                                                                        axis="columns")
+      # next three lines are valid since only one GPU per job
+      self.df["gpu-memory-used"]  = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][0])
+      self.df["gpu-memory-alloc"] = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][1])
+      self.df["gpu-eff"]          = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][2])
+
+      # get CPU memory usage
+      self.df["cpu-memused-memalloc"] = self.df.apply(lambda row:
+                                        cpu_memory_usage(row["admincomment"],
+                                                         row["jobid"],
+                                                         row["cluster"]),
+                                                         axis="columns")
+      self.df["cpu-memory-used"] = self.df["cpu-memused-memalloc"].apply(lambda x: x[0])
+      gpu_eff_threshold = 15 # percent
+      gpu_mem_threshold = 10 # GB
+      cpu_mem_threshold = 32 # GB
+      self.df = self.df[(self.df["gpu-eff"] <= gpu_eff_threshold) &
+                        (self.df["gpu-eff"] != 0) &
+                        (self.df["gpu-memory-used"] <= gpu_mem_threshold) &
+                        (self.df["cpu-memory-used"] <= cpu_mem_threshold)]
+      self.df = self.df[["jobid", "netid", "gpu-eff", "gpu-memory-used", "cpu-memory-used", "elapsed-hours"]]
+      #print(self.df["elapsed-hours"].sum())
+      #print(self.df["netid"].unique().size)
+
+  def send_emails(self):
+    for user in self.df.netid.unique():
+        usr = self.df[self.df.netid == user].copy()
+        vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+        last_write_date = datetime(1970, 1, 1)
+        if os.path.exists(vfile):
+            last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
+        if (datetime.now().timestamp() - last_write_date.timestamp() >= self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR):
+          renamings = {"elapsed-hours":"Hours",
+                       "jobid":"JobID",
+                       "netid":"NetID",
+                       "gpu-memory-used":"GPU-Mem-Used",
+                       "cpu-memory-used":"CPU-Mem-Used",
+                       "cpu-hours":"CPU-hours",
+                       "gpu-eff":"GPU-Util"}
+          usr = usr.rename(columns=renamings)
+          usr["CPU-Mem-Used"] = usr["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
+          usr["GPU-Mem-Used"] = usr["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
+          usr["GPU-Util"] = usr["GPU-Util"].apply(lambda x: f"{round(x)}%")
+          s = f"{get_first_name(user)},\n\n"
+          s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
+          s += "\n\n"
+          s += "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+          s += "\n"
+          #if user in self.mig_users: s += "Already using MIG:"
+          s += textwrap.dedent(f"""
+          The jobs above have a low GPU utilization and they use less than 10 GB of GPU
+          memory and less than 32 GB of CPU memory. Such jobs could be run on the MIG GPUs.
+          A MIG GPU is essentially a small A100 GPU with 1/7th the performance and memory of
+          an A100. To run on a MIG GPU, add the partition directive to your Slurm script:
+
+            #SBATCH --nodes=1
+            #SBATCH --ntasks=1
+            #SBATCH --cpus-per-task=1
+            #SBATCH --gres=gpu:1
+            #SBATCH --partition=mig
+
+          For interactive sessions use, for example:
+
+            $ salloc --nodes=1 --ntasks=1 --time=1:00:00 --gres=gpu:1 --partition=mig
+
+          If you are using Jupyter OnDemand then set the "Custom partition" to "mig" when
+          creating the session.
+
+          A job can use a MIG GPU when the following constraints are satisfied:
+
+            1. The required number of GPUs is 1
+            2. The required number of CPU-cores is 1
+            3. The required GPU memory is less than 10 GB
+            4. The required CPU memory is less than 32 GB
+
+          All MIG jobs are automatically allocated 32 GB of CPU memory and 10 GB of GPU
+          memory.
+
+          By running future jobs on the MIG GPUs you will experience shorter queue
+          times and you will help keep A100 GPUs free for jobs that need them. Since
+          your jobs satisfy the above constraints, please use the MIG GPUs. For more:
+
+            https://researchcomputing.princeton.edu/systems/della#gpus
+
+          Replying to this email will open a support ticket with CSES. Let us know if we
+          can be of help.
+          """)
+          date_today = datetime.now().strftime("%Y-%m-%d")
+          if Alert.is_work_day(date_today):
+            send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+            send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+            print(s)
+
+
 
 if __name__ == "__main__":
 
@@ -907,6 +1086,8 @@ if __name__ == "__main__":
                       help='Identify users with low CPU/GPU efficiency')
   parser.add_argument('--datascience', action='store_true', default=False,
                       help='Identify users that unjustly used the datascience nodes')
+  parser.add_argument('--mig', action='store_true', default=False,
+                      help='Identify users that should use MIG')
   parser.add_argument('--fragmentation', action='store_true', default=False,
                       help='Identify users that are splitting jobs across too many nodes')
   parser.add_argument('--low-time-efficiency', action='store_true', default=False,
@@ -938,6 +1119,7 @@ if __name__ == "__main__":
   start_date = datetime.now() - timedelta(days=args.days)
   # jobname must be last in line below to catch "|" chars in raw_dataframe_from_sacct()
   fields = "jobid,user,cluster,account,partition,cputimeraw,elapsedraw,timelimitraw,nnodes,ncpus,alloctres,submit,eligible,start,end,qos,state,admincomment,jobname"
+  assert fields.split(",")[-1] == "jobname"
   renamings = {"user":"netid", "cputimeraw":"cpu-seconds", "nnodes":"nodes", "ncpus":"cores", "timelimitraw":"limit-minutes"}
   numeric_fields = ["cpu-seconds", "elapsedraw", "limit-minutes", "nodes", "cores", "submit", "eligible"]
   raw = raw_dataframe_from_sacct(flags, start_date, fields, renamings, numeric_fields, use_cache=not args.email)
@@ -952,6 +1134,19 @@ if __name__ == "__main__":
   df = df[pd.notnull(df.alloctres) & (df.alloctres != "")]
   df.start = df.start.astype("int64")
   df = add_new_and_derived_fields(df)
+
+  if args.mig:
+    mig = MultiInstanceGPU(df,
+                           days_between_emails=args.days,
+                           violation="should_be_using_mig",
+                           vpath=args.files,
+                           subject="Consider using the MIG GPUs on Della")
+    print(mig)
+    print(len(mig))
+    print(len(mig.mig_users))
+    if args.email:
+      mig.send_emails()
+      mig.update_violation_log()
 
   if not args.email:
     df.info()
@@ -971,6 +1166,10 @@ if __name__ == "__main__":
          ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"), \
          ("tiger", "TigerGPU", ("gpu",), "gpu"), \
          ("traverse", "Traverse (GPU)", ("all",), "gpu"))
+  cls = (("della", "Della (CPU)", ("cpu", "datasci", "physics"), "cpu"), \
+         ("della", "Della (GPU)", ("gpu",), "gpu"))
+
+
   if args.low_time_efficiency:
     ####################################
     ### used allocated cpu/gpu hours ###
