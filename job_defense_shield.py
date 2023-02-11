@@ -255,7 +255,6 @@ def datascience_node_violators(df):
           Add the following lines to your Slurm scripts to receive an email report with
           memory usage information after each job finishes:
 
-             #SBATCH --mail-type=begin
              #SBATCH --mail-type=end
              #SBATCH --mail-user={netid}@princeton.edu
 
@@ -291,7 +290,7 @@ def datascience_node_violators(df):
   cols = ["netid", "jobid", "state", "memory-used", "memory-alloc", "elapsed-hours", "cores", "account", "Large-Memory-Needed?"]
   return ds[cols].sort_values(by="memory-used", ascending=False)
 
-def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
+def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email=False):
   # compute proportion using as much data as possible
   pr = df[(df.cluster == cluster) & (df.partition.isin(partitions)) & pd.notna(df[f"{xpu}-seconds"])].copy()
   pr = pr.groupby("netid").agg({f"{xpu}-seconds":np.sum}).reset_index(drop=False)
@@ -324,70 +323,120 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
   ce["coverage"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / row[f"{xpu}-seconds-all"], 2), axis="columns")
   ce["eff(%)"] = ce["eff(%)"].apply(lambda x: round(x))
   ce["cores"] = ce["cores"].apply(lambda x: round(x, 1))
-  eff_thres = 60 if xpu == "cpu" else 15
-  filters = (ce["eff(%)"] < eff_thres) & (ce["proportion(%)"] >= 4)
-  ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
   ce.index += 1
+  eff_thres = 60 if xpu == "cpu" else 15
+  filters = (ce["eff(%)"] <= eff_thres) & (ce["proportion(%)"] >= 3)
+  de = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]].copy()
+  ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
 
   ###########
   ## EMAIL ##
   ###########
-  if args.email:
+  rank_text = {1:"the most", 2:"the 2nd most", 3:"the 3rd most"}
+  if email:
     for netid in ce.netid:
       vfile = f"{args.files}/low_xpu_efficiency/{netid}.email.csv"
       last_write_date = datetime(1970, 1, 1)
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
       s = f"{get_first_name(netid)},\n\n"
-      if (datetime.now().timestamp() - last_write_date.timestamp() >= 7 * HOURS_PER_DAY * SECONDS_PER_HOUR):
+      if (datetime.now().timestamp() - last_write_date.timestamp() >= 8 * HOURS_PER_DAY * SECONDS_PER_HOUR):
         usr = ce[ce.netid == netid].copy()
-        cols = ["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs"]
-        renamings = {"eff(%)":"Efficiency(%)", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
+        rank = ce.index[ce.netid == netid].tolist()[0]
+        usr[f"{xpu.upper()}-rank"] = f"{rank}/{pr.shape[0]}"
+        usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%") 
+        usr["Partition(s)"] = ",".join(sorted(partitions))
+        cols = ["netid", "Partition(s)", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)"]
+        renamings = {"eff(%)":"Efficiency", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
                      "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours", "jobs":"Jobs"}
         usr = usr[cols].rename(columns=renamings)
-        s += "\n\n"
-        # make period clear and number of jobs and rank
-        s += "Over the last 14 days you are one of the heaviest users of {cluster} yet your {xpu.upper()} efficiency\n"
-        s += "is low:\n"
+        usage = usr["CPU-hours"] if xpu == "cpu" else usr["GPU-hours"]
+        usage = usage.values[0]
+        myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
+        s +=f"Over the last 8 days you have used {myrank} {xpu.upper()}-hours on {cluster_name} but\n"
+        s +=f"your mean {xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
         s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-        s += "\n\n"
         s += "\n"
+        if xpu == "cpu":
+          s += textwrap.dedent(f"""
+          Please investigate the reason(s) for the low efficiency. Common reasons for low
+          {xpu.upper()} efficiency include:
+
+            1. Running a serial code using multiple CPU-cores. Make sure that your code is
+               written to run in parallel before using multiple CPU-cores. Learn more:
+               https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
+
+            2. Using too many CPU-cores for parallel jobs. You can find the optimal number
+               of CPU-cores by performing a scaling analysis:
+               https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
+
+            3. Writing job output to the /tigress or /projects storage systems. Actively
+               running jobs should be writing output files to /scratch/gpfs/{netid} which is
+               a much faster filesystem. For more information:
+               https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
+
+            4. Using the MPICH library instead of an MPI library that was built for our
+               clusters. Some software installed using 'conda' is built against an MPI
+               library that is not optimized for our systems. Run 'conda list' after
+               activating the environment and look for 'mpich' to see if you are using this
+               library.
+
+            5. Using 'mpirun' instead of 'srun' for parallel codes. Please use 'srun'.
+          """)
+        elif xpu == "gpu":
+          s += textwrap.dedent(f"""
+          Please investigate the reason(s) for the low efficiency. Common reasons for low
+          {xpu.upper()} efficiency include:
+
+            1. Misconfigured application scripts. Be sure to read the documentation of the
+               software to make sure that you are using it properly. This includes creating
+               the appropriate software environment. For a general overview of GPU computing:
+               https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
+
+            2. Using an A100 GPU when a MIG GPU would be sufficient. Some codes do not have
+               enough work to keep an A100 GPU busy. If you encounter this on the Della
+               cluster then consider using a MIG GPU:
+               https://researchcomputing.princeton.edu/systems/della#gpus
+
+            3. Training deep learning models using only a single CPU-core. Codes such as
+               PyTorch and TensorFlow show performance benefits when multiple CPU-cores are
+               used for data loading. For PyTorch see:
+               https://researchcomputing.princeton.edu/support/knowledge-base/pytorch#multi
+
+            4. Using too many GPUs for a job. You can find the optimal number of GPUs and
+               CPU-cores by performing a scaling analysis:
+               https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
+
+            5. Writing job output to the /tigress or /projects storage systems. Actively
+               running jobs should be writing output files to /scratch/gpfs/{netid} which is
+               a much faster filesystem. For more information:
+               https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
+
+          """)
         s += textwrap.dedent(f"""
-        Run the jobstats command 
-             https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
+        Consult the documentation or write to the mailing list of the software that you
+        are using for additional reasons for low {xpu.upper()} efficiency and for potential
+        solutions. You may also consider attending a Research Computing help session:
 
-        The most common reasons for low CPU efficiency are:
-
-             1. Using too many CPU-cores for parallel jobs. You can find the optimal number
-                of CPU-cores by performing a scaling analysis:
-                https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
-
-             2. Writing or reading files to/from the /tigress or /projects storage systems.
-                Job output should be written to /scratch/gpfs/{netid} which is a much
-                faster filesystem. For more on the filesystems:
-                https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
-
-             3. Slow MPI calls potentially due to load imbalance. Make sure you are using an environment module
-                and not MPICH from a Conda install.
-             4. Are you using srun in place of mpirun? Binding to cores instead of NUMA nodes.
-
-        Consult the documentation or write to mailing list of the code for additional
-        reasons for low {xpu.upper()} efficiency.
+             https://researchcomputing.princeton.edu/support/help-sessions
         """)
-        s += "\n"
         s += textwrap.dedent(f"""
-        Add the following lines to your Slurm scripts to receive an email report with
-        {xpu.upper()} utilization information after each job finishes:
+        Add the following lines to your Slurm scripts to receive an email report with {xpu.upper()}
+        efficiency information after each job finishes:
 
-             #SBATCH --mail-type=begin
              #SBATCH --mail-type=end
              #SBATCH --mail-user={netid}@princeton.edu
         
+        You can check the efficiency of completed and actively running jobs by using the
+        'jobstats' command:
+
+             https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
+
         Replying to this email will open a support ticket with CSES. Let us know if we
-        can be of help in resolving this matter.
+        can be of help.
         """)
-        send_email(s, "halverson@princeton.edu", subject=f"Low {xpu.upper()} utilization on {cluster}", sender="cses@princeton.edu")
-        #send_email(s,   f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
+        send_email(s, "halverson@princeton.edu", subject=f"Low {xpu.upper()} efficiency on {cluster_name}", sender="cses@princeton.edu")
+        send_email(s,  f"{netid}@princeton.edu", subject=f"Low {xpu.upper()} efficiency on {cluster_name}", sender="cses@princeton.edu")
         usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
         if os.path.exists(vfile):
           curr = pd.read_csv(vfile)
@@ -399,7 +448,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu):
         print(s)
   print("Exiting low efficiency email routine")
   ###########
-  return ce
+  return de
 
 def get_stats_for_running_job(jobid, cluster):
   import importlib.machinery
@@ -546,7 +595,6 @@ def emails_gpu_jobs_zero_util(df):
       Add the following lines to your Slurm scripts to receive an email report with
       GPU utilization information after each job finishes:
 
-           #SBATCH --mail-type=begin
            #SBATCH --mail-type=end
            #SBATCH --mail-user={netid}@princeton.edu
       
@@ -754,7 +802,6 @@ def multinode_cpu_fragmentation(df):
         Add the following lines to your Slurm scripts to receive an email report with
         node information after each job finishes:
 
-          #SBATCH --mail-type=begin
           #SBATCH --mail-type=end
           #SBATCH --mail-user={netid}@princeton.edu
         
@@ -859,30 +906,29 @@ def add_dividers(df, title="", pre="\n\n\n"):
     rows.insert(2, "-" * len(divider))
   return pre + "\n".join(rows)
 
-def print_report_of_users_with_continual_underutilization(mydir):
+def print_report_of_users_with_continual_underutilization(mydir, title, days=30):
   files = sorted(glob.glob(f"{args.files}/{mydir}/*.csv"))
   if len(files) == 0:
-    print("No underutilization files found.")
+    print(f"No underutilization files found in {args.files}/{mydir}")
     return None
   today = datetime.now().date()
-  day_ticks = 30
-  if 1 or args.zero_gpu_utilization:
-    print("=====================================================")
-    print("           ZERO GPU UTILIZATION EMAILS SENT")
-    print("=====================================================")
-    max_netid = max([len(f.split("/")[-1].split(".")[0]) for f in files])
-    print(" " * (max_netid + len("@princeton.edu") + day_ticks - 2) + "today")
-    print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "|")
-    print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "V")
-    for f in files:
-      netid = f.split("/")[-1].split(".")[0]
-      df = pd.read_csv(f)
-      df["when"] = df.email_sent.apply(lambda x: datetime.strptime(x, "%m/%d/%Y %H:%M").date())
-      hits = df.when.unique()
-      row = [today - timedelta(days=i) in hits for i in range(day_ticks)]
-      s = " " * (8 - len(netid)) + netid + "@princeton.edu "
-      s += ''.join(["X" if r else "_" for r in row])[::-1]
-      if "X" in s: print(s)
+  day_ticks = days
+  print("=====================================================")
+  print(f"           {title} EMAILS SENT")
+  print("=====================================================")
+  max_netid = max([len(f.split("/")[-1].split(".")[0]) for f in files])
+  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 2) + "today")
+  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "|")
+  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "V")
+  for f in files:
+    netid = f.split("/")[-1].split(".")[0]
+    df = pd.read_csv(f)
+    df["when"] = df.email_sent.apply(lambda x: datetime.strptime(x, "%m/%d/%Y %H:%M").date())
+    hits = df.when.unique()
+    row = [today - timedelta(days=i) in hits for i in range(day_ticks)]
+    s = " " * (8 - len(netid)) + netid + "@princeton.edu "
+    s += ''.join(["X" if r else "_" for r in row])[::-1]
+    if "X" in s: print(s)
   print("\n=====================================================")
   text = (
           "\nRequestor: <>@princeton.edu\n"
@@ -893,7 +939,7 @@ def print_report_of_users_with_continual_underutilization(mydir):
           "If you fail to take action then we will be forced to suspend your account and notify"
           "your sponsor. The GPUs are valuable resources."
       )
-  print("\n".join(textwrap.wrap(text, width=80, replace_whitespace=False)))
+  #print("\n".join(textwrap.wrap(text, width=80, replace_whitespace=False)))
   return None
 
 
@@ -996,8 +1042,8 @@ class MultiInstanceGPU(Alert):
       cpu_mem_threshold = 32 # GB
       self.df = self.df[(self.df["gpu-eff"] <= gpu_eff_threshold) &
                         (self.df["gpu-eff"] != 0) &
-                        (self.df["gpu-memory-used"] <= gpu_mem_threshold) &
-                        (self.df["cpu-memory-used"] <= cpu_mem_threshold)]
+                        (self.df["gpu-memory-used"] < gpu_mem_threshold) &
+                        (self.df["cpu-memory-used"] < cpu_mem_threshold)]
       self.df = self.df[["jobid", "netid", "gpu-eff", "gpu-memory-used", "cpu-memory-used", "elapsed-hours"]]
       #print(self.df["elapsed-hours"].sum())
       #print(self.df["netid"].unique().size)
@@ -1030,8 +1076,8 @@ class MultiInstanceGPU(Alert):
           s += textwrap.dedent(f"""
           The jobs above have a low GPU utilization and they use less than 10 GB of GPU
           memory and less than 32 GB of CPU memory. Such jobs could be run on the MIG GPUs.
-          A MIG GPU is essentially a small A100 GPU with 1/7th the performance and memory of
-          an A100. To run on a MIG GPU, add the partition directive to your Slurm script:
+          A MIG GPU is essentially a small A100 GPU with 1/7th the performance and memory
+          of an A100. To run on a MIG GPU, add the partition directive to your Slurm script:
 
             #SBATCH --nodes=1
             #SBATCH --ntasks=1
@@ -1061,6 +1107,11 @@ class MultiInstanceGPU(Alert):
           your jobs satisfy the above constraints, please use the MIG GPUs. For more:
 
             https://researchcomputing.princeton.edu/systems/della#gpus
+
+
+          As an alternative to MIG, you may consider trying to improve the GPU
+          utilization of your code. A good place is start is the mailing list of
+          the software you are using.
 
           Replying to this email will open a support ticket with CSES. Let us know if we
           can be of help.
@@ -1096,6 +1147,8 @@ if __name__ == "__main__":
                       help='Path to the underutilization files')
   parser.add_argument('--email', action='store_true', default=False,
                       help='Send output via email')
+  parser.add_argument('--watch', action='store_true', default=False,
+                      help='Send output via email to halverson@princeton.edu')
   parser.add_argument('--check', action='store_true', default=False,
                       help='Create report of users who may be ignoring the automated emails')
   args = parser.parse_args()
@@ -1107,9 +1160,13 @@ if __name__ == "__main__":
 
   if args.check:
     if args.datascience:
-      _ = print_report_of_users_with_continual_underutilization("datascience")
+      _ = print_report_of_users_with_continual_underutilization("datascience", "DATASCIENCE")
     if args.zero_gpu_utilization:
-      _ = print_report_of_users_with_continual_underutilization("zero_gpu_utilization")
+      _ = print_report_of_users_with_continual_underutilization("zero_gpu_utilization", "ZERO GPU UTILIZATION")
+    if args.mig:
+      _ = print_report_of_users_with_continual_underutilization("should_be_using_mig", "       MIG")
+    if args.low-xpu-efficiency:
+      _ = print_report_of_users_with_continual_underutilization("low_xpu_efficiency", "LOW EFFICIENCY")
     sys.exit()
 
   # convert slurm timestamps to seconds
@@ -1127,6 +1184,7 @@ if __name__ == "__main__":
   raw = raw[~raw.cluster.isin(["tukey", "perseus"])]
   raw.cluster   =   raw.cluster.str.replace("tiger2", "tiger")
   raw.partition = raw.partition.str.replace("datascience", "datasci")
+  raw = raw[pd.notna(raw.state)]
   raw.state = raw.state.apply(lambda x: "CANCELLED" if "CANCEL" in x else x)
 
   # df excludes pending jobs
@@ -1166,33 +1224,32 @@ if __name__ == "__main__":
          ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"), \
          ("tiger", "TigerGPU", ("gpu",), "gpu"), \
          ("traverse", "Traverse (GPU)", ("all",), "gpu"))
-  cls = (("della", "Della (CPU)", ("cpu", "datasci", "physics"), "cpu"), \
+  cls = (("della", "Della (CPU)", ("cpu",), "cpu"),)
+  cls = (("della", "Della (CPU)", ("cpu",), "cpu"), \
+         ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
+         ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"), \
          ("della", "Della (GPU)", ("gpu",), "gpu"))
-
-
-  if args.low_time_efficiency:
-    ####################################
-    ### used allocated cpu/gpu hours ###
-    ####################################
-    s += "           Unused allocated CPU/GPU-Hours (of COMPLETED 2+ hour jobs)"
-    for cluster, name, partitions, xpu in cls:
-      un = unused_allocated_hours_of_completed(df, cluster, partitions, xpu)
-      if not un.empty:
-        df_str = un.to_string(index=True, justify="center")
-        s += add_dividers(df_str, title=name, pre="\n\n")
-
-  ####### consider jobs in the last N days only #######
-  #thres_days = 7
-  #df = df[df.start >= time.time() - thres_days * HOURS_PER_DAY * SECONDS_PER_HOUR]
-  #s += f"\n\n\n            --- the next set of tables below is for the last {thres_days} days ---"
 
   if args.low_xpu_efficiency:
     ##########################
     ### cpu/gpu efficiency ###
     ##########################
     s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
-    for cluster, name, partitions, xpu in cls:
-      un = xpu_efficiencies_of_heaviest_users(df, cluster, partitions, xpu)
+    for cluster, cluster_name, partitions, xpu in cls:
+      un = xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, args.email)
+      if not un.empty:
+        df_str = un.to_string(index=True, justify="center")
+        s += add_dividers(df_str, title=cluster_name, pre="\n\n")
+    if args.watch:
+      send_email(s, "halverson@princeton.edu", subject="XPU", sender="cses@princeton.edu")
+
+  if args.low_time_efficiency:
+    ####################################
+    ### used allocated cpu/gpu hours ###
+    ####################################
+    s += "           Unused allocated CPU/GPU-Hours (of COMPLETED 2+ hour jobs)"
+    for cluster, cluster_name, partitions, xpu in cls:
+      un = unused_allocated_hours_of_completed(df, cluster, cluster_name, partitions, xpu)
       if not un.empty:
         df_str = un.to_string(index=True, justify="center")
         s += add_dividers(df_str, title=name, pre="\n\n")
