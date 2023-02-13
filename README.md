@@ -86,6 +86,7 @@ The requirements are:
 
 - Python 3.7 or above  
 - Pandas  
+- jobstats (if looking to send emails about actively running jobs)  
 
 You can run the script on `tigergpu` using the `jds-bin` in `/home/jdh4/bin`. The Conda environment was create in this way:
 
