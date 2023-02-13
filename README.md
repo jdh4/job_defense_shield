@@ -2,15 +2,16 @@
 
 The software in this repo creates a report of problem users and problem jobs on the large Research Computing clusters. The software identifies the following:
 
++ actively running jobs where a GPU has zero utilization  
 + the heaviest users with low CPU or GPU utilization  
++ jobs that use the datascience nodes but do not need them  
++ jobs that could have been run on MIG GPUs instead of full A100 GPUs  
 + multinode CPU jobs where one or more nodes have zero utilization  
-+ multi-GPU jobs where one or more GPUs have zero utilization  
 + users that have been over-allocating CPU or GPU time  
 + jobs with CPU or GPU fragmentation (e.g., 1 GPU per node over 4 nodes)  
 + jobs with the most CPU-cores and jobs with the most GPUs  
-+ jobs with the longest queue times  
++ pending jobs with the longest queue times  
 + jobs that request more than the default memory but do not use it  
-+ users (G1 and G2) with all failed jobs on the last day they submitted  
 
 The script does not identify:
 + abuses of file storage or I/O  
@@ -19,22 +20,33 @@ The script does not identify:
 ## How to run
 
 ```
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --files /tigress/jdh4/utilities/job_defense_shield/violations --email
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --zero-gpu-utilization --low-gpu-efficiencies --datascience --gpu-fragmentation --email
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --all --files /tigress/jdh4/utilities/job_defense_shield/violations --email
+$ ./job_defense_shield.py --email \
+                          --days=3 \
+                          --zero-gpu-utilization \
+                          --files /tigress/jdh4/utilities/job_defense_shield/violations
+                          
+$ ./job_defense_shield.py --email \
+                          --watch \
+                          --zero-gpu-utilization \
+                          --low-gpu-efficiencies \ 
+                          --datascience \
+                          --gpu-fragmentation                          
 ```
 
 The data science nodes are checked once per day:
 
 ```
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --files /tigress/jdh4/utilities/job_defense_shield/violations --datascience --email
+$ ./job_defense_shield.py --email \
+                          --datascience \
+                          --days=7 \
+                          --files /tigress/jdh4/utilities/job_defense_shield/violations                          
 ```
 
 ## Which users are ignoring the automated emails?
 
 ```
-$ /home/jdh4/bin/jds-env/bin/python /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check --zero-gpu-utilization
-$ /home/jdh4/bin/jds-env/bin/python /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check-all
+$ ./job_defense_shield.py --check \
+                          --zero-gpu-utilization
 ```
 
 ## What to do after writing to a user?
