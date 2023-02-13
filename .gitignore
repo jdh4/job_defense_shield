@@ -1,5 +1,4 @@
 *.csv
-*.log
-dossier.py
-__pycache__
-violations
+__pycache__/
+violations/
+log/
