@@ -28,7 +28,7 @@ $ ./job_defense_shield.py --email \
 $ ./job_defense_shield.py --email \
                           --watch \
                           --zero-gpu-utilization \
-                          --low-gpu-efficiencies \ 
+                          --low-xpu-efficiencies \ 
                           --datascience \
                           --gpu-fragmentation                          
 ```
@@ -45,8 +45,7 @@ $ ./job_defense_shield.py --email \
 ## Which users are ignoring the automated emails?
 
 ```
-$ ./job_defense_shield.py --check \
-                          --zero-gpu-utilization
+$ ./job_defense_shield.py --check --zero-gpu-utilization
 ```
 
 ## What to do after writing to a user?
@@ -54,13 +53,12 @@ $ ./job_defense_shield.py --check \
 The event must be logged so that when `--check` it does not suggest writing again to the user. The next line will write to the dataframe indicating that a new email is not needed:
 
 ```
-$ /home/jdh4/bin/jds-bin/python job_defense_shield.py --resolved ab1234 --violation zero-gpu
+$ ./job_defense_shield.py --resolved --netid aturing --violation zero-gpu-utilization
 ```
 
 ### Notes for developers
 
 - As Slurm partitions are added and removed the script should be updated  
-- dossier.py comes from [here](https://github.com/jdh4/tigergpu_visualization)
 - For jdh4, the git repo is /tigress/jdh4/utilities/job_defense_shield
 
 ### How to use
@@ -68,10 +66,9 @@ $ /home/jdh4/bin/jds-bin/python job_defense_shield.py --resolved ab1234 --violat
 Run the commands below on a login node (e.g., tigergpu) to execute the script:
 
 ```bash
-$ wget https://raw.githubusercontent.com/jdh4/job_defense_shield/main/job_defense_shield.py
-$ wget https://raw.githubusercontent.com/jdh4/tigergpu_visualization/master/dossier.py
-$ module load anaconda3/2021.11
-$ python job_defense_shield.py
+$ git clone https://github.com/jdh4/job_defense_shield.git
+$ module load anaconda3/2022.5
+$ ./job_defense_shield.py
 ```
 
 ###  Gotchas
@@ -109,7 +106,7 @@ envs_dirs:
 ```
 
 ```
-$ module load anaconda3/2021.5
+$ module load anaconda3/2022.5
 $ conda create --name jds-env numpy pandas blessed requests -c conda-forge -y
 ```
 
