@@ -20,7 +20,7 @@ def large_memory_needed(usage, account, safety=1.0):
   else:
     return "No"
 
-def datascience_node_violators(df, email):
+def datascience_node_violators(df, email, vpath):
   ds = df[(df.cluster == "della") &
           (df.partition == "datasci") &
           (df.state != "OUT_OF_MEMORY") &
@@ -44,7 +44,7 @@ def datascience_node_violators(df, email):
       is_physics = "physics" in usr.account.unique().tolist()
       small_physics = usr[usr["memory-alloc"] < 380].shape[0]
       if bad_jobs > 0:
-        vfile = f"{args.files}/datascience/{netid}.email.csv"
+        vfile = f"{vpath}/datascience/{netid}.email.csv"
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
           last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))

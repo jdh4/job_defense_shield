@@ -11,7 +11,7 @@ from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
 from pandas.tseries.holiday import USFederalHolidayCalendar # tdo check for holiday
 
-def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email=False):
+def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email, vpath):
   # compute proportion using as much data as possible
   pr = df[(df.cluster == cluster) & (df.partition.isin(partitions)) & pd.notna(df[f"{xpu}-seconds"])].copy()
   pr = pr.groupby("netid").agg({f"{xpu}-seconds":np.sum}).reset_index(drop=False)
@@ -53,9 +53,10 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
   if email:
     rank_text = {1:"the most", 2:"the 2nd most", 3:"the 3rd most"}
     for netid in ce.netid:
-      vfile = f"{args.files}/low_xpu_efficiency/{netid}.email.csv"
+      vfile = f"{vpath}/low_xpu_efficiency/{netid}.email.csv"
       last_write_date = datetime(1970, 1, 1)
       if os.path.exists(vfile):
+        # instead of next line, could read datetime from last line and use that
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
       s = f"{get_first_name(netid)},\n\n"
       if (datetime.now().timestamp() - last_write_date.timestamp() >= 8 * HOURS_PER_DAY * SECONDS_PER_HOUR):
@@ -63,10 +64,13 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
         rank = ce.index[ce.netid == netid].tolist()[0]
         usr[f"{xpu.upper()}-rank"] = f"{rank}/{pr.shape[0]}"
         usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%") 
-        usr["Partition(s)"] = ",".join(sorted(partitions))
-        cols = ["netid", "Partition(s)", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)"]
+        usr["Partition(s)"] = ",".join(sorted(partitions))  # TDO: should be the partitions that were used
+        if xpu == "cpu":
+          cols = ["netid", "Partition(s)", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)", "cores"]
+        if xpu == "gpu":
+          cols = ["netid", "Partition(s)", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)"]
         renamings = {"eff(%)":"Efficiency", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
-                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours", "jobs":"Jobs"}
+                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours", "jobs":"Jobs", "cores":"AvgCores"}
         usr = usr[cols].rename(columns=renamings)
         usage = usr["CPU-hours"] if xpu == "cpu" else usr["GPU-hours"]
         usage = usage.values[0]
@@ -129,7 +133,6 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
                running jobs should be writing output files to /scratch/gpfs/{netid} which is
                a much faster filesystem. For more information:
                https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
-
           """)
         s += textwrap.dedent(f"""
         Consult the documentation or write to the mailing list of the software that you

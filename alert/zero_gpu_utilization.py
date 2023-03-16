@@ -36,7 +36,7 @@ def get_stats_for_running_job(jobid, cluster):
   sleep(0.5)
   return eval(stats.report_job_json(False))
 
-def active_gpu_jobs_with_zero_utilization(df, email):
+def active_gpu_jobs_with_zero_utilization(df, email, vpath):
   fltr = ((df.cluster == "della")    & (df.partition == "gpu")) | \
          ((df.cluster == "traverse") & (df.partition == "all"))
   em = df[fltr & \
@@ -55,7 +55,7 @@ def active_gpu_jobs_with_zero_utilization(df, email):
 
   if email:
     for netid in em.NetID.unique():
-      vfile = f"{args.files}/zero_gpu_utilization/{netid}.violations.email.csv"
+      vfile = f"{vpath}/zero_gpu_utilization/{netid}.violations.email.csv"
       last_write_date = datetime(1970, 1, 1).date()
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
@@ -173,7 +173,7 @@ def active_gpu_jobs_with_zero_utilization(df, email):
              #SBATCH --mail-user={netid}@princeton.edu
         
         Replying to this email will open a support ticket with CSES. Let us know if we
-        can be of help in resolving this matter.
+        can be of help.
         """)
 
         # send email and append violation file
@@ -183,7 +183,7 @@ def active_gpu_jobs_with_zero_utilization(df, email):
         pu_holidays = ["2022-07-05", "2022-11-25", "2022-12-23", "2022-12-26", "2022-12-30", "2023-01-02",
                        "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19"]
         pu_holiday = date_today in pu_holidays
-        if us_holiday and not pu_holiday:
+        if not us_holiday and not pu_holiday:
           send_email(s,  f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
           send_email(s, "halverson@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
           usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")

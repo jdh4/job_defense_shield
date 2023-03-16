@@ -1,4 +1,5 @@
 import math
+import pandas as pd
 from efficiency import cpu_memory_usage
 from efficiency import max_cpu_memory_used_per_node
 from efficiency import gpu_efficiency
@@ -36,7 +37,7 @@ def min_nodes_needed(cluster, partition, nodes, cores, max_mem_used_per_node):
   else:
     return nodes
 
-def multinode_cpu_fragmentation(df):
+def multinode_cpu_fragmentation(df, email, vpath):
   cols = ["jobid", "netid", "cluster", "nodes", "cores", "state", "partition", "elapsed-hours", "start-date", "start", "admincomment"]
   fr = df[(df["elapsed-hours"] >= 1) &
           (df["admincomment"] != {}) &
@@ -63,9 +64,9 @@ def multinode_cpu_fragmentation(df):
   print(fr[["jobid", "netid", "cluster", "min-nodes", "nodes", "cores", "cores-per-node", "mean-memory-used-per-node", "max-memory-used-per-node", "hours"]].to_string(index=False))
 
   ### EMAIL
-  if 0 and args.email:
+  if 0 and email:
     for netid in fr.netid:
-      vfile = f"{args.files}/fragmentation/{netid}.email.csv"
+      vfile = f"{vpath}/fragmentation/{netid}.email.csv"
       last_write_date = datetime(1970, 1, 1)
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
