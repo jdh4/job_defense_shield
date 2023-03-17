@@ -152,8 +152,12 @@ class Alert:
       self.days_between_emails = days_between_emails
       self.violation = violation
       self.vpath = vpath
+      self.vbase = os.path.join(self.vpath, self.violation)
       self.subject = subject
       self._filter_and_add_new_fields()
+      # create directory to store user violations
+      if not os.path.exists(self.vbase):
+          os.mkdir(self.vbase)
 
   @abstractmethod
   def _filter_and_add_new_fields(self):
@@ -387,10 +391,10 @@ class ZeroUtilGPUHours(Alert):
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
-                  This automated email has opened a support ticket with Research Computing. Please
-                  reply to this message if you would like assistance.
+                  Replying to this email will open a support ticket with CSES. Let us know if we
+                  can be of help.
                   """)
-                  send_email(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                  send_email(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="halverson@princeton.edu")
                   send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                   print(s)
 
@@ -398,7 +402,86 @@ class ZeroUtilGPUHours(Alert):
                   Alert.update_violation_log(usr, vfile)
 
   def send_report_to_admins(self):
-      return self.gp.head(5).to_string()
+      return self.gp.head(10).to_string()
+
+
+class MultinodeGPUFragmentation(Alert):
+
+  def __init__(self, df, days_between_emails, violation, vpath, subject):
+      super().__init__(df, days_between_emails, violation, vpath, subject)
+
+  def _filter_and_add_new_fields(self):
+      # filter the dataframe
+      self.df = self.df[(self.df.cluster == "della") &
+                        (self.df.partition == "gpu") &
+                        (self.df.gpus > 0) &
+                        (self.df.nodes > 1) &
+                        (self.df.nodes == self.df.gpus) &
+                        (self.df["elapsed-hours"] >= 1)].copy()
+      if not self.df.empty:
+          self.df["GPU-eff"] = self.df.apply(lambda row:
+                                             gpu_efficiency(row["admincomment"],
+                                                            row["elapsedraw"],
+                                                            row["jobid"],
+                                                            row["cluster"], single=True)
+                                             if row["admincomment"] != {} else 999, axis="columns")
+          self.gpu_util_thres = 50
+          self.has_low_gpu_util = bool(self.df[self.df["GPU-eff"] < self.gpu_util_thres].shape[0])
+          self.df["GPU-eff"] = self.df["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
+          self.df["GPUs-per-Node"] = 1
+          self.df = self.df[["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "GPU-eff"]]
+
+  def send_emails_to_users(self, emails):
+      if emails and Alert.is_today_a_work_day() and not self.df.empty:
+          for user in self.df.netid.unique():
+              vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+              if self.has_sufficient_time_passed_since_last_email(vfile):
+                  usr = self.df[self.df.netid == user].copy()
+                  renamings = {"netid":"NetID",
+                               "jobid":"JobID",
+                               "nodes":"Nodes",
+                               "gpus":"GPUs",
+                               "elapsed-hours":"Hours"}
+                  usr = usr.rename(columns=renamings)
+                  edays = self.days_between_emails
+                  s =  f"{get_first_name(user)},\n\n"
+                  s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
+                  s +=  "over multiple nodes:\n\n"
+                  s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+                  if self.has_low_gpu_util:
+                      s +=  "\n\n"
+                      s += f"There is at least one job with a GPU efficiency of less than {self.gpu_util_thres}%. In these cases\n"
+                      s +=  "please consider using only 1 GPU per job to improve the efficiency."
+                  s += "\n"
+                  s += textwrap.dedent(f"""
+                  The GPU nodes on Della have either 2 GPUs per node or 4 GPUs per node. For future
+                  jobs, please try to use as few nodes as possible by allocating more GPUs per node.
+                  This is done by modifying the --gres Slurm directive:
+
+                    https://researchcomputing.princeton.edu/support/knowledge-base/slurm#gpus
+
+                  For more information about the Della GPU nodes:
+
+                    https://researchcomputing.princeton.edu/systems/della#gpus
+
+                  When using more than 1 GPU per job, be sure to conduct a scaling analysis to find
+                  the optimal number of GPUs:
+
+                    https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
+
+                  Replying to this email will open a support ticket with CSES. Let us know if we
+                  can be of help.
+                  """)
+                  send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                  send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                  print(s)
+
+                  # append the new violations to the log file
+                  Alert.update_violation_log(usr, vfile)
+
+  def send_report_to_admins(self):
+      return self.df.to_string()
+
 
 
 if __name__ == "__main__":
@@ -508,22 +591,32 @@ if __name__ == "__main__":
   s += f"Total jobs:  {raw.shape[0]}\n\n"
 
   if args.mig:
-    mig = MultiInstanceGPU(df,
-                           days_between_emails=args.days,
-                           violation="should_be_using_mig",
-                           vpath=args.files,
-                           subject="Consider Using the MIG GPUs on Della")
-    mig.send_emails_to_users(args.email)
+      mig = MultiInstanceGPU(df,
+                             days_between_emails=args.days,
+                             violation="should_be_using_mig",
+                             vpath=args.files,
+                             subject="Consider Using the MIG GPUs on Della")
+      mig.send_emails_to_users(args.email)
 
   if args.zero_gpu_util_hours:
-    zero_gpu_hours = ZeroUtilGPUHours(df,
-                           days_between_emails=args.days,
-                           violation="zero_util_gpu_hours",
-                           vpath=args.files,
-                           subject="Many GPU-Hours with Zero GPU Utilization on Della")
-    zero_gpu_hours.send_emails_to_users(args.email)
-    s += "\n\n\n           Zero Utilization GPU-Hours"
-    s += zero_gpu_hours.send_report_to_admins()
+      zero_gpu_hours = ZeroUtilGPUHours(df,
+                             days_between_emails=args.days,
+                             violation="zero_util_gpu_hours",
+                             vpath=args.files,
+                             subject="Many GPU-Hours with Zero GPU Utilization on Della")
+      zero_gpu_hours.send_emails_to_users(args.email)
+      s += add_dividers(zero_gpu_hours.send_report_to_admins(),
+                        title="Zero Utilization GPU-Hours (of COMPLETED 1+ Hour Jobs)")
+
+  if args.gpu_fragmentation:
+      gpu_frag = MultinodeGPUFragmentation(df,
+                             days_between_emails=args.days,
+                             violation="gpu_fragmentation",
+                             vpath=args.files,
+                             subject="Fragmented GPU Jobs on Della")
+      gpu_frag.send_emails_to_users(args.email)
+      s += add_dividers(gpu_frag.send_report_to_admins(),
+                        title="Multinode GPU jobs with fragmentation (all jobs, 1+ hours)")
 
   if not args.email:
     df.info()
@@ -565,11 +658,11 @@ if __name__ == "__main__":
 
   if args.zero_gpu_utilization:
     em = active_gpu_jobs_with_zero_utilization(df, args.email, args.files)
-    if not em.empty:
+    if False and not em.empty:
       df_str = em.to_string(index=True, justify="center")
       s += add_dividers(df_str, title="ZERO GPU", pre="\n\n")
 
-  if True:
+  if False:
     name = "    Zero utilization on a GPU (1+ hour jobs, ignoring running)"
     zu = gpu_jobs_zero_util(df)
     if not zu.empty:
@@ -596,15 +689,9 @@ if __name__ == "__main__":
       df_str = fg.to_string(index=False, justify="center")
       s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n")
  
-  if args.gpu_fragmentation:
-    fg = multinode_gpu_fragmentation(df)
-    if not fg.empty:
-      df_str = fg.to_string(index=False, justify="center")
-      s += add_dividers(df_str, title="Multinode GPU jobs with fragmentation (all jobs, 2+ hours)")
-
   if args.datascience:
     ds = datascience_node_violators(df, args.email, args.files)
-    if not ds.empty:
+    if False and not ds.empty:
       df_str = ds.to_string(index=False, justify="center")
       s += add_dividers(df_str, title="Datascience jobs that didn't need to be (all jobs, 1+ hours)", pre="\n\n\n")
 
