@@ -179,6 +179,15 @@ class Alert:
           None
       """
 
+  def has_sufficient_time_passed_since_last_email(self, vfile) -> bool:
+      """Return boolean specifying whether sufficient time has passed."""
+      last_write_date = datetime(1970, 1, 1)
+      if os.path.exists(vfile):
+          last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
+      seconds_since_last_email = datetime.now().timestamp() - last_write_date.timestamp()
+      seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR
+      return seconds_since_last_email >= seconds_threshold
+
   def __len__(self):
       return self.df.shape[0]
 
@@ -199,20 +208,10 @@ class Alert:
       return (not us_holiday) and (not pu_holiday) and (day_of_week < 5)
 
   @staticmethod
-  def has_sufficient_time_passed_since_last_email(vfile) -> bool:
-      """Return boolean specifying whether sufficient time has passed."""
-      last_write_date = datetime(1970, 1, 1)
-      if os.path.exists(vfile):
-          last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
-      seconds_since_last_email = datetime.now().timestamp() - last_write_date.timestamp()
-      seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR
-      return seconds_since_last_email >= seconds_threshold
-
-  @staticmethod
   def update_violation_log(usr, vfile) -> None:
       """Append the new violations to file."""
       usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
-      if os.path.exists(usr, vfile):
+      if os.path.exists(vfile):
           curr = pd.read_csv(vfile)
           curr = pd.concat([curr, usr]).drop_duplicates()
           curr.to_csv(vfile, index=False, header=True)
@@ -221,11 +220,12 @@ class Alert:
 
 
 class MultiInstanceGPU(Alert):
+
   def __init__(self, df, days_between_emails, violation, vpath, subject):
       super().__init__(df, days_between_emails, violation, vpath, subject)
+
   def _filter_and_add_new_fields(self):
-      # add new instance variable in next line
-      self.mig_users = set(self.df[self.df.partition == "mig"]["netid"])
+      # filter the dataframe
       self.df = self.df[(self.df.cluster == "della") &
                         (self.df.partition == "gpu") &
                         (self.df.cores == 1) &
@@ -233,6 +233,7 @@ class MultiInstanceGPU(Alert):
                         (self.df.admincomment != {}) &
                         (self.df.state != "OUT_OF_MEMORY") &
                         (self.df["elapsed-hours"] >= 1)].copy()
+      # add new fields
       self.df["gpu-memused-memalloc-eff"] = self.df.apply(lambda row:
                                             gpu_memory_usage_eff_tuples(row["admincomment"],
                                                                         row["jobid"],
@@ -242,8 +243,7 @@ class MultiInstanceGPU(Alert):
       self.df["gpu-memory-used"]  = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][0])
       self.df["gpu-memory-alloc"] = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][1])
       self.df["gpu-eff"]          = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][2])
-
-      # get CPU memory usage
+      # add CPU memory usage
       self.df["cpu-memused-memalloc"] = self.df.apply(lambda row:
                                         cpu_memory_usage(row["admincomment"],
                                                          row["jobid"],
@@ -258,14 +258,12 @@ class MultiInstanceGPU(Alert):
                         (self.df["gpu-memory-used"] < gpu_mem_threshold) &
                         (self.df["cpu-memory-used"] < cpu_mem_threshold)]
       self.df = self.df[["jobid", "netid", "gpu-eff", "gpu-memory-used", "cpu-memory-used", "elapsed-hours"]]
-      #print(self.df["elapsed-hours"].sum())
-      #print(self.df["netid"].unique().size)
 
   def send_emails_to_users(self, emails):
       if emails and Alert.is_today_a_work_day():
           for user in self.df.netid.unique():
               vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
-              if Alert.has_sufficient_time_passed_since_last_email(vfile):
+              if self.has_sufficient_time_passed_since_last_email(vfile):
                   usr = self.df[self.df.netid == user].copy()
                   renamings = {"elapsed-hours":"Hours",
                                "jobid":"JobID",
@@ -283,7 +281,6 @@ class MultiInstanceGPU(Alert):
                   s += "\n\n"
                   s += "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
                   s += "\n"
-                  #if user in self.mig_users: s += "Already using MIG:"
                   s += textwrap.dedent(f"""
                   The jobs above have a low GPU utilization and they use less than 10 GB of GPU
                   memory and less than 32 GB of CPU memory. Such jobs could be run on the MIG
@@ -335,6 +332,75 @@ class MultiInstanceGPU(Alert):
                   Alert.update_violation_log(usr, vfile)
                   
 
+class ZeroUtilGPUHours(Alert):
+
+  def __init__(self, df, days_between_emails, violation, vpath, subject):
+      super().__init__(df, days_between_emails, violation, vpath, subject)
+
+  def _filter_and_add_new_fields(self):
+      # filter the dataframe
+      self.df = self.df[(self.df.cluster == "della") &
+                        (self.df.partition == "gpu") &
+                        (self.df.gpus > 0) &
+                        (self.df.admincomment != {}) &
+                        (self.df["elapsedraw"] >= SECONDS_PER_HOUR)].copy()
+      # add new fields
+      self.df["gpus-unused"] = self.df.admincomment.apply(num_gpus_with_zero_util)
+      self.df = self.df[self.df["gpus-unused"] > 0]
+      self.df["zero-util-hours"] = self.df["gpus-unused"] * self.df["elapsedraw"] / SECONDS_PER_HOUR
+      self.df["GPU-Unused-Util"] = "0%"
+      self.df = self.df[["jobid", "netid", "gpus", "gpus-unused", "GPU-Unused-Util", "zero-util-hours"]]
+      # for each user sum the number of GPU-hours with zero GPU utilization
+      self.gp = self.df.groupby("netid").agg({"zero-util-hours":np.sum, "netid":np.size})
+      self.gp = self.gp.rename(columns={"netid":"jobs"})
+      self.gp = self.gp.sort_values(by="zero-util-hours", ascending=False).reset_index(drop=False)
+      self.gp = self.gp[self.gp["zero-util-hours"] >= 100]
+      self.df["zero-util-hours"] = self.df["zero-util-hours"].apply(round)
+
+  def send_emails_to_users(self, emails):
+      if emails and Alert.is_today_a_work_day():
+          for user in self.gp.netid.unique():
+              vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+              if self.has_sufficient_time_passed_since_last_email(vfile):
+                  usr = self.df[self.df.netid == user].copy()
+                  renamings = {"zero-util-hours":"Zero-Util-GPU-Hours",
+                               "jobid":"JobID",
+                               "netid":"NetID",
+                               "gpus-unused":"GPUs-Unused",
+                               "gpus":"GPUs"}
+                  usr = usr.rename(columns=renamings)
+                  zero_hours = round(self.gp[self.gp.netid == user]["zero-util-hours"].values[0])
+                  s =  f"Requestor: {user}@princeton.edu\n\n"
+                  s += f"{get_first_name(user)},\n\n"
+                  s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
+                  s +=  "Della. This is a waste of valuable resources. Please monitor your jobs using the\n"
+                  s +=  "\"jobstats\" command or the web interface:\n\n"
+                  s +=  "  https://researchcomputing.princeton.edu/support/knowledge-base/job-stats\n\n"
+                  s +=  "Below are the jobs with 0% GPU utilization:\n\n"
+                  s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+                  s +=  "\n"
+                  s += textwrap.dedent(f"""
+                  Please investigate the reason for the GPUs not being used. For instance, is the
+                  code GPU-enabled? Can you use a MIG GPU instead of a full A100?
+
+                  For general information about GPU computing at Princeton:
+
+                    https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
+
+                  This automated email has opened a support ticket with Research Computing. Please
+                  reply to this message if you would like assistance.
+                  """)
+                  send_email(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                  send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                  print(s)
+
+                  # append the new violations to the log file
+                  Alert.update_violation_log(usr, vfile)
+
+  def send_report_to_admins(self):
+      return self.gp.head(5).to_string()
+
+
 if __name__ == "__main__":
 
   parser = argparse.ArgumentParser(description='Slurm job alerts')
@@ -344,6 +410,8 @@ if __name__ == "__main__":
                       help='Identify CPU jobs with zero utilization')
   parser.add_argument('--zero-gpu-utilization', action='store_true', default=False,
                       help='Identify running GPU jobs with zero utilization')
+  parser.add_argument('--zero-gpu-util-hours', action='store_true', default=False,
+                      help='Identify users with the most zero GPU utilization hours')
   parser.add_argument('--low-xpu-efficiency', action='store_true', default=False,
                       help='Identify users with low CPU/GPU efficiency')
   parser.add_argument('--datascience', action='store_true', default=False,
@@ -387,10 +455,33 @@ if __name__ == "__main__":
 
   flags = "-L -a -X -P -n"
   start_date = datetime.now() - timedelta(days=args.days)
-  # jobname must be last in line below to catch "|" chars in raw_dataframe_from_sacct()
-  fields = "jobid,user,cluster,account,partition,cputimeraw,elapsedraw,timelimitraw,nnodes,ncpus,alloctres,submit,eligible,start,end,qos,state,admincomment,jobname"
+  # jobname must be last in list below to catch "|" chars in raw_dataframe_from_sacct()
+  fields = ["jobid",
+            "user",
+            "cluster",
+            "account",
+            "partition",
+            "cputimeraw",
+            "elapsedraw",
+            "timelimitraw",
+            "nnodes",
+            "ncpus",
+            "alloctres",
+            "submit",
+            "eligible",
+            "start",
+            "end",
+            "qos",
+            "state",
+            "admincomment",
+            "jobname"]  
+  fields = ",".join(fields)
   assert fields.split(",")[-1] == "jobname"
-  renamings = {"user":"netid", "cputimeraw":"cpu-seconds", "nnodes":"nodes", "ncpus":"cores", "timelimitraw":"limit-minutes"}
+  renamings = {"user":"netid",
+               "cputimeraw":"cpu-seconds",
+               "nnodes":"nodes",
+               "ncpus":"cores",
+               "timelimitraw":"limit-minutes"}
   numeric_fields = ["cpu-seconds", "elapsedraw", "limit-minutes", "nodes", "cores", "submit", "eligible"]
   use_cache = False if (args.email or args.watch) else True
   raw = raw_dataframe_from_sacct(flags, start_date, fields, renamings, numeric_fields, use_cache)
@@ -421,11 +512,18 @@ if __name__ == "__main__":
                            days_between_emails=args.days,
                            violation="should_be_using_mig",
                            vpath=args.files,
-                           subject="Consider using the MIG GPUs on Della")
-    print(mig)
-    print(len(mig))
-    print(len(mig.mig_users))
+                           subject="Consider Using the MIG GPUs on Della")
     mig.send_emails_to_users(args.email)
+
+  if args.zero_gpu_util_hours:
+    zero_gpu_hours = ZeroUtilGPUHours(df,
+                           days_between_emails=args.days,
+                           violation="zero_util_gpu_hours",
+                           vpath=args.files,
+                           subject="Many GPU-Hours with Zero GPU Utilization on Della")
+    zero_gpu_hours.send_emails_to_users(args.email)
+    s += "\n\n\n           Zero Utilization GPU-Hours"
+    s += zero_gpu_hours.send_report_to_admins()
 
   if not args.email:
     df.info()
