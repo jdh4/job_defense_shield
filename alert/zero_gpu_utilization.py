@@ -11,18 +11,6 @@ from utils import send_email
 from efficiency import num_gpus_with_zero_util
 from pandas.tseries.holiday import USFederalHolidayCalendar
 
-def gpu_jobs_zero_util(df):
-  """List all jobs where the GPU(s) were never used."""
-  zu = df[(df.gpus > 0) & \
-          (df.partition != "mig") & \
-          (df["elapsed-hours"] >= 1)].copy()
-  zu = zu[zu.admincomment != {}]  # ignore running jobs
-  zu["interactive"] = zu["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
-  zu["gpus-unused"] = zu.admincomment.apply(num_gpus_with_zero_util)
-  zu = zu[zu["gpus-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
-  zu.state = zu.state.apply(lambda x: JOBSTATES[x])
-  return zu[["netid", "cluster", "gpus", "gpus-unused", "jobid", "state", "hours", "interactive", "start-date"]]
-
 def get_stats_for_running_job(jobid, cluster):
   """Get the job statistics for running jobs by calling jobstats"""
   import importlib.machinery

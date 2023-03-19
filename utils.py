@@ -1,5 +1,11 @@
+import math
+import glob
 import subprocess
 import smtplib
+from datetime import datetime
+from datetime import timedelta
+import pandas as pd
+from pandas.tseries.holiday import USFederalHolidayCalendar
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -28,6 +34,58 @@ states = {
   'TO'  :'TIMEOUT'
   }
 JOBSTATES = dict(zip(states.values(), states.keys()))
+
+def add_dividers(df_str: str, title: str="", pre: str="\n\n\n") -> str:
+  rows = df_str.split("\n")
+  width = max([len(row) for row in rows])
+  padding = " " * max(1, math.ceil((width - len(title)) / 2))
+  divider = padding + title + padding
+  if bool(title):
+    rows.insert(0, divider)
+    rows.insert(1, "-" * len(divider))
+    rows.insert(3, "-" * len(divider))
+  else:
+    rows.insert(0, "-" * len(divider))
+    rows.insert(2, "-" * len(divider))
+  return pre + "\n".join(rows)
+
+def show_history_of_emails_sent(vpath, mydir, title, days=30):
+  files = sorted(glob.glob(f"{vpath}/{mydir}/*.csv"))
+  if len(files) == 0:
+    print(f"No underutilization files found in {vpath}/{mydir}")
+    return None
+  today = datetime.now().date()
+  day_ticks = days
+  print("=====================================================")
+  print(f"           {title} EMAILS SENT")
+  print("=====================================================")
+  max_netid = max([len(f.split("/")[-1].split(".")[0]) for f in files])
+  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 2) + "today")
+  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "|")
+  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "V")
+  for f in files:
+    netid = f.split("/")[-1].split(".")[0]
+    df = pd.read_csv(f)
+    df["when"] = df.email_sent.apply(lambda x: datetime.strptime(x, "%m/%d/%Y %H:%M").date())
+    hits = df.when.unique()
+    row = [today - timedelta(days=i) in hits for i in range(day_ticks)]
+    s = " " * (8 - len(netid)) + netid + "@princeton.edu "
+    s += ''.join(["X" if r else "_" for r in row])[::-1]
+    if "X" in s: print(s)
+  print("\n=====================================================")
+  return None
+
+def is_today_a_work_day() -> bool:
+    """Determine if today is a work day."""
+    date_today = datetime.now().strftime("%Y-%m-%d")
+    cal = USFederalHolidayCalendar()
+    us_holiday = date_today in cal.holidays()
+    pu_holidays = ["2023-05-29", "2023-06-16", "2023-07-04", 
+                   "2023-09-04", "2023-11-23", "2023-11-24",
+                   "2023-12-26", "2024-01-02", "2024-01-15"]
+    pu_holiday = date_today in pu_holidays
+    day_of_week = datetime.strptime(date_today, "%Y-%m-%d").weekday()
+    return (not us_holiday) and (not pu_holiday) and (day_of_week < 5)
 
 def get_first_name(netid):
   """Get the first name of the user by calling ldapsearch."""
