@@ -46,7 +46,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
   ce["cores"] = ce["cores"].apply(lambda x: round(x, 1))
   ce.index += 1
   eff_thres = 60 if xpu == "cpu" else 15
-  filters = (ce["eff(%)"] <= eff_thres) & (ce["proportion(%)"] >= 3)
+  filters = (ce["eff(%)"] <= eff_thres) & (ce["proportion(%)"] >= 2)
   de = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]].copy()
   ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
 

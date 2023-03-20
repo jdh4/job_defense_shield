@@ -23,30 +23,23 @@ class ZeroUtilGPUHours(Alert):
                         (self.df.admincomment != {}) &
                         (self.df["elapsedraw"] >= SECONDS_PER_HOUR)].copy()
       # add new fields
-      self.df["gpus-unused"] = self.df.admincomment.apply(num_gpus_with_zero_util)
-      self.df = self.df[self.df["gpus-unused"] > 0]
-      self.df["zero-util-hours"] = self.df["gpus-unused"] * self.df["elapsedraw"] / SECONDS_PER_HOUR
+      self.df["GPUs-Unused"] = self.df.admincomment.apply(num_gpus_with_zero_util)
+      self.df = self.df[self.df["GPUs-Unused"] > 0]
+      self.df["Zero-Util-GPU-Hours"] = self.df["GPUs-Unused"] * self.df["elapsedraw"] / SECONDS_PER_HOUR
       self.df["GPU-Unused-Util"] = "0%"
-      self.df = self.df[["jobid", "netid", "gpus", "gpus-unused", "GPU-Unused-Util", "zero-util-hours"]]
+      self.df = self.df[["jobid", "netid", "gpus", "GPUs-Unused", "GPU-Unused-Util", "Zero-Util-GPU-Hours"]]
+      renamings = {"jobid":"JobID", "netid":"NetID", "gpus":"GPUs"}
+      self.df = self.df.rename(columns=renamings)
       # for each user sum the number of GPU-hours with zero GPU utilization
-      self.gp = self.df.groupby("netid").agg({"zero-util-hours":np.sum, "netid":np.size})
-      self.gp = self.gp.rename(columns={"netid":"jobs"})
-      self.gp = self.gp.sort_values(by="zero-util-hours", ascending=False).reset_index(drop=False)
-      self.gp = self.gp[self.gp["zero-util-hours"] >= 100]
-      self.df["zero-util-hours"] = self.df["zero-util-hours"].apply(round)
+      self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":np.sum, "NetID":np.size})
+      self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
   def send_emails_to_users(self):
       for user in self.gp.netid.unique():
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
-              usr = self.df[self.df.netid == user].copy()
-              renamings = {"zero-util-hours":"Zero-Util-GPU-Hours",
-                           "jobid":"JobID",
-                           "netid":"NetID",
-                           "gpus-unused":"GPUs-Unused",
-                           "gpus":"GPUs"}
-              usr = usr.rename(columns=renamings)
-              zero_hours = round(self.gp[self.gp.netid == user]["zero-util-hours"].values[0])
+              usr = self.df[self.df.NetID == user].copy()
+              zero_hours = round(self.gp[self.gp.NetID == user]["Zero-Util-GPU-Hours"].values[0])
               s =  f"Requestor: {user}@princeton.edu\n\n"
               s += f"{get_first_name(user)},\n\n"
               s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
@@ -74,8 +67,11 @@ class ZeroUtilGPUHours(Alert):
               # append the new violations to the log file
               #Alert.update_violation_log(usr, vfile)
 
-  def generate_report_for_admins(self, title: str, keep_index: bool=True) -> str:
-      self.gp["zero-util-hours"] = self.gp["zero-util-hours"].apply(round)
-      self.gp = self.gp.rename(columns={"netid":"NetID", "jobs":"Jobs", "zero-util-hours":"Zero-Util-GPU-Hours"})
+  def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+      self.gp = self.gp.rename(columns={"NetID":"Jobs"})
+      self.gp = self.gp.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
+      self.gp.reset_index(drop=False, inplace=True)
+      self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
+      self.gp["Zero-Util-GPU-Hours"] = self.gp["Zero-Util-GPU-Hours"].apply(round)
       self.gp.index += 1
       return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

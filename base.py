@@ -43,7 +43,7 @@ class Alert:
         """
 
     @abstractmethod
-    def generate_report_for_admins(self, title: str, keep_index: bool=True) -> str:
+    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Generate a report for system administrators.
 
         Returns:

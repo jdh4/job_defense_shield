@@ -104,6 +104,12 @@ class MultiInstanceGPU(Alert):
               utilization of your code. A good place to start is the mailing list of
               the software you are using.
 
+              Add the following lines to your Slurm scripts to receive an email report with
+              GPU utilization information after each job finishes:
+
+                #SBATCH --mail-type=end
+                #SBATCH --mail-user={user}@princeton.edu
+
               Replying to this email will open a support ticket with CSES. Let us know if we
               can be of help.
               """)
@@ -114,10 +120,10 @@ class MultiInstanceGPU(Alert):
               # append the new violations to the log file
               Alert.update_violation_log(usr, vfile)
  
-  def generate_report_for_admins(self, title: str, keep_index: bool=True) -> str:
+  def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
       self.gp = self.df.groupby("NetID").agg({"Hours":np.sum, "NetID":np.size})
-      self.gp = self.gp.rename(columns={"NetID":"Jobs"})
-      self.gp = self.gp.sort_values(by="Hours", ascending=False)
+      self.gp = self.gp.rename(columns={"NetID":"Jobs", "Hours":"Full-A100-GPU-Hours"})
+      self.gp = self.gp.sort_values(by="Full-A100-GPU-Hours", ascending=False)
       self.gp.reset_index(drop=False, inplace=True)
       self.gp.index += 1
       return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

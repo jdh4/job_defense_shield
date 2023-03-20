@@ -32,19 +32,20 @@ class MultinodeGPUFragmentation(Alert):
           self.has_low_gpu_util = bool(self.df[self.df["GPU-eff"] < self.gpu_util_thres].shape[0])
           self.df["GPU-eff"] = self.df["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
           self.df["GPUs-per-Node"] = 1
-          self.df = self.df[["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "GPU-eff"]]
+          cols = ["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "GPU-eff"]
+          self.df = self.df[cols]
+          renamings = {"netid":"NetID",
+                       "jobid":"JobID",
+                       "nodes":"Nodes",
+                       "gpus":"GPUs",
+                       "elapsed-hours":"Hours"}
+          self.df = self.df.rename(columns=renamings)
 
   def send_emails_to_users(self):
       for user in self.df.netid.unique():
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
-              usr = self.df[self.df.netid == user].copy()
-              renamings = {"netid":"NetID",
-                           "jobid":"JobID",
-                           "nodes":"Nodes",
-                           "gpus":"GPUs",
-                           "elapsed-hours":"Hours"}
-              usr = usr.rename(columns=renamings)
+              usr = self.df[self.df.NetID == user].copy()
               edays = self.days_between_emails
               s =  f"{get_first_name(user)},\n\n"
               s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
@@ -81,5 +82,5 @@ class MultinodeGPUFragmentation(Alert):
               # append the new violations to the log file
               Alert.update_violation_log(usr, vfile)
 
-  def generate_report_for_admins(self, title: str, keep_index: bool=True) -> str:
+  def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
       return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

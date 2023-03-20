@@ -1,0 +1,34 @@
+import time
+from utils import SECONDS_PER_HOUR
+from utils import HOURS_PER_DAY
+from utils import add_dividers
+from base import Alert
+
+
+class LongestQueuedJobs(Alert):
+
+    """Find the jobs with the longest queue times."""
+
+    def __init__(self, df, days_between_emails, violation, vpath, subject):
+        super().__init__(df, days_between_emails, violation, vpath, subject)
+
+    def _filter_and_add_new_fields(self):
+        # filter the dataframe
+        self.df = self.df[self.df.state == "PENDING"].copy()
+        # remove array jobs
+        self.df = self.df[~self.df.jobid.str.contains("_")]
+        # add new fields
+        self.df["s-days"] = round((time.time() - self.df["submit"])   / SECONDS_PER_HOUR / HOURS_PER_DAY)
+        self.df["e-days"] = round((time.time() - self.df["eligible"]) / SECONDS_PER_HOUR / HOURS_PER_DAY)
+        self.df["s-days"] = self.df["s-days"].astype("int64")
+        self.df["e-days"] = self.df["e-days"].astype("int64")
+        cols = ["jobid", "netid", "cluster", "nodes", "cores", "qos", "partition", "s-days", "e-days"]
+        self.df = self.df[cols].groupby("netid").apply(lambda d: d.iloc[d["s-days"].argmax()])
+        self.df.sort_values("s-days", ascending=False, inplace=True)
+        self.df = self.df[self.df["s-days"] >= 4][:10]
+
+    def send_emails_to_users(self):
+        pass
+
+    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

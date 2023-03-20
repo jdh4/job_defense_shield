@@ -35,5 +35,5 @@ class MostCores(Alert):
   def send_emails_to_users(self):
       pass
 
-  def generate_report_for_admins(self, title: str, keep_index: bool=True) -> str:
+  def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
       return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

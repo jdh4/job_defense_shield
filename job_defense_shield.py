@@ -25,7 +25,6 @@ from efficiency import get_stats_dict
 
 from alert.unused_allocated_time import unused_allocated_hours_of_completed
 from alert.fragmentation import multinode_cpu_fragmentation
-from alert.info import longest_queue_times
 from alert.datascience import datascience_node_violators
 from alert.xpu_efficiency import xpu_efficiencies_of_heaviest_users
 from alert.zero_gpu_utilization import active_gpu_jobs_with_zero_utilization
@@ -36,6 +35,7 @@ from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.gpu_fragmentation import MultinodeGPUFragmentation
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
+from alert.longest_queued import LongestQueuedJobs
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -115,6 +115,8 @@ if __name__ == "__main__":
                       help='List the largest jobs by number of allocated CPU-cores')
   parser.add_argument('--most-gpus', action='store_true', default=False,
                       help='List the largest jobs by number of allocated GPUs')
+  parser.add_argument('--longest-queued', action='store_true', default=False,
+                      help='List the longest queued jobs')
   parser.add_argument('-d', '--days', type=int, default=14, metavar='N',
                       help='Use job data over N previous days from now (default: 14)')
   parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
@@ -194,32 +196,24 @@ if __name__ == "__main__":
   df = add_new_and_derived_fields(df)
   df.reset_index(drop=True, inplace=True)
 
-  # header
-  fmt = "%a %b %-d"
-  s = f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}\n\n"
-  s += f"Total users: {raw.netid.unique().size}\n"
-  s += f"Total jobs:  {raw.shape[0]}"
-
   if not args.email:
     df.info()
     print(df.describe().astype("int64").T)
     print("\nTotal NaNs:", df.isnull().sum().sum())
 
-  #########
-  ## MIG ##
-  #########
-  if args.mig:
-      mig = MultiInstanceGPU(df,
-                             days_between_emails=args.days,
-                             violation="should_be_using_mig",
-                             vpath=args.files,
-                             subject="Consider Using the MIG GPUs on Della")
-      if args.email and is_today_a_work_day():
-          mig.send_emails_to_users()
-      s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
+  fmt = "%a %b %-d"
+  s =  f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}\n\n"
+  s += f"Total users: {raw.netid.unique().size}\n"
+  s += f"Total jobs:  {raw.shape[0]}"
+
+  ############################################
+  ## RUNNING JOBS WITH ZERO GPU UTILIZATION ##
+  ############################################
+  if args.zero_gpu_utilization:
+      em = active_gpu_jobs_with_zero_utilization(df, args.email, args.files)
 
   ######################### 
-  ## ZERO UTIL GPU HOURS ##
+  ## ZERO UTIL GPU-HOURS ##
   ######################### 
   if args.zero_util_gpu_hours:
       zero_gpu_hours = ZeroUtilGPUHours(df,
@@ -231,6 +225,19 @@ if __name__ == "__main__":
           zero_gpu_hours.send_emails_to_users()
       title="Zero Utilization GPU-Hours (of COMPLETED 1+ Hour Jobs)"
       s += zero_gpu_hours.generate_report_for_admins(title)
+
+  ####################################
+  ## JOBS THAT SHOULD HAVE USED MIG ##
+  ####################################
+  if args.mig:
+      mig = MultiInstanceGPU(df,
+                             days_between_emails=args.days,
+                             violation="should_be_using_mig",
+                             vpath=args.files,
+                             subject="Consider Using the MIG GPUs on Della")
+      if args.email and is_today_a_work_day():
+          mig.send_emails_to_users()
+      s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
 
   #######################
   ## GPU FRAGMENTATION ##
@@ -244,34 +251,8 @@ if __name__ == "__main__":
       if args.email and is_today_a_work_day():
           gpu_frag.send_emails_to_users()
       title = "Multinode GPU jobs with fragmentation (all jobs, 1+ hours)"
-      s += gpu_frag.generate_report_for_admins(title, keep_index=False)
+      s += gpu_frag.generate_report_for_admins(title)
 
-  ################
-  ## MOST CORES ##
-  ################
-  if args.most_cores:
-      most_cores = MostCores(df,
-                             days_between_emails=args.days,
-                             violation="null",
-                             vpath=args.files,
-                             subject="")
-      title = "Jobs with the most CPU-cores (1 job per user)"
-      s += most_cores.generate_report_for_admins(title, keep_index=False)
-
-  ###############
-  ## MOST GPUS ##
-  ###############
-  if args.most_gpus:
-      most_gpus = MostGPUs(df,
-                           days_between_emails=args.days,
-                           violation="null",
-                           vpath=args.files,
-                           subject="")
-      title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
-      s += most_gpus.generate_report_for_admins(title, keep_index=False)
-
-
-  print(s); import sys; sys.exit()
   ############################
   ## LOW CPU/GPU EFFICIENCY ##
   ############################
@@ -285,7 +266,6 @@ if __name__ == "__main__":
          ("della", "Della (GPU)", ("gpu",), "gpu"), \
          ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
          ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
-
   if args.low_xpu_efficiency:
     first_hit = False
     for cluster, cluster_name, partitions, xpu in cls:
@@ -297,6 +277,15 @@ if __name__ == "__main__":
         df_str = un.to_string(index=True, justify="center")
         s += add_dividers(df_str, title=cluster_name, pre="\n\n")
 
+  #################
+  ## DATASCIENCE ##
+  #################
+  if args.datascience:
+      ds = datascience_node_violators(df, args.email, args.files)
+
+  #########################
+  ## LOW TIME EFFICIENCY ##
+  #########################
   if args.low_time_efficiency:
     first_hit = False
     for cluster, cluster_name, partitions, xpu in cls:
@@ -307,12 +296,6 @@ if __name__ == "__main__":
           first_hit = True
         df_str = un.to_string(index=True, justify="center")
         s += add_dividers(df_str, title=cluster_name, pre="\n\n")
-
-  if args.zero_gpu_utilization:
-    em = active_gpu_jobs_with_zero_utilization(df, args.email, args.files)
-    if False and not em.empty:
-      df_str = em.to_string(index=True, justify="center")
-      s += add_dividers(df_str, title="ZERO GPU", pre="\n\n")
 
   if args.zero_cpu_utilization:
     first_hit = False
@@ -333,21 +316,46 @@ if __name__ == "__main__":
     if not fg.empty:
       df_str = fg.to_string(index=False, justify="center")
       s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n")
- 
-  if args.datascience:
-    ds = datascience_node_violators(df, args.email, args.files)
-    if False and not ds.empty:
-      df_str = ds.to_string(index=False, justify="center")
-      s += add_dividers(df_str, title="Datascience jobs that didn't need to be (all jobs, 1+ hours)", pre="\n\n\n")
 
-  if True:
-    df_str = jobs_with_the_most_gpus(df).to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="Jobs with the most GPUs (1 job per user, ignoring cryoem)")
+  ################
+  ## MOST CORES ##
+  ################
+  if args.most_cores:
+      most_cores = MostCores(df,
+                             days_between_emails=args.days,
+                             violation="null",
+                             vpath=args.files,
+                             subject="")
+      title = "Jobs with the most CPU-cores (1 job per user)"
+      s += most_cores.generate_report_for_admins(title)
 
-  if True:
-    df_str = longest_queue_times(raw).to_string(index=False, justify="center")
-    s += add_dividers(df_str, title="Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)")
+  ###############
+  ## MOST GPUS ##
+  ###############
+  if args.most_gpus:
+      most_gpus = MostGPUs(df,
+                           days_between_emails=args.days,
+                           violation="null",
+                           vpath=args.files,
+                           subject="")
+      title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
+      s += most_gpus.generate_report_for_admins(title)
 
+  #########################
+  ## LONGEST QUEUED JOBS ##
+  #########################
+  if args.longest_queued:
+      queued = LongestQueuedJobs(raw,
+                           days_between_emails=args.days,
+                           violation="null",
+                           vpath=args.files,
+                           subject="")
+      title = "Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)"
+      s += queued.generate_report_for_admins(title)
+
+  ########################## 
+  ## SEND EMAIL TO ADMINS ##
+  ########################## 
   if args.watch:
     send_email(s, "halverson@princeton.edu", subject="Cluster utilization report", sender="halverson@princeton.edu")
 
