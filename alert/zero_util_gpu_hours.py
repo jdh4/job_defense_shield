@@ -6,6 +6,7 @@ from base import Alert
 from utils import SECONDS_PER_HOUR
 from utils import get_first_name
 from utils import send_email
+from utils import send_email_cses
 from utils import add_dividers
 from efficiency import num_gpus_with_zero_util
 import numpy as np
@@ -38,7 +39,7 @@ class ZeroUtilGPUHours(Alert):
       self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":np.sum, "NetID":np.size})
       self.gp = self.gp.rename(columns={"NetID":"Jobs"})
       self.gp.reset_index(drop=False, inplace=True)
-      # apply a threshold to reduce the number of users
+      # apply a threshold to focus on the heaviest offenders
       self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
       self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
@@ -94,7 +95,7 @@ class ZeroUtilGPUHours(Alert):
                    for your software. If your code is not GPU-enabled then please remove the
                    --gres Slurm directive when submitting jobs. For more information:
 
-                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm
+                     https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
                 2. Make sure your software environment is properly configured. In some cases
                    certain libraries must be available for your code to run on GPUs. The
@@ -109,10 +110,6 @@ class ZeroUtilGPUHours(Alert):
                    consider using the MIG GPUs:
 
                      https://researchcomputing.princeton.edu/systems/della#mig
-
-              For general information about GPU computing at Princeton:
-
-                https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
               Consider attending an in-person Research Computing help session:
 
@@ -132,8 +129,8 @@ class ZeroUtilGPUHours(Alert):
                   self.subject = "Underutilization of the GPUs on Della"
               else:
                   self.subject = "WARNING OF ACCOUNT SUSPENSION: Underutilization of the GPUs on Della"
-              send_email(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="halverson@princeton.edu")
-              send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+              send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="jdh4@princeton.edu")
+              send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
               print(s)
 
               # append the new violations to the log file

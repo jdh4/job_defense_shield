@@ -115,3 +115,17 @@ def send_email(s, addressee, subject="Slurm job alerts", sender="halverson@princ
   s.sendmail(sender, addressee, msg.as_string())
   s.quit()
   return None
+
+def send_email_cses(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
+  """Send an email in plain text to the user."""
+  msg = MIMEMultipart('alternative')
+  msg['Subject'] = subject
+  msg['From'] = sender
+  msg['To'] = addressee
+  text = s
+  html = f'<html><head></head><body><font face="Courier New, Courier, monospace"><pre>{s}</pre></font></body></html>'
+  part1 = MIMEText(text, 'plain'); msg.attach(part1)
+  #part2 = MIMEText(html, 'html');  msg.attach(part2)
+  s = smtplib.SMTP('localhost')
+  s.sendmail(sender, addressee, msg.as_string())
+  s.quit()

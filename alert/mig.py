@@ -1,3 +1,4 @@
+import textwrap
 from base import Alert
 from utils import add_dividers
 from utils import get_first_name
