@@ -1,11 +1,15 @@
+import os
+import textwrap
+from datetime import datetime
+from datetime import timedelta
 from base import Alert
 from utils import SECONDS_PER_HOUR
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 from efficiency import num_gpus_with_zero_util
-from efficiency import gpu_efficiency
 import numpy as np
+import pandas as pd
 
 
 class ZeroUtilGPUHours(Alert):
@@ -32,46 +36,111 @@ class ZeroUtilGPUHours(Alert):
       self.df = self.df.rename(columns=renamings)
       # for each user sum the number of GPU-hours with zero GPU utilization
       self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":np.sum, "NetID":np.size})
+      self.gp = self.gp.rename(columns={"NetID":"Jobs"})
+      self.gp.reset_index(drop=False, inplace=True)
+      # apply a threshold to reduce the number of users
+      self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
       self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
+  def get_emails_sent_count(self, user: str) -> int:
+      """Return the number of zero GPU utilization emails sent in the last 30 days."""
+      prev_violations = f"{self.vpath}/zero_gpu_utilization/{user}.violations.email.csv"
+      if os.path.exists(prev_violations):
+          d = pd.read_csv(prev_violations, parse_dates=["email_sent"])
+          start_date = datetime.now() - timedelta(days=30)
+          return d[d["email_sent"] >= start_date]["email_sent"].unique().size
+      else:
+          return 0
+
   def send_emails_to_users(self):
-      for user in self.gp.netid.unique():
+      for user in self.gp.NetID.unique():
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
               usr = self.df[self.df.NetID == user].copy()
               zero_hours = round(self.gp[self.gp.NetID == user]["Zero-Util-GPU-Hours"].values[0])
+              emails_sent = self.get_emails_sent_count(user)
               s =  f"Requestor: {user}@princeton.edu\n\n"
               s += f"{get_first_name(user)},\n\n"
-              s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
-              s +=  "Della. This is a waste of valuable resources. Please monitor your jobs using the\n"
-              s +=  "\"jobstats\" command or the web interface:\n\n"
-              s +=  "  https://researchcomputing.princeton.edu/support/knowledge-base/job-stats\n\n"
-              s +=  "Below are the jobs with 0% GPU utilization:\n\n"
-              s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-              s +=  "\n"
+              if emails_sent == 0:
+                  s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
+                  s +=  "Della. This is a waste of valuable resources.\n"
+              elif emails_sent == 1:
+                  s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
+                  s +=  "Della. Additionally, in the last 30 days you have been sent a warning email\n"
+                  s +=  "with the subject \"Jobs with zero GPU utilization\".\n"
+              else:
+                  s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
+                  s += f"Della. Additionally, in the last 30 days you have been sent {emails_sent} warning emails\n"
+                  s +=  "with the subject \"Jobs with zero GPU utilization\".\n"
+              if emails_sent <= 1:
+                  s += textwrap.dedent(f"""
+                  Be aware that your account can be suspended when you waste this amount of
+                  GPU resources. Since this appears to be an isolated incident, no action
+                  will be taken and your account will remain active.
+                  """)
+              else:
+                  s += textwrap.dedent(f"""
+                  At this time you need to stop underutilizing the GPUs or YOUR ACCOUNT WILL BE
+                  SUSPENDED and your sponsor will be contacted. The GPUs are valuable resources
+                  and they must be used efficiently.
+                  """)
               s += textwrap.dedent(f"""
-              Please investigate the reason for the GPUs not being used. For instance, is the
-              code GPU-enabled? Can you use a MIG GPU instead of a full A100?
+              Please reply to this email if you would like assistance in resolving this issue.
+
+              Below are three common reasons why a user may encounter 0% GPU utilization:
+
+                1. Is your code GPU-enabled? Only codes that have been explicitly written
+                   to use GPUs can take advantage of them. Please consult the documentation
+                   for your software. If your code is not GPU-enabled then please remove the
+                   --gres Slurm directive when submitting jobs. For more information:
+
+                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm
+
+                2. Make sure your software environment is properly configured. In some cases
+                   certain libraries must be available for your code to run on GPUs. The
+                   solution can be to load an environment module or to install a specific
+                   software dependency. If your code uses CUDA then CUDA Toolkit 11 or higher
+                   should be used on Della. Please check your software environment against
+                   the installation directions for your code.
+
+                3. Please do not create "salloc" sessions for long periods of time. For
+                   example, allocating a GPU for 24 hours is wasteful unless you plan to work
+                   intensively during the entire period. For interactive work, please
+                   consider using the MIG GPUs:
+
+                     https://researchcomputing.princeton.edu/systems/della#mig
 
               For general information about GPU computing at Princeton:
 
                 https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
-              Replying to this email will open a support ticket with CSES. Let us know if we
-              can be of help.
+              Consider attending an in-person Research Computing help session:
+
+                https://researchcomputing.princeton.edu/support/help-sessions
+
+              It is your responsibility to ensure that the GPUs and other resources are being
+              used efficiently by your jobs. Please monitor your jobs using the "jobstats"
+              command and the web interface:
+
+                https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
               """)
-              #send_email(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="halverson@princeton.edu")
+              s += f"\nBelow are the jobs that ran in the past {self.days_between_emails} days with 0% GPU utilization:\n\n"
+              s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+              s +=  "\n\nPlease reply to this support ticket if you need assistance."
+
+              if emails_sent <= 1:
+                  self.subject = "Underutilization of the GPUs on Della"
+              else:
+                  self.subject = "WARNING OF ACCOUNT SUSPENSION: Underutilization of the GPUs on Della"
+              send_email(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="halverson@princeton.edu")
               send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
               print(s)
 
               # append the new violations to the log file
-              #Alert.update_violation_log(usr, vfile)
+              Alert.update_violation_log(usr, vfile)
 
   def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-      self.gp = self.gp.rename(columns={"NetID":"Jobs"})
       self.gp = self.gp.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
-      self.gp.reset_index(drop=False, inplace=True)
-      self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
       self.gp["Zero-Util-GPU-Hours"] = self.gp["Zero-Util-GPU-Hours"].apply(round)
       self.gp.index += 1
       return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

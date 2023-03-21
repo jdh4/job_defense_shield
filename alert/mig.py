@@ -55,10 +55,10 @@ class MultiInstanceGPU(Alert):
       self.df = self.df[["JobID", "NetID", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
 
   def send_emails_to_users(self):
-      for user in self.df.netid.unique():
+      for user in self.df.NetID.unique():
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
-              usr = self.df[self.df.netid == user].copy()
+              usr = self.df[self.df.NetID == user].copy()
               s =  f"{get_first_name(user)},\n\n"
               s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
               s +=  "\n\n"

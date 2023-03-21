@@ -42,7 +42,7 @@ class MultinodeGPUFragmentation(Alert):
           self.df = self.df.rename(columns=renamings)
 
   def send_emails_to_users(self):
-      for user in self.df.netid.unique():
+      for user in self.df.NetID.unique():
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
               usr = self.df[self.df.NetID == user].copy()

@@ -129,16 +129,41 @@ if __name__ == "__main__":
                       help='Show the history of emails sent to users')
   args = parser.parse_args()
 
+  #######################
+  ## CHECK EMAILS SENT ##
+  #######################
   if args.check:
-    if args.datascience:
-      _ = show_history_of_emails_sent(args.files, "datascience", "DATASCIENCE")
-    if args.zero_gpu_utilization:
-      _ = show_history_of_emails_sent(args.files, "zero_gpu_utilization", "ZERO GPU UTILIZATION")
-    if args.mig:
-      _ = show_history_of_emails_sent(args.files, "should_be_using_mig", "       MIG")
-    if args.low_xpu_efficiency:
-      _ = show_history_of_emails_sent(args.files, "low_xpu_efficiency", "LOW CPU/GPU EFFICIENCY")
-    sys.exit()
+      if args.zero_gpu_utilization:
+          show_history_of_emails_sent(args.files,
+                                      "zero_gpu_utilization",
+                                      "ZERO GPU UTILIZATION OF A RUNNING JOB",
+                                      args.days)
+      if args.mig:
+          show_history_of_emails_sent(args.files,
+                                      "should_be_using_mig",
+                                      "SHOULD HAVE USED MIG",
+                                      args.days)
+      if args.low_xpu_efficiency:
+          show_history_of_emails_sent(args.files,
+                                      "low_xpu_efficiency",
+                                      "LOW CPU/GPU EFFICIENCY",
+                                      args.days)
+      if args.zero_util_gpu_hours:
+          show_history_of_emails_sent(args.files,
+                                      "zero_util_gpu_hours",
+                                      "ZERO UTILIZATION GPU-HOURS",
+                                      args.days)
+      if args.gpu_fragmentation:
+          show_history_of_emails_sent(args.files,
+                                      "gpu_fragmentation",
+                                      "1 GPU PER NODE",
+                                      args.days)
+      if args.datascience:
+          show_history_of_emails_sent(args.files,
+                                      "datascience",
+                                      "DATASCIENCE",
+                                      args.days) 
+      sys.exit()
 
   # pandas display settings
   pd.set_option("display.max_rows", None)
@@ -197,9 +222,9 @@ if __name__ == "__main__":
   df.reset_index(drop=True, inplace=True)
 
   if not args.email:
-    df.info()
-    print(df.describe().astype("int64").T)
-    print("\nTotal NaNs:", df.isnull().sum().sum())
+      df.info()
+      print(df.describe().astype("int64").T)
+      print("\nTotal NaNs:", df.isnull().sum().sum())
 
   fmt = "%a %b %-d"
   s =  f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}\n\n"
@@ -220,7 +245,7 @@ if __name__ == "__main__":
                              days_between_emails=args.days,
                              violation="zero_util_gpu_hours",
                              vpath=args.files,
-                             subject="Many GPU-Hours with Zero GPU Utilization on Della")
+                             subject="WARNING OF ACCOUNT SUSPENSION: Underutilization of the GPUs on Della")
       if args.email and is_today_a_work_day():
           zero_gpu_hours.send_emails_to_users()
       title="Zero Utilization GPU-Hours (of COMPLETED 1+ Hour Jobs)"
