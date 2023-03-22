@@ -45,15 +45,7 @@ $ ./job_defense_shield.py --email \
 ## Which users are ignoring the automated emails?
 
 ```
-$ ./job_defense_shield.py --check --zero-gpu-utilization
-```
-
-## What to do after writing to a user?
-
-The event must be logged so that when `--check` it does not suggest writing again to the user. The next line will write to the dataframe indicating that a new email is not needed:
-
-```
-$ ./job_defense_shield.py --resolved --netid aturing --violation zero-gpu-utilization
+$ ./job_defense_shield.py --check --zero-gpu-utilization --days=30
 ```
 
 ### Notes for developers
@@ -67,8 +59,9 @@ Run the commands below on a login node (e.g., tigergpu) to execute the script:
 
 ```bash
 $ git clone https://github.com/jdh4/job_defense_shield.git
-$ module load anaconda3/2022.5
-$ ./job_defense_shield.py
+$ module load anaconda3/2022.10
+$ cd job_defense_shield
+$ ./job_defense_shield.py -h
 ```
 
 ###  Gotchas
@@ -106,7 +99,7 @@ envs_dirs:
 ```
 
 ```
-$ module load anaconda3/2022.5
+$ module load anaconda3/2022.10
 $ conda create --name jds-env numpy pandas blessed requests -c conda-forge -y
 ```
 
