@@ -3,6 +3,7 @@ from efficiency import gpu_efficiency
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
+from utils import JOBSTATES
 
 
 class MultinodeGPUFragmentation(Alert):
@@ -32,12 +33,14 @@ class MultinodeGPUFragmentation(Alert):
           self.has_low_gpu_util = bool(self.df[self.df["GPU-eff"] < self.gpu_util_thres].shape[0])
           self.df["GPU-eff"] = self.df["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
           self.df["GPUs-per-Node"] = 1
-          cols = ["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "GPU-eff"]
+          cols = ["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "state", "GPU-eff"]
           self.df = self.df[cols]
+          self.df.state = self.df.state.apply(lambda x: JOBSTATES[x])
           renamings = {"netid":"NetID",
                        "jobid":"JobID",
                        "nodes":"Nodes",
                        "gpus":"GPUs",
+                       "state":"State",
                        "elapsed-hours":"Hours"}
           self.df = self.df.rename(columns=renamings)
 
@@ -83,4 +86,7 @@ class MultinodeGPUFragmentation(Alert):
               Alert.update_violation_log(usr, vfile)
 
   def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-      return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+      if self.df.empty:
+          return ""
+      else:
+          return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

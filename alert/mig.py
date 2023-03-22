@@ -122,9 +122,12 @@ class MultiInstanceGPU(Alert):
               Alert.update_violation_log(usr, vfile)
  
   def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-      self.gp = self.df.groupby("NetID").agg({"Hours":np.sum, "NetID":np.size})
-      self.gp = self.gp.rename(columns={"NetID":"Jobs", "Hours":"Full-A100-GPU-Hours"})
-      self.gp = self.gp.sort_values(by="Full-A100-GPU-Hours", ascending=False)
-      self.gp.reset_index(drop=False, inplace=True)
-      self.gp.index += 1
-      return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+      if self.df.empty:
+          return ""
+      else:
+          self.gp = self.df.groupby("NetID").agg({"Hours":np.sum, "NetID":np.size})
+          self.gp = self.gp.rename(columns={"NetID":"Jobs", "Hours":"Full-A100-GPU-Hours"})
+          self.gp = self.gp.sort_values(by="Full-A100-GPU-Hours", ascending=False)
+          self.gp.reset_index(drop=False, inplace=True)
+          self.gp.index += 1
+          return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
