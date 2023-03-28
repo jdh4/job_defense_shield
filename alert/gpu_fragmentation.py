@@ -1,3 +1,4 @@
+import textwrap
 from base import Alert
 from efficiency import gpu_efficiency
 from utils import get_first_name

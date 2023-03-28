@@ -20,8 +20,8 @@ class LongestQueuedJobs(Alert):
         # add new fields
         self.df["s-days"] = round((time.time() - self.df["submit"])   / SECONDS_PER_HOUR / HOURS_PER_DAY)
         self.df["e-days"] = round((time.time() - self.df["eligible"]) / SECONDS_PER_HOUR / HOURS_PER_DAY)
-        #self.df["s-days"] = self.df["s-days"].astype("int64")
-        #self.df["e-days"] = self.df["e-days"].astype("int64")
+        self.df["s-days"] = self.df["s-days"].astype("int64")
+        self.df["e-days"] = self.df["e-days"].astype("int64")
         cols = ["jobid", "netid", "cluster", "nodes", "cores", "qos", "partition", "s-days", "e-days"]
         self.df = self.df[cols].groupby("netid").apply(lambda d: d.iloc[d["s-days"].argmax()])
         self.df.sort_values("s-days", ascending=False, inplace=True)

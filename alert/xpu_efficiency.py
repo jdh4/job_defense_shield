@@ -98,12 +98,12 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
                https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
 
             4. Using the MPICH library instead of an MPI library that was built for our
-               clusters. Some software installed using 'conda' is built against an MPI
+               clusters. Some software installed using \"conda\" is built against an MPI
                library that is not optimized for our systems. Run 'conda list' after
-               activating the environment and look for 'mpich' to see if you are using this
+               activating the environment and look for \"mpich\" to see if you are using this
                library.
 
-            5. Using 'mpirun' instead of 'srun' for parallel codes. Please use 'srun'.
+            5. Using \"mpirun\" instead of \"srun\" for parallel codes. Please use \"srun\".
           """)
         elif xpu == "gpu":
           s += textwrap.dedent(f"""
@@ -149,7 +149,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
              #SBATCH --mail-user={netid}@princeton.edu
         
         You can check the efficiency of completed and actively running jobs by using the
-        'jobstats' command:
+        \"jobstats\" command:
 
              https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
 

@@ -39,8 +39,10 @@ class ZeroUtilGPUHours(Alert):
       self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":np.sum, "NetID":np.size})
       self.gp = self.gp.rename(columns={"NetID":"Jobs"})
       self.gp.reset_index(drop=False, inplace=True)
+      self.rw = self.gp.copy()
       # apply a threshold to focus on the heaviest offenders
       self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
+      # finally format one column of the df dataframe
       self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
   def get_emails_sent_count(self, user: str) -> int:
@@ -137,7 +139,12 @@ class ZeroUtilGPUHours(Alert):
               Alert.update_violation_log(usr, vfile)
 
   def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-      self.gp = self.gp.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
-      self.gp["Zero-Util-GPU-Hours"] = self.gp["Zero-Util-GPU-Hours"].apply(round)
-      self.gp.index += 1
-      return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+      self.rw = self.rw[self.rw["Zero-Util-GPU-Hours"] >= 25]
+      if self.rw.empty:
+          return ""
+      else:
+          self.rw = self.rw.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
+          self.rw["Zero-Util-GPU-Hours"] = self.rw["Zero-Util-GPU-Hours"].apply(round)
+          self.rw.reset_index(drop=True, inplace=True)
+          self.rw.index += 1
+          return add_dividers(self.rw.to_string(index=keep_index, justify="center"), title)
