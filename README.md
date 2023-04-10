@@ -109,6 +109,8 @@ The above leads to the shebang line as:
 #!/home/jdh4/bin/jds-bin/python -u -B
 ```
 
+If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
+
 ## cron
 
 ```
