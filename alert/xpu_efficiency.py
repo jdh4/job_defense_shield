@@ -32,7 +32,9 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
   ce[f"{xpu}-seconds-used"]  = ce[f"{xpu}-tuples"].apply(lambda x: x[0])
   ce[f"{xpu}-seconds-total"] = ce[f"{xpu}-tuples"].apply(lambda x: x[1])
   ce["interactive"] = ce["jobname"].apply(lambda x: 1 if x.startswith("sys/dashboard") or x.startswith("interactive") else 0)
-  d = {"netid":np.size, f"{xpu}-seconds-used":np.sum, f"{xpu}-seconds-total":np.sum, \
+  def uniq_list(series):
+    return ",".join(sorted(set(series)))
+  d = {"netid":np.size, f"{xpu}-seconds-used":np.sum, f"{xpu}-seconds-total":np.sum, "partition":uniq_list \
        "proportion(%)":"first", f"{xpu}-seconds-all":"first", "cores":np.mean, "interactive":np.sum}
   ce = ce.groupby("netid").agg(d).rename(columns={"netid":"jobs"})
   ce = ce.sort_values(by=f"{xpu}-seconds-total", ascending=False).reset_index(drop=False)
@@ -47,8 +49,8 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
   ce.index += 1
   eff_thres = 60 if xpu == "cpu" else 15
   filters = (ce["eff(%)"] <= eff_thres) & (ce["proportion(%)"] >= 2)
-  de = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]].copy()
-  ce = ce[["netid", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
+  de = ce[["netid", "partition", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]].copy()
+  ce = ce[["netid", "partition", f"{xpu}-hours", "proportion(%)", "eff(%)", "jobs", "interactive", "cores", "coverage"]][filters]
 
   if email:
     rank_text = {1:"the most", 2:"the 2nd most", 3:"the 3rd most"}
@@ -63,14 +65,14 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
         usr = ce[ce.netid == netid].copy()
         rank = ce.index[ce.netid == netid].tolist()[0]
         usr[f"{xpu.upper()}-rank"] = f"{rank}/{pr.shape[0]}"
-        usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%") 
-        usr["Partition(s)"] = ",".join(sorted(partitions))  # TDO: should be the partitions that were used
+        usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%")
         if xpu == "cpu":
-          cols = ["netid", "Partition(s)", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)", "cores"]
+          cols = ["netid", "partition", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)", "cores"]
         if xpu == "gpu":
-          cols = ["netid", "Partition(s)", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)"]
+          cols = ["netid", "partition", "jobs", f"{xpu}-hours", f"{xpu.upper()}-rank", "eff(%)"]
         renamings = {"eff(%)":"Efficiency", "jobid":"JobID", "netid":"NetID", "proportion(%)":"Proportion(%)", \
-                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours", "jobs":"Jobs", "cores":"AvgCores"}
+                     "cpu-hours":"CPU-hours", "gpu-hours":"GPU-hours", "jobs":"Jobs", "cores":"AvgCores", \
+                     "partition":"Partition(s)"}
         usr = usr[cols].rename(columns=renamings)
         usage = usr["CPU-hours"] if xpu == "cpu" else usr["GPU-hours"]
         usage = usage.values[0]

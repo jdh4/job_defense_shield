@@ -139,9 +139,12 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n"
         s += textwrap.dedent("""
-        For general information about GPU computing and Slurm job statistics:
+        For general information about GPU computing at Princeton is here:
 
              https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
+
+        Please monitor your jobs using the "jobstats" command and the web interface:
+
              https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
         """)
         s += "\n"

@@ -47,7 +47,7 @@ class MultiInstanceGPU(Alert):
       self.df = self.df[(self.df["GPU-Util"] <= gpu_eff_threshold) &
                         (self.df["GPU-Util"] != 0) &
                         (self.df["GPU-Mem-Used"] < gpu_mem_threshold) &
-                        (self.df["GPU-Mem-Used"] < cpu_mem_threshold)]
+                        (self.df["CPU-Mem-Used"] < cpu_mem_threshold)]
       self.df["CPU-Mem-Used"] = self.df["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
       self.df["GPU-Mem-Used"] = self.df["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
       self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%")
