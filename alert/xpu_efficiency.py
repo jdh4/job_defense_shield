@@ -34,7 +34,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
   ce["interactive"] = ce["jobname"].apply(lambda x: 1 if x.startswith("sys/dashboard") or x.startswith("interactive") else 0)
   def uniq_list(series):
     return ",".join(sorted(set(series)))
-  d = {"netid":np.size, f"{xpu}-seconds-used":np.sum, f"{xpu}-seconds-total":np.sum, "partition":uniq_list \
+  d = {"netid":np.size, f"{xpu}-seconds-used":np.sum, f"{xpu}-seconds-total":np.sum, "partition":uniq_list, \
        "proportion(%)":"first", f"{xpu}-seconds-all":"first", "cores":np.mean, "interactive":np.sum}
   ce = ce.groupby("netid").agg(d).rename(columns={"netid":"jobs"})
   ce = ce.sort_values(by=f"{xpu}-seconds-total", ascending=False).reset_index(drop=False)
