@@ -18,6 +18,7 @@ class MultinodeGPUFragmentation(Alert):
       # filter the dataframe
       self.df = self.df[(self.df.cluster == "della") &
                         (self.df.partition == "gpu") &
+                        (self.df.state != "RUNNING") &
                         (self.df.gpus > 0) &
                         (self.df.nodes > 1) &
                         (self.df.nodes == self.df.gpus) &
@@ -31,8 +32,6 @@ class MultinodeGPUFragmentation(Alert):
                                                             row["cluster"], single=True)
                                              if row["admincomment"] != {} else 999, axis="columns")
           self.gpu_util_thres = 50
-          self.has_low_gpu_util = bool(self.df[self.df["GPU-eff"] < self.gpu_util_thres].shape[0])
-          self.df["GPU-eff"] = self.df["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
           self.df["GPUs-per-Node"] = 1
           cols = ["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "state", "GPU-eff"]
           self.df = self.df[cols]
@@ -50,15 +49,17 @@ class MultinodeGPUFragmentation(Alert):
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
               usr = self.df[self.df.NetID == user].copy()
+              has_low_gpu_util = bool(usr[usr["GPU-eff"] < self.gpu_util_thres].shape[0])
+              usr["GPU-eff"] = usr["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
               edays = self.days_between_emails
               s =  f"{get_first_name(user)},\n\n"
               s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
               s +=  "over multiple nodes:\n\n"
               s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-              if self.has_low_gpu_util:
+              if has_low_gpu_util:
                   s +=  "\n\n"
-                  s += f"There is at least one job with a GPU efficiency of less than {self.gpu_util_thres}%. In these cases\n"
-                  s +=  "please consider using only 1 GPU per job to improve the efficiency."
+                  s += f"There is at least one job above with a GPU efficiency of less than {self.gpu_util_thres}%. In these\n"
+                  s +=  "cases please consider using only 1 GPU per job to improve the efficiency."
               s += "\n"
               s += textwrap.dedent(f"""
               The GPU nodes on Della have either 2 GPUs per node or 4 GPUs per node. For future
@@ -90,4 +91,5 @@ class MultinodeGPUFragmentation(Alert):
       if self.df.empty:
           return ""
       else:
+          self.df["GPU-eff"] = self.df["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
           return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

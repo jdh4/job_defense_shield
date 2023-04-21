@@ -20,7 +20,7 @@ def get_stats_for_running_job(jobid, cluster):
   spec = importlib.util.spec_from_loader('jobstats', loader)
   mymodule = importlib.util.module_from_spec(spec)
   loader.exec_module(mymodule)
-  stats = mymodule.JobStats(jobid=jobid, cluster=cluster)
+  stats = mymodule.JobStats(jobid=jobid, cluster=cluster, prom_server="http://vigilant2:8480")
   sleep(0.5)
   return eval(stats.report_job_json(False))
 
@@ -114,6 +114,15 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
         s += "\n\n"
 
+        version = "job" if single_job else "jobs"
+        text = (
+        f'Please consider canceling the {version} listed above by using the "scancel" command, for example:'
+        )
+        s += "\n".join(textwrap.wrap(text, width=80))
+        s += "\n\n"
+        s += f"     $ scancel {usr.JobID.values[0]}"
+        s += "\n"
+
         s += "\n".join(textwrap.wrap(zero, width=80))
         s += "\n\n"
         s += f"     $ jobstats {usr.JobID.values[0]}"
@@ -139,7 +148,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n"
         s += textwrap.dedent("""
-        For general information about GPU computing at Princeton is here:
+        For general information about GPU computing at Princeton:
 
              https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
@@ -147,14 +156,6 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
 
              https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
         """)
-        s += "\n"
-        version = "job" if single_job else "jobs"
-        text = (
-        f'Please consider canceling the {version} listed above by using the "scancel" command, for example:'
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        s += f"     $ scancel {usr.JobID.values[0]}"
         s += "\n"
         s += textwrap.dedent(f"""
         Add the following lines to your Slurm scripts to receive an email report with

@@ -75,7 +75,7 @@ def datascience_node_violators(df, email, vpath):
 
                https://researchcomputing.princeton.edu/systems/della#large_memory
 
-            Learn more about allocating CPU memory in Slurm:
+            Learn more about allocating CPU memory with Slurm:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
@@ -92,9 +92,12 @@ def datascience_node_violators(df, email, vpath):
             each job is less than {max_mem}. You should use the smallest value possible but include
             an extra 20% for safety.
 
-            For more information on the large-memory nodes and allocating CPU memory:
+            For more information on the Della large-memory nodes:
 
                https://researchcomputing.princeton.edu/systems/della#large_memory
+
+            Learn more about allocating CPU memory with Slurm:
+
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
             Users that continually run jobs on the large-memory nodes without justification
@@ -112,9 +115,12 @@ def datascience_node_violators(df, email, vpath):
             We understand that for some jobs it can be very difficult or impossible to estimate
             the memory requirements. For those jobs please disregard this email.
 
-            For more information on the large-memory nodes and allocating CPU memory:
+            For more information on the Della large-memory nodes:
 
                https://researchcomputing.princeton.edu/systems/della#large_memory
+
+            Learn more about allocating CPU memory with Slurm:
+
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
             """)
 
