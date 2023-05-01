@@ -5,10 +5,6 @@ from datetime import timedelta
 from base import Alert
 from efficiency import cpu_memory_usage
 from utils import JOBSTATES
-#from utils import SECONDS_PER_HOUR
-#from utils import HOURS_PER_DAY
-#from utils import get_first_name
-#from utils import send_email
 from utils import add_dividers
 import numpy as np
 import pandas as pd
@@ -44,8 +40,6 @@ class DataScienceMemoryHours(Alert):
             self.df["mem-hrs-unused"] = self.df["mem-hrs-alloc"] - self.df["mem-hrs-used"]
             self.df["median-ratio"]   = self.df["mem-hrs-used"] / self.df["mem-hrs-alloc"]
             self.df.state = self.df.state.apply(lambda x: JOBSTATES[x])
-            print(self.df.to_string())
-            #import sys; sys.exit()
             # compute various quantities by grouping by user
             d = {"mem-hrs-used":np.sum,
                  "mem-hrs-alloc":np.sum,
@@ -76,13 +70,20 @@ class DataScienceMemoryHours(Alert):
             self.gp = self.gp[cols]
             renamings = {"elapsed-hours":"hrs", "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
+            self.gp["emails"] = self.gp["netid"].apply(self.get_emails_sent_count)
+            cols = ["mem-hrs-unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
+            self.gp[cols] = self.gp[cols].apply(round).astype("int64")
+            cols = ["proportion", "ratio", "median-ratio"]
+            self.gp[cols] = self.gp[cols].apply(lambda x: round(x, 2))
+            self.gp.reset_index(drop=True, inplace=True)
+            self.gp.index += 1
 
     def get_emails_sent_count(self, user: str) -> int:
         """Return the number of datascience emails sent in the last 30 days."""
         prev_violations = f"{self.vpath}/datascience/{user}.email.csv"
         if os.path.exists(prev_violations):
             d = pd.read_csv(prev_violations, parse_dates=["email_sent"])
-            start_date = datetime.now() - timedelta(days=60)
+            start_date = datetime.now() - timedelta(days=30)
             return d[d["email_sent"] >= start_date]["email_sent"].unique().size
         else:
             return 0
@@ -91,18 +92,17 @@ class DataScienceMemoryHours(Alert):
         pass
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-        self.gp = self.gp.head(10)
         if self.gp.empty:
             return ""
         else:
-            self.gp["mem-hrs-unused"] = self.gp["mem-hrs-unused"].apply(round)
-            self.gp["mem-hrs-used"] = self.gp["mem-hrs-used"].apply(round)
-            self.gp["mem-hrs-alloc"] = self.gp["mem-hrs-alloc"].apply(round)
-            self.gp["cpu-hrs"] = self.gp["cpu-hrs"].apply(round)
-            self.gp["ratio"] = self.gp["ratio"].apply(lambda x: round(x, 2))
-            self.gp["median-ratio"] = self.gp["median-ratio"].apply(lambda x: round(x, 2))
-            self.gp["proportion"] = self.gp["proportion"].apply(lambda x: round(x, 2))
-            self.gp.reset_index(drop=True, inplace=True)
-            self.gp.index += 1
-            self.gp["emails"] = self.gp["netid"].apply(self.get_emails_sent_count)
+            cols = ["netid",
+                    "account",
+                    "proportion",
+                    "mem-hrs-unused",
+                    "ratio",
+                    "median-ratio",
+                    "elapsed-hours",
+                    "jobs",
+                    "emails"]
+            self.gp = self.gp[cols].head(5)
             return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
