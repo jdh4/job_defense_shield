@@ -2,3 +2,4 @@
 __pycache__/
 violations/
 log/
+.pytest_cache/

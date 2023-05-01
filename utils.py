@@ -5,6 +5,7 @@ import smtplib
 from datetime import datetime
 from datetime import timedelta
 import pandas as pd
+from base64 import b64decode
 from pandas.tseries.holiday import USFederalHolidayCalendar
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -89,17 +90,19 @@ def is_today_a_work_day() -> bool:
     day_of_week = datetime.strptime(date_today, "%Y-%m-%d").weekday()
     return (not us_holiday) and (not pu_holiday) and (day_of_week < 5)
 
-def get_first_name(netid):
-  """Get the first name of the user by calling ldapsearch."""
-  cmd = f"ldapsearch -x uid={netid} displayname"
-  output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=5, text=True, check=True)
-  lines = output.stdout.split('\n')
-  for line in lines:
-    if line.startswith("displayname:"):
-      full_name = line.replace("displayname:", "").strip()
-      if full_name.replace(".", "").replace(",", "").replace(" ", "").replace("-", "").isalpha():
-        return f"Hi {full_name.split()[0]}"
-  return "Hello"
+def get_first_name(netid: str) -> str:
+    """Get the first name of the user by calling ldapsearch."""
+    cmd = f"ldapsearch -x uid={netid} displayname"
+    output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=5, text=True, check=True)
+    lines = output.stdout.split('\n')
+    for line in lines:
+        if line.startswith("displayname:"):
+            full_name = line.replace("displayname:", "").strip()
+            if ": " in full_name:
+                full_name = b64decode(full_name).decode("utf-8")
+            if full_name.replace(".", "").replace(",", "").replace(" ", "").replace("-", "").isalpha():
+                return f"Hi {full_name.split()[0]}"
+    return "Hello"
 
 def send_email(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
   """Send an email in HTML to the user."""

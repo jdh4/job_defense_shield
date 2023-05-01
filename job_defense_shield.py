@@ -33,6 +33,7 @@ from alert.zero_cpu_utilization import cpu_jobs_zero_util
 from alert.mig import MultiInstanceGPU
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.gpu_fragmentation import MultinodeGPUFragmentation
+from alert.datascience_mem_hours import DataScienceMemoryHours
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
 from alert.longest_queued import LongestQueuedJobs
@@ -103,6 +104,8 @@ if __name__ == "__main__":
                       help='Identify users with low CPU/GPU efficiency')
   parser.add_argument('--datascience', action='store_true', default=False,
                       help='Identify users that unjustly used the datascience nodes')
+  parser.add_argument('--datascience-mem-hours', action='store_true', default=False,
+                      help='Memory hours on the datascience nodes')
   parser.add_argument('--mig', action='store_true', default=False,
                       help='Identify users that should use MIG')
   parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
@@ -307,6 +310,14 @@ if __name__ == "__main__":
   #################
   if args.datascience:
       ds = datascience_node_violators(df, args.email, args.files)
+  if args.datascience_mem_hours:
+      mem_hours = DataScienceMemoryHours(df,
+                             days_between_emails=args.days,
+                             violation="datascience_mem_hours",
+                             vpath=args.files,
+                             subject="Underutilization of the Datascience Nodes")
+      title = "Datascience Memory-Hours"
+      s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
   #########################
   ## LOW TIME EFFICIENCY ##

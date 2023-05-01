@@ -23,7 +23,7 @@ class Alert:
         self.subject = subject
         self._filter_and_add_new_fields()
         # create directory to store user violations
-        if not os.path.exists(self.vbase):
+        if self.vbase and not os.path.exists(self.vbase):
             os.mkdir(self.vbase)
 
     @abstractmethod

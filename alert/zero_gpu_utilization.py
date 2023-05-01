@@ -21,7 +21,7 @@ def get_stats_for_running_job(jobid, cluster):
   mymodule = importlib.util.module_from_spec(spec)
   loader.exec_module(mymodule)
   stats = mymodule.JobStats(jobid=jobid, cluster=cluster, prom_server="http://vigilant2:8480")
-  sleep(0.5)
+  sleep(1)
   return eval(stats.report_job_json(False))
 
 def active_gpu_jobs_with_zero_utilization(df, email, vpath):
@@ -121,7 +121,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n\n"
         s += f"     $ scancel {usr.JobID.values[0]}"
-        s += "\n"
+        s += "\n\n"
 
         s += "\n".join(textwrap.wrap(zero, width=80))
         s += "\n\n"
@@ -156,7 +156,6 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
 
              https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
         """)
-        s += "\n"
         s += textwrap.dedent(f"""
         Add the following lines to your Slurm scripts to receive an email report with
         GPU utilization information after each job finishes:
