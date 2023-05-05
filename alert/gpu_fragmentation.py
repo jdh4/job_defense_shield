@@ -55,7 +55,7 @@ class MultinodeGPUFragmentation(Alert):
               s =  f"{get_first_name(user)},\n\n"
               s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
               s +=  "over multiple nodes:\n\n"
-              s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+              s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
               if has_low_gpu_util:
                   s +=  "\n\n"
                   s += f"There is at least one job above with a GPU efficiency of less than {self.gpu_util_thres}%. In these\n"
@@ -66,16 +66,16 @@ class MultinodeGPUFragmentation(Alert):
               jobs, please try to use as few nodes as possible by allocating more GPUs per node.
               This is done by modifying the --gres Slurm directive as explained here:
 
-                https://researchcomputing.princeton.edu/support/knowledge-base/slurm#gpus
+                  https://researchcomputing.princeton.edu/support/knowledge-base/slurm#gpus
 
               For more information about the Della GPU nodes:
 
-                https://researchcomputing.princeton.edu/systems/della#gpus
+                  https://researchcomputing.princeton.edu/systems/della#gpus
 
               When using more than 1 GPU per job, be sure to conduct a scaling analysis to find
               the optimal number of GPUs:
 
-                https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
+                  https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
 
               Replying to this email will open a support ticket with CSES. Let us know if we
               can be of help.

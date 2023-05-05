@@ -1,5 +1,4 @@
 import os
-import textwrap
 from datetime import datetime
 from datetime import timedelta
 from base import Alert
@@ -96,13 +95,18 @@ class DataScienceMemoryHours(Alert):
             return ""
         else:
             cols = ["netid",
-                    "account",
                     "proportion",
                     "mem-hrs-unused",
+                    "mem-hrs-used",
                     "ratio",
                     "median-ratio",
-                    "elapsed-hours",
+                    "hrs",
                     "jobs",
                     "emails"]
-            self.gp = self.gp[cols].head(5)
+            self.gp = self.gp[cols]
+            renamings = {"mem-hrs-unused":"TB-Hours-unused",
+                         "mem-hrs-used":"TB-Hours-used"}
+                         "median-ratio":"median"}
+            self.gp = self.gp.rename(columns=renamings)
+            self.gp = self.gp.head(5)
             return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

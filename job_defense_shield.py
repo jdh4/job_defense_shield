@@ -122,6 +122,10 @@ if __name__ == "__main__":
                       help='List the longest queued jobs')
   parser.add_argument('-d', '--days', type=int, default=14, metavar='N',
                       help='Use job data over N previous days from now (default: 14)')
+  parser.add_argument('-M', '--clusters', type=str, default="all",
+                      help='Specify specific clusters (e.g., --clusters=della,traverse)')
+  parser.add_argument('-r', '--partition', type=str, default="",
+                      help='Specify specific partitions (e.g., --partition=gpu,mig)')
   parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
                       help='Path to the underutilization files')
   parser.add_argument('--email', action='store_true', default=False,
@@ -176,7 +180,9 @@ if __name__ == "__main__":
   # convert slurm timestamps to seconds
   os.environ["SLURM_TIME_FORMAT"] = "%s"
 
-  flags = "-L -a -X -P -n"
+  flags = f"-a -X -P -n --clusters={args.clusters.replace('tiger', 'tiger2')}"
+  if args.partition:
+      flags = f"{flags} --partition={args.partition}"
   start_date = datetime.now() - timedelta(days=args.days)
   # jobname must be last in list below to catch "|" chars in raw_dataframe_from_sacct()
   fields = ["jobid",
@@ -316,7 +322,7 @@ if __name__ == "__main__":
                              violation="datascience_mem_hours",
                              vpath=args.files,
                              subject="Underutilization of the Datascience Nodes")
-      title = "Datascience Memory-Hours"
+      title = "Datascience Memory-Hours (1+ hour jobs)"
       s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
   #########################
