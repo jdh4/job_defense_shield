@@ -91,6 +91,7 @@ class DataScienceMemoryHours(Alert):
         pass
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+        """Drop and rename some of the columns."""
         if self.gp.empty:
             return ""
         else:
@@ -105,7 +106,7 @@ class DataScienceMemoryHours(Alert):
                     "emails"]
             self.gp = self.gp[cols]
             renamings = {"mem-hrs-unused":"TB-Hours-unused",
-                         "mem-hrs-used":"TB-Hours-used"}
+                         "mem-hrs-used":"TB-Hours-used",
                          "median-ratio":"median"}
             self.gp = self.gp.rename(columns=renamings)
             self.gp = self.gp.head(5)
