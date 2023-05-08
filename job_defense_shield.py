@@ -37,6 +37,7 @@ from alert.datascience_mem_hours import DataScienceMemoryHours
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
 from alert.longest_queued import LongestQueuedJobs
+from alert.excessive_time_limits import ExcessiveTimeLimits
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -112,8 +113,8 @@ if __name__ == "__main__":
                       help='Identify users that are splitting CPU jobs across too many nodes')
   parser.add_argument('--gpu-fragmentation', action='store_true', default=False,
                       help='Identify users that are splitting GPU jobs across too many nodes')
-  parser.add_argument('--low-time-efficiency', action='store_true', default=False,
-                      help='Identify users that are over-allocating time')
+  parser.add_argument('--excessive-time-limits', action='store_true', default=False,
+                      help='Identify users that are using excessive time limits')
   parser.add_argument('--most-cores', action='store_true', default=False,
                       help='List the largest jobs by number of allocated CPU-cores')
   parser.add_argument('--most-gpus', action='store_true', default=False,
@@ -325,10 +326,21 @@ if __name__ == "__main__":
       title = "Datascience Memory-Hours (1+ hour jobs)"
       s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
-  #########################
-  ## LOW TIME EFFICIENCY ##
-  #########################
-  if args.low_time_efficiency:
+  ###########################
+  ## EXCESSIVE TIME LIMITS ##
+  ###########################
+  if args.excessive_time_limits:
+      low_time = ExcessiveTimeLimits(df,
+                             days_between_emails=args.days,
+                             violation="excessive_time_limits",
+                             vpath=args.files,
+                             subject="Excessive Time Limits on Della")
+      if args.email and is_today_a_work_day():
+          low_time.send_emails_to_users()
+      title = "Excessive time limits (all jobs, 1+ hours)"
+      s += low_time.generate_report_for_admins(title)
+
+  if 0:
     first_hit = False
     for cluster, cluster_name, partitions, xpu in cls:
       un = unused_allocated_hours_of_completed(df, cluster, cluster_name, partitions, xpu, args.email)
@@ -339,6 +351,9 @@ if __name__ == "__main__":
         df_str = un.to_string(index=True, justify="center")
         s += add_dividers(df_str, title=cluster_name, pre="\n\n")
 
+  ###################
+  ## ZERO CPU UTIL ##
+  ###################
   if args.zero_cpu_utilization:
     first_hit = False
     for cluster, cluster_name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
