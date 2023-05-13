@@ -113,7 +113,7 @@ if __name__ == "__main__":
                       help='Identify users that are splitting CPU jobs across too many nodes')
   parser.add_argument('--gpu-fragmentation', action='store_true', default=False,
                       help='Identify users that are splitting GPU jobs across too many nodes')
-  parser.add_argument('--excessive-time-limits', action='store_true', default=False,
+  parser.add_argument('--excessive-time', action='store_true', default=False,
                       help='Identify users that are using excessive time limits')
   parser.add_argument('--most-cores', action='store_true', default=False,
                       help='List the largest jobs by number of allocated CPU-cores')
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                       help='Path to the underutilization files')
   parser.add_argument('--email', action='store_true', default=False,
                       help='Send email alerts to users')
-  parser.add_argument('--watch', action='store_true', default=False,
+  parser.add_argument('--report', action='store_true', default=False,
                       help='Send an email report to administrators')
   parser.add_argument('--check', action='store_true', default=False,
                       help='Show the history of emails sent to users')
@@ -213,7 +213,7 @@ if __name__ == "__main__":
                "ncpus":"cores",
                "timelimitraw":"limit-minutes"}
   numeric_fields = ["cpu-seconds", "elapsedraw", "limit-minutes", "nodes", "cores", "submit", "eligible"]
-  use_cache = False if (args.email or args.watch) else True
+  use_cache = False if (args.email or args.report) else True
   raw = raw_dataframe_from_sacct(flags, start_date, fields, renamings, numeric_fields, use_cache)
 
   raw = raw[~raw.cluster.isin(["tukey", "perseus"])]
@@ -329,7 +329,7 @@ if __name__ == "__main__":
   ###########################
   ## EXCESSIVE TIME LIMITS ##
   ###########################
-  if args.excessive_time_limits:
+  if args.excessive_time:
       low_time = ExcessiveTimeLimits(df,
                              days_between_emails=args.days,
                              violation="excessive_time_limits",
@@ -413,7 +413,7 @@ if __name__ == "__main__":
   ########################## 
   ## SEND EMAIL TO ADMINS ##
   ########################## 
-  if args.watch:
+  if args.report:
     send_email(s, "halverson@princeton.edu", subject="Cluster utilization report", sender="halverson@princeton.edu")
 
   print(s)

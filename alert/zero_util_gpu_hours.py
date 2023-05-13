@@ -42,7 +42,6 @@ class ZeroUtilGPUHours(Alert):
       self.rw = self.gp.copy()
       # apply a threshold to focus on the heaviest offenders
       self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
-      # finally format one column of the df dataframe
       self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
   def get_emails_sent_count(self, user: str) -> int:
@@ -102,9 +101,9 @@ class ZeroUtilGPUHours(Alert):
                 2. Make sure your software environment is properly configured. In some cases
                    certain libraries must be available for your code to run on GPUs. The
                    solution can be to load an environment module or to install a specific
-                   software dependency. If your code uses CUDA then CUDA Toolkit 11 or higher
-                   should be used on Della. Please check your software environment against
-                   the installation directions for your code.
+                   software dependency. If your code uses CUDA then the CUDA Toolkit 11 or
+                   higher should be used on Della. Please check your software environment
+                   against the installation directions of your code.
 
                 3. Please do not create "salloc" sessions for long periods of time. For
                    example, allocating a GPU for 24 hours is wasteful unless you plan to work

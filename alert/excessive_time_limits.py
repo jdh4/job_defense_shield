@@ -20,8 +20,8 @@ class ExcessiveTimeLimits(Alert):
                           (self.df.state == "COMPLETED") &
                           (self.df["elapsed-hours"] >= 1)].copy()
         # add new fields
-        xpu = "cpu"
         if not self.df.empty:
+            xpu = "cpu"
             self.df["ratio"] = 100 * self.df[f"{xpu}-hours"] / self.df[f"{xpu}-alloc-hours"]
             d = {f"{xpu}-waste-hours":np.sum,
                  f"{xpu}-alloc-hours":np.sum,
@@ -68,6 +68,10 @@ class ExcessiveTimeLimits(Alert):
                 s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
                 s += "\n"
                 s += textwrap.dedent(f"""
+                Please request less time by modifying the --time Slurm
+                directive. This will lower your queue times and allow the Slurm job
+                scheduler to work more effectively for all users. For more info:
+                https://researchcomputing.princeton.edu/support/knowledge-base/slurm
                 Please lower the value of the --time Slurm directive.
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm

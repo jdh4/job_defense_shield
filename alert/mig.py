@@ -68,9 +68,8 @@ class MultiInstanceGPU(Alert):
               s += textwrap.dedent(f"""
               The jobs above have a low GPU utilization and they use less than 10 GB of GPU
               memory and less than 32 GB of CPU memory. Such jobs could be run on the MIG
-              GPUs. A MIG GPU is essentially a small A100 GPU with 1/7th the performance and
-              memory of an A100. To run on a MIG GPU, add the "partition" directive to your
-              Slurm script:
+              GPUs. A MIG GPU has 1/7th the performance and memory of an A100. To run on a
+              MIG GPU, add the "partition" directive to your Slurm script:
 
                 #SBATCH --nodes=1
                 #SBATCH --ntasks=1
