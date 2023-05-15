@@ -90,6 +90,25 @@ def is_today_a_work_day() -> bool:
     day_of_week = datetime.strptime(date_today, "%Y-%m-%d").weekday()
     return (not us_holiday) and (not pu_holiday) and (day_of_week < 5)
 
+def seconds_to_slurm_time_format(seconds: int) -> str:
+    """Convert the number of seconds to DD-HH:MM:SS"""
+    hour = seconds // 3600
+    if hour >= 24:
+        days = "%d-" % (hour // 24)
+        hour %= 24
+        hour = days + ("%02d:" % hour)
+    else:
+        if hour > 0:
+            hour = "%02d:" % hour
+        else:
+            hour = '00:'
+    seconds = seconds % (24 * 3600)
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+    return "%s%02d:%02d" % (hour, minutes, seconds)
+
+
 def get_first_name(netid: str) -> str:
     """Get the first name of the user by calling ldapsearch."""
     cmd = f"ldapsearch -x uid={netid} displayname"

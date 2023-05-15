@@ -334,7 +334,7 @@ if __name__ == "__main__":
                              days_between_emails=args.days,
                              violation="excessive_time_limits",
                              vpath=args.files,
-                             subject="Excessive Time Limits on Della")
+                             subject="Requesting Too Much Time for Jobs on Della")
       if args.email and is_today_a_work_day():
           low_time.send_emails_to_users()
       title = "Excessive time limits (all jobs, 1+ hours)"

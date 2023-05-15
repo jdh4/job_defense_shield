@@ -4,6 +4,7 @@ import sys
 sys.path.append("../")
 sys.path.append(".")
 from base import Alert
+from utils import seconds_to_slurm_time_format
 from alert.datascience_mem_hours import DataScienceMemoryHours
 
 @pytest.fixture(autouse=True)
@@ -18,6 +19,12 @@ def test_answer():
                        "use":range(4)})
     A = Alert(df, 13, "", "", "Subject")
     assert 1 == 1
+
+def test_seconds_to_slurm_time_format():
+    assert seconds_to_slurm_time_format(100) == "00:01:40"
+    assert seconds_to_slurm_time_format(1000) == "00:16:40"
+    assert seconds_to_slurm_time_format(10000) == "02:46:40"
+    assert seconds_to_slurm_time_format(100000) == "1-03:46:40"
 
 def test_datascience_mem_hours():
     n_jobs = 5

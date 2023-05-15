@@ -1,5 +1,7 @@
 import textwrap
 from base import Alert
+from utils import SECONDS_PER_MINUTE
+from utils import seconds_to_slurm_time_format
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
@@ -62,24 +64,49 @@ class ExcessiveTimeLimits(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.gp[self.gp.NetID == user].copy()
+                jobs = self.df[self.df.netid == user].copy()
+                xpu = "cpu"
+                num_disp = 10
+                total_jobs = jobs.shape[0]
+                case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
+                jobs = jobs.sort_values(by=f"{xpu}-waste-hours", ascending=False).head(num_disp)
+                jobs["Time-Used"] = jobs["elapsedraw"].apply(seconds_to_slurm_time_format)
+                jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x: seconds_to_slurm_time_format(SECONDS_PER_MINUTE * x))
+                jobs["Percent-Used"] = jobs["ratio"].apply(lambda x: f"{round(x)}%")
+                jobs = jobs[["jobid", "netid", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]].sort_values(by=f"jobid")
+                renamings = {"jobid":"JobID", "netid":"NetID", "cores":"CPU-Cores"}
+                jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
                 s =  f"{get_first_name(user)},\n\n"
-                s += f"Below are jobs that ran on Della in the past {edays} days that allocated too much time\n"
-                s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+                s += f"Below are {case} that ran on Della ({xpu.upper()}) in the past {edays} days:\n\n"
+                s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
                 s += "\n"
                 s += textwrap.dedent(f"""
-                Please request less time by modifying the --time Slurm
-                directive. This will lower your queue times and allow the Slurm job
-                scheduler to work more effectively for all users. For more info:
-                https://researchcomputing.princeton.edu/support/knowledge-base/slurm
-                Please lower the value of the --time Slurm directive.
+                It appears that you are requesting too much time for your jobs since you are
+                only using on average {usr['mean(%)'].values[0]}% of the total allocated time.
+
+                Please request less time by modifying the --time Slurm directive. This will
+                lower your queue times and allow the Slurm job scheduler to work more
+                effectively for all users. For instance, if your job requires 8 hours then use:
+
+                    #SBATCH --time=10:00:00
+
+                The above includes an extra 20% for safety. A good target for Percent-Used
+                is 80%.
+
+                Time-Used is the time (wallclock) that the job needed. The total time allocated
+                for the job is Time-Allocated. The format is DD-HH:MM:SS where DD is days,
+                HH is hours, MM is minutes and SS is seconds. Percent-Used is Time-Used
+                divided by Time-Allocated.
+
+                For more info:
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm
 
                 Replying to this email will open a support ticket with CSES. Let us know if we
                 can be of help.
                 """)
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
