@@ -73,7 +73,7 @@ class ExcessiveTimeLimits(Alert):
                 jobs["Time-Used"] = jobs["elapsedraw"].apply(seconds_to_slurm_time_format)
                 jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x: seconds_to_slurm_time_format(SECONDS_PER_MINUTE * x))
                 jobs["Percent-Used"] = jobs["ratio"].apply(lambda x: f"{round(x)}%")
-                jobs = jobs[["jobid", "netid", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]].sort_values(by=f"jobid")
+                jobs = jobs[["jobid", "netid", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]].sort_values(by="jobid")
                 renamings = {"jobid":"JobID", "netid":"NetID", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
