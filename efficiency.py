@@ -9,7 +9,7 @@ def get_stats_dict(x):
   else:
     return json.loads(gzip.decompress(base64.b64decode(x[4:])))
 
-def cpu_efficiency(d, elapsedraw, jobid, cluster, single=False):
+def cpu_efficiency(d, elapsedraw, jobid, cluster, single=False, precision=1):
   total = 0
   total_used = 0
   for node in d['nodes']:
@@ -24,9 +24,9 @@ def cpu_efficiency(d, elapsedraw, jobid, cluster, single=False):
       total += alloc
       total_used += used
   if total_used > total: print("E: CPU efficiency:", jobid, cluster, total_used, total, flush=True)
-  return round(100 * total_used / total, 1) if single else (total_used, total)
+  return round(100 * total_used / total, precision) if single else (total_used, total)
 
-def gpu_efficiency(d, elapsedraw, jobid, cluster, single=False):
+def gpu_efficiency(d, elapsedraw, jobid, cluster, single=False, precision=1):
   total = 0
   total_used = 0
   for node in d['nodes']:
@@ -41,9 +41,9 @@ def gpu_efficiency(d, elapsedraw, jobid, cluster, single=False):
         total      += elapsedraw
         total_used += elapsedraw * (float(util) / 100)
   if total_used > total: print("GPU efficiency:", jobid, cluster, total_used, total, flush=True)
-  return round(100 * total_used / total, 1) if single else (total_used, total)
+  return round(100 * total_used / total, precision) if single else (total_used, total)
 
-def gpu_memory_usage_eff_tuples(d, jobid, cluster):
+def gpu_memory_usage_eff_tuples(d, jobid, cluster, precision=1):
   all_gpus = []
   for node in d['nodes']:
     try:
@@ -56,12 +56,12 @@ def gpu_memory_usage_eff_tuples(d, jobid, cluster):
     else:
       assert sorted(list(used.keys())) == sorted(list(alloc.keys())), "keys do not match"
       for g in used.keys():
-        all_gpus.append((round(used[g] / 1024**3, 1), round(alloc[g] / 1024**3, 1), float(util[g])))
+        all_gpus.append((round(used[g] / 1024**3, precision), round(alloc[g] / 1024**3, precision), float(util[g])))
         if used[g] > alloc[g]: print("GPU memory:", jobid, cluster, used[g], alloc[g], flush=True)
         if util[g] > 100 or util[g] < 0: print("GPU util:", jobid, cluster, util[g], flush=True)
   return all_gpus
 
-def cpu_memory_usage(d, jobid, cluster):
+def cpu_memory_usage(d, jobid, cluster, precision=0):
   total = 0
   total_used = 0
   for node in d['nodes']:
@@ -75,9 +75,9 @@ def cpu_memory_usage(d, jobid, cluster):
       total += alloc
       total_used += used
   if total_used > total: print("CPU memory:", jobid, cluster, total_used, total, flush=True)
-  return (round(total_used / 1024**3), round(total / 1024**3))
+  return (round(total_used / 1024**3, precision), round(total / 1024**3, precision))
 
-def max_cpu_memory_used_per_node(d, jobid, cluster):
+def max_cpu_memory_used_per_node(d, jobid, cluster, precision=0):
   total = 0
   total_used = 0
   mem_per_node = []
@@ -91,7 +91,7 @@ def max_cpu_memory_used_per_node(d, jobid, cluster):
     else:
       mem_per_node.append(used)
     if used > alloc: print("CPU memory:", jobid, cluster, total_used, total, flush=True)
-  return round(max(mem_per_node) / 1024**3)
+  return round(max(mem_per_node) / 1024**3, precision)
 
 def num_gpus_with_zero_util(d):
   ct = 0
