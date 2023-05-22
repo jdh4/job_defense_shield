@@ -53,6 +53,13 @@ $ ./job_defense_shield.py --check --zero-gpu-utilization --days=30
 - As Slurm partitions are added and removed the script should be updated  
 - For jdh4, the git repo is /tigress/jdh4/utilities/job_defense_shield
 
+To run the unit tests:
+
+```
+$ module load anaconda3/2023.3
+$ pytest --capture=tee-sys tests
+```
+
 ### How to use
 
 Run the commands below on a login node (e.g., tigergpu) to execute the script:
