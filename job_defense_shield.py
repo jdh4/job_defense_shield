@@ -23,7 +23,6 @@ from utils import show_history_of_emails_sent
 
 from efficiency import get_stats_dict
 
-from alert.unused_allocated_time import unused_allocated_hours_of_completed
 from alert.fragmentation import multinode_cpu_fragmentation
 from alert.datascience import datascience_node_violators
 from alert.xpu_efficiency import xpu_efficiencies_of_heaviest_users
@@ -38,6 +37,7 @@ from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
 from alert.longest_queued import LongestQueuedJobs
 from alert.excessive_time_limits import ExcessiveTimeLimits
+from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -115,6 +115,8 @@ if __name__ == "__main__":
                       help='Identify users that are splitting GPU jobs across too many nodes')
   parser.add_argument('--excessive-time', action='store_true', default=False,
                       help='Identify users that are using excessive time limits')
+  parser.add_argument('--serial-using-multiple', action='store_true', default=False,
+                      help='Indentify serial codes using multiple CPU-cores')
   parser.add_argument('--most-cores', action='store_true', default=False,
                       help='List the largest jobs by number of allocated CPU-cores')
   parser.add_argument('--most-gpus', action='store_true', default=False,
@@ -350,6 +352,20 @@ if __name__ == "__main__":
           first_hit = True
         df_str = un.to_string(index=True, justify="center")
         s += add_dividers(df_str, title=cluster_name, pre="\n\n")
+
+  ######################################
+  ## SERIAL CODE USING MULTIPLE CORES ##
+  ######################################
+  if args.serial_using_multiple:
+      serial = SerialCodeUsingMultipleCores(df,
+                                        days_between_emails=args.days,
+                                        violation="serial_using_multiple",
+                                        vpath=args.files,
+                                        subject="Serial Jobs Using Multiple CPU-cores")
+      if args.email and is_today_a_work_day():
+          serial.send_emails_to_users()
+      title = "Potential serial codes using multiple CPU-cores"
+      s += serial.generate_report_for_admins(title)
 
   ###################
   ## ZERO CPU UTIL ##

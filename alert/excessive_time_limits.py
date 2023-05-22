@@ -56,7 +56,7 @@ class ExcessiveTimeLimits(Alert):
                     "partition"]
             self.gp = self.gp[cols]
             renamings = {"netid":"NetID",
-                         f"{xpu}-waste-hours":"CPU-Hours-Unused"}
+                         f"{xpu}-waste-hours":f"{xpu.upper()}-Hours-Unused"}
             self.gp = self.gp.rename(columns=renamings)
 
     def send_emails_to_users(self):
@@ -81,9 +81,12 @@ class ExcessiveTimeLimits(Alert):
                 s += f"Below are {case} that ran on Della ({xpu.upper()}) in the past {edays} days:\n\n"
                 s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
                 s += "\n"
+                unused_hours = usr[f"{xpu.upper()}-Hours-Unused"].values[0]
                 s += textwrap.dedent(f"""
                 It appears that you are requesting too much time for your jobs since you are
-                only using on average {usr['mean(%)'].values[0]}% of the total allocated time.
+                only using on average {usr['mean(%)'].values[0]}% of the total allocated time. This has resulted in
+                {unused_hours} {xpu.upper()}-hours that you scheduled but did not use (it was made available
+                to other users, however).
 
                 Please request less time by modifying the --time Slurm directive. This will
                 lower your queue times and allow the Slurm job scheduler to work more
