@@ -27,7 +27,7 @@ def datascience_node_violators(df, email, vpath):
           (df.admincomment != {}) &
           (df["elapsed-hours"] >= 1)].copy()
 
-  ds["memory-tuple"] = ds.apply(lambda row: cpu_memory_usage(row["admincomment"], row["jobid"], row["cluster"]), axis="columns")
+  ds["memory-tuple"] = ds.apply(lambda row: cpu_memory_usage(row["admincomment"], row["jobid"], row["cluster"], precision=None), axis="columns")
   ds["memory-used"]  = ds["memory-tuple"].apply(lambda x: x[0])
   ds["memory-alloc"] = ds["memory-tuple"].apply(lambda x: x[1])
   ds["Large-Memory-Needed?"] = ds.apply(lambda row: large_memory_needed(row["memory-used"], row["account"]), axis="columns")

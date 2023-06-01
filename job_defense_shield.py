@@ -365,7 +365,7 @@ if __name__ == "__main__":
       if args.email and is_today_a_work_day():
           serial.send_emails_to_users()
       title = "Potential serial codes using multiple CPU-cores"
-      s += serial.generate_report_for_admins(title)
+      s += serial.generate_report_for_admins(title, keep_index=True)
 
   ###################
   ## ZERO CPU UTIL ##
