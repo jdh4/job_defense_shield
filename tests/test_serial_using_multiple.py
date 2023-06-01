@@ -11,7 +11,7 @@ def setUp():
     print("setUp")
     print("tearDown")
 
-def test_mig():
+def test_serial_using_multiple_cores():
     n_jobs = 5
     wallclock_secs = 100000
     wallclock_hrs = wallclock_secs / 3600
@@ -72,10 +72,10 @@ def test_mig():
                                     16 * wallclock_hrs,
                                     32 * wallclock_hrs]})
     serial = SerialCodeUsingMultipleCores(df, 0, "", "", "Subject")
-    actual = serial.df[["NetID", "CPU-cores", "1/CPU-cores", "CPU-Util", "Hours"]]
+    actual = serial.df[["NetID", "CPU-cores", "100%/CPU-cores", "CPU-Util", "Hours"]]
     expected = pd.DataFrame({"NetID":["user1", "user1", "user1", "user2"],
                              "CPU-cores":[32, 16, 16, 32],
-                             "1/CPU-cores":["3.1%", "6.2%", "6.2%", "3.1%"],
+                             "100%/CPU-cores":["3.1%", "6.2%", "6.2%", "3.1%"],
                              "CPU-Util":["3.1%", "6.2%", "6.2%", "3.1%"],
                              "Hours":[round(wallclock_hrs),
                                       round(wallclock_hrs),
