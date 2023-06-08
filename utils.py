@@ -71,9 +71,16 @@ def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
     df = pd.read_csv(f)
     df["when"] = df.email_sent.apply(lambda x: datetime.strptime(x, "%m/%d/%Y %H:%M").date())
     hits = df.when.unique()
-    row = [today - timedelta(days=i) in hits for i in range(day_ticks)]
+    row = []
+    for i in range(day_ticks):
+        dt = today - timedelta(days=i)
+        day_of_week = dt.weekday()
+        char = "_"
+        if day_of_week >= 5: char = " "
+        if dt in hits: char = "X"
+        row.append(char)
     s = " " * (8 - len(netid)) + netid + "@princeton.edu "
-    s += ''.join(["X" if r else "_" for r in row])[::-1]
+    s += ''.join(row)[::-1]
     if "X" in s: print(s)
   print("\n" + "=" * width)
   return None

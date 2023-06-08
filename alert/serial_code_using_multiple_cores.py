@@ -80,8 +80,8 @@ class SerialCodeUsingMultipleCores(Alert):
                     true then allocating more than 1 CPU-core is wasteful. A good target value for
                     CPU-Util is 90% and above.
 
-                    Please consult the documentation for the software to see if it is parallelized.
-                    For more info:
+                    Please consult the documentation of the software to see if it is parallelized.
+                    For a general overview of parallel computing:
         
                         https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
 
@@ -111,8 +111,8 @@ class SerialCodeUsingMultipleCores(Alert):
                         #SBATCH --mail-type=end
                         #SBATCH --mail-user={user}@princeton.edu
 
-                    Replying to this email will open a support ticket with CSES. Let us know if we
-                    can be of help.
+                    Replying to this automated email will open a support ticket with Research
+                    Computing. Let us know if we can be of help.
                     """)
                     send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                     send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")

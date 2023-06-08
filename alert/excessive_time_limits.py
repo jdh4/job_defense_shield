@@ -84,9 +84,9 @@ class ExcessiveTimeLimits(Alert):
                 unused_hours = usr[f"{xpu.upper()}-Hours-Unused"].values[0]
                 s += textwrap.dedent(f"""
                 It appears that you are requesting too much time for your jobs since you are
-                only using on average {usr['mean(%)'].values[0]}% of the total allocated time. This has resulted in
-                {unused_hours} {xpu.upper()}-hours that you scheduled but did not use (it was made available
-                to other users, however).
+                only using on average {usr['mean(%)'].values[0]}% of the allocated time (for the {total_jobs} jobs). This has
+                resulted in {unused_hours} {xpu.upper()}-hours that you scheduled but did not use (it was made
+                available to other users, however).
 
                 Please request less time by modifying the --time Slurm directive. This will
                 lower your queue times and allow the Slurm job scheduler to work more
@@ -94,7 +94,7 @@ class ExcessiveTimeLimits(Alert):
 
                     #SBATCH --time=10:00:00
 
-                The above includes an extra 20% for safety. A good target for Percent-Used
+                The value above includes an extra 20% for safety. A good target for Percent-Used
                 is 80%.
 
                 Time-Used is the time (wallclock) that the job needed. The total time allocated
@@ -102,12 +102,16 @@ class ExcessiveTimeLimits(Alert):
                 HH is hours, MM is minutes and SS is seconds. Percent-Used is Time-Used
                 divided by Time-Allocated.
 
-                For more info:
+                For more information on allocating time via Slurm:
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm
 
-                Replying to this email will open a support ticket with CSES. Let us know if we
-                can be of help.
+                Consider attending an in-person Research Computing help session for assistance:
+
+                    https://researchcomputing.princeton.edu/support/help-sessions
+
+                Replying to this automated email will open a support ticket with Research
+                Computing. Let us know if we can be of help.
                 """)
                 send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")

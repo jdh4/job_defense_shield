@@ -102,10 +102,12 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
             4. Using the MPICH library instead of an MPI library that was built for our
                clusters. Some software installed using \"conda\" is built against an MPI
                library that is not optimized for our systems. Run 'conda list' after
-               activating the environment and look for \"mpich\" to see if you are using this
-               library.
+               activating the environment and look for \"mpich\" to see if you are using
+               this library.
 
             5. Using \"mpirun\" instead of \"srun\" for parallel codes. Please use \"srun\".
+               For more information on Slurm:
+               https://researchcomputing.princeton.edu/support/knowledge-base/slurm
           """)
         elif xpu == "gpu":
           s += textwrap.dedent(f"""
@@ -155,8 +157,8 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
 
              https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
 
-        Replying to this email will open a support ticket with CSES. Let us know if we
-        can be of help.
+        Replying to this automated email will open a support ticket with Research
+        Computing. Let us know if we can be of help.
         """)
         send_email(s, "halverson@princeton.edu", subject=f"Low {xpu.upper()} efficiency on {cluster_name}", sender="cses@princeton.edu")
         send_email(s,  f"{netid}@princeton.edu", subject=f"Low {xpu.upper()} efficiency on {cluster_name}", sender="cses@princeton.edu")

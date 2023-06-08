@@ -173,6 +173,16 @@ if __name__ == "__main__":
                                       "datascience",
                                       "DATASCIENCE",
                                       args.days) 
+      if args.serial_using_multiple:
+          show_history_of_emails_sent(args.files,
+                                      "serial_using_multiple",
+                                      "SERIAL CODE USING MULTIPLE CPU-CORES",
+                                      args.days)
+      if args.excessive_time:
+          show_history_of_emails_sent(args.files,
+                                      "excessive_time_limits",
+                                      "EXCESSIVE TIME LIMITS",
+                                      args.days)
       sys.exit()
 
   # pandas display settings

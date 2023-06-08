@@ -110,8 +110,12 @@ class MultiInstanceGPU(Alert):
                 #SBATCH --mail-type=end
                 #SBATCH --mail-user={user}@princeton.edu
 
-              Replying to this email will open a support ticket with CSES. Let us know if we
-              can be of help.
+              Consider attending an in-person Research Computing help session for assistance:
+
+                https://researchcomputing.princeton.edu/support/help-sessions
+
+              Replying to this automated email will open a support ticket with Research
+              Computing. Let us know if we can be of help.
               """)
               send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
               send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")

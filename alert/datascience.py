@@ -144,9 +144,13 @@ def datascience_node_violators(df, email, vpath):
           One can also see memory usage information by using the following command:
 
              $ jobstats {usr.JobID.values[0]}
+
+          Consider attending an in-person Research Computing help session for assistance:
+
+             https://researchcomputing.princeton.edu/support/help-sessions
           
-          Replying to this email will open a support ticket with CSES. Let us know if we
-          can be of help.
+          Replying to this automated email will open a support ticket with Research
+          Computing. Let us know if we can be of help.
           """)
 
           # send email and append violation file

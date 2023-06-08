@@ -162,9 +162,13 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
 
              #SBATCH --mail-type=end
              #SBATCH --mail-user={netid}@princeton.edu
+
+        Consider attending an in-person Research Computing help session for assistance:
+
+             https://researchcomputing.princeton.edu/support/help-sessions
         
-        Replying to this email will open a support ticket with CSES. Let us know if we
-        can be of help.
+        Replying to this automated email will open a support ticket with Research
+        Computing. Let us know if we can be of help.
         """)
 
         # send email and append violation file

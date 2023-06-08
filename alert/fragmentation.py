@@ -125,6 +125,9 @@ def multinode_cpu_fragmentation(df, email, vpath):
         node information after each job finishes:
           #SBATCH --mail-type=end
           #SBATCH --mail-user={netid}@princeton.edu
+        Consider attending an in-person Research Computing help session for assistance:
+
+             https://researchcomputing.princeton.edu/support/help-sessions
         
         Replying to this email will open a support ticket with CSES. Let us know if we
         can be of help.

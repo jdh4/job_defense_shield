@@ -19,6 +19,7 @@ def cpu_jobs_zero_util(df, cluster, partitions):
       else:
         if float(cpu_time) == 0: ct += 1
     return ct
+
   zu["nodes-unused"] = zu.admincomment.apply(cpu_nodes_with_zero_util)
   zu = zu[zu["nodes-unused"] > 0].rename(columns={"elapsed-hours":"hours"}).sort_values(by="netid")
   zu.state = zu.state.apply(lambda x: JOBSTATES[x])
