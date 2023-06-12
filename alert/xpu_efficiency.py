@@ -101,7 +101,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
 
             4. Using the MPICH library instead of an MPI library that was built for our
                clusters. Some software installed using \"conda\" is built against an MPI
-               library that is not optimized for our systems. Run 'conda list' after
+               library that is not optimized for our systems. Run \"conda list\" after
                activating the environment and look for \"mpich\" to see if you are using
                this library.
 

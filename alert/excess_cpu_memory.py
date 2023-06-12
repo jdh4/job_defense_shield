@@ -9,21 +9,22 @@ import numpy as np
 import pandas as pd
 
 
-class DataScienceMemoryHours(Alert):
+class ExcessCPUMemory(Alert):
 
-    """Cumulative memory use of the datascience nodes."""
+    """Cumulative memory use per user."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject):
-        super().__init__(df, days_between_emails, violation, vpath, subject)
+    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster == "della") &
-                          (self.df.partition == "datasci") &
+        self.df = self.df[(self.df.cluster == self.cluster) &
+                          (self.df.partition == self.partition) &
                           (self.df.admincomment != {}) &
                           (self.df.state != "RUNNING") &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= 1)].copy()
+        self.gp = pd.DataFrame()
         # add new fields
         if not self.df.empty:
             self.df["memory-tuple"] = self.df.apply(lambda row:
@@ -89,6 +90,8 @@ class DataScienceMemoryHours(Alert):
 
     def send_emails_to_users(self):
         pass
+        # what if using full nodes
+        # what if cannot know memory limits in advance
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Drop and rename some of the columns."""

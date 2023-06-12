@@ -11,18 +11,19 @@ class MultinodeGPUFragmentation(Alert):
 
   """Find multinode GPU jobs that use 1 GPU per node."""
 
-  def __init__(self, df, days_between_emails, violation, vpath, subject):
-      super().__init__(df, days_between_emails, violation, vpath, subject)
+  def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+      super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
 
   def _filter_and_add_new_fields(self):
       # filter the dataframe
-      self.df = self.df[(self.df.cluster == "della") &
-                        (self.df.partition == "gpu") &
+      self.df = self.df[(self.df.cluster == self.cluster) &
+                        (self.df.partition == self.partition) &
                         (self.df.state != "RUNNING") &
                         (self.df.gpus > 0) &
                         (self.df.nodes > 1) &
                         (self.df.nodes == self.df.gpus) &
                         (self.df["elapsed-hours"] >= 1)].copy()
+      self.df.rename(columns={"netid":"NetID"}, inplace=True)
       # add new fields
       if not self.df.empty:
           self.df["GPU-eff"] = self.df.apply(lambda row:
@@ -33,11 +34,10 @@ class MultinodeGPUFragmentation(Alert):
                                              if row["admincomment"] != {} else 999, axis="columns")
           self.gpu_util_thres = 50
           self.df["GPUs-per-Node"] = 1
-          cols = ["netid", "jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "state", "GPU-eff"]
+          cols = ["jobid", "gpus", "nodes", "GPUs-per-Node", "elapsed-hours", "state", "GPU-eff"]
           self.df = self.df[cols]
           self.df.state = self.df.state.apply(lambda x: JOBSTATES[x])
-          renamings = {"netid":"NetID",
-                       "jobid":"JobID",
+          renamings = {"jobid":"JobID",
                        "nodes":"Nodes",
                        "gpus":"GPUs",
                        "state":"State",

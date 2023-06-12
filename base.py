@@ -14,13 +14,16 @@ class Alert:
                  days_between_emails: int,
                  violation: str,
                  vpath: str,
-                 subject: str) -> None:
+                 subject: str,
+                 props: dict) -> None:
         self.df = df
         self.days_between_emails = days_between_emails
         self.violation = violation
         self.vpath = vpath
         self.vbase = os.path.join(self.vpath, self.violation)
         self.subject = subject
+        for key in props:
+            setattr(self, key, props[key])
         self._filter_and_add_new_fields()
         # create directory to store user violations
         if self.vbase and not os.path.exists(self.vbase):

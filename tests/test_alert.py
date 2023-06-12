@@ -5,7 +5,7 @@ sys.path.append("../")
 sys.path.append(".")
 from base import Alert
 from utils import seconds_to_slurm_time_format
-from alert.datascience_mem_hours import DataScienceMemoryHours
+from alert.excess_cpu_memory import ExcessCPUMemory
 
 @pytest.fixture(autouse=True)
 def setUp():
@@ -17,7 +17,7 @@ def test_answer():
     df = pd.DataFrame({"netid":["jdh4", "jdh4", "jdh4", "miz"],
                        "partition":["gpu", "mig", "gpu", "mig"],
                        "use":range(4)})
-    A = Alert(df, 13, "", "", "Subject")
+    A = Alert(df, 13, "", "", "Subject", {})
     assert 1 == 1
 
 def test_seconds_to_slurm_time_format():
@@ -26,7 +26,7 @@ def test_seconds_to_slurm_time_format():
     assert seconds_to_slurm_time_format(10000) == "02:46:40"
     assert seconds_to_slurm_time_format(100000) == "1-03:46:40"
 
-def test_datascience_mem_hours():
+def test_excess_cpu_memory():
     n_jobs = 5
     alloc = 1000 * 1024**3
     used = 500 * 1024**3
@@ -69,7 +69,7 @@ def test_datascience_mem_hours():
                        "partition":["datasci"] * n_jobs,
                        "elapsed-hours":[run_time_hrs] * n_jobs,
                        "cpu-hours":[cpus * run_time_hrs] * n_jobs})
-    ds = DataScienceMemoryHours(df, 0, "", "", "Subject")
+    ds = ExcessCPUMemory(df, 0, "", "", "Subject", partition="datasci", cluster="della")
     assert ds.df["cpu-hours"].sum() == cpus * run_time_hrs * n_jobs
     expected = pd.DataFrame({"netid":["user2", "user1"], "mem-hrs-unused":[1000, 350]})
     expected.index += 1

@@ -12,13 +12,13 @@ class MultiInstanceGPU(Alert):
 
   """Find jobs that could have used the MIG GPUs."""
 
-  def __init__(self, df, days_between_emails, violation, vpath, subject):
-      super().__init__(df, days_between_emails, violation, vpath, subject)
+  def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+      super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
 
   def _filter_and_add_new_fields(self):
       # filter the dataframe
-      self.df = self.df[(self.df.cluster == "della") &
-                        (self.df.partition == "gpu") &
+      self.df = self.df[(self.df.cluster == self.cluster) &
+                        (self.df.partition == self.partition) &
                         (self.df.cores == 1) &
                         (self.df.gpus == 1) &
                         (self.df.admincomment != {}) &

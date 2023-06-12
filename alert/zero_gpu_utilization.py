@@ -143,7 +143,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n\n"
         text = (
-        'Toward resolving this issue please consult the documentation for the code that you are running. Is it GPU-enabled? '
+        'Toward resolving this issue, please consult the documentation for the code that you are running. Is it GPU-enabled? '
         )
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n"
