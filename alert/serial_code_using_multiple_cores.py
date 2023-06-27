@@ -93,6 +93,7 @@ class SerialCodeUsingMultipleCores(Alert):
                         #SBATCH --cpus-per-task=1
 
                     You will experience shorter queue times by allocating only 1 CPU-core per job.
+                    In some cases this will also allow you run more jobs simultaneously.
 
                     If you believe that the code is capable of using more than 1 CPU-core then
                     consider attending a Research Computing help session for assistance with

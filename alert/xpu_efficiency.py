@@ -11,7 +11,7 @@ from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
 from pandas.tseries.holiday import USFederalHolidayCalendar # tdo check for holiday
 
-def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email, vpath):
+def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email, vpath, num_top_users):
   # compute proportion using as much data as possible
   pr = df[(df.cluster == cluster) & (df.partition.isin(partitions)) & pd.notna(df[f"{xpu}-seconds"])].copy()
   pr = pr.groupby("netid").agg({f"{xpu}-seconds":np.sum}).reset_index(drop=False)
@@ -38,11 +38,11 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
        "proportion(%)":"first", f"{xpu}-seconds-all":"first", "cores":np.mean, "interactive":np.sum}
   ce = ce.groupby("netid").agg(d).rename(columns={"netid":"jobs"})
   ce = ce.sort_values(by=f"{xpu}-seconds-total", ascending=False).reset_index(drop=False)
-  ce = ce.head(15)
+  ce = ce.head(num_top_users)
   ce["eff(%)"] = 100.0 * ce[f"{xpu}-seconds-used"] / ce[f"{xpu}-seconds-total"]
   if ce.empty: return pd.DataFrame()  # prevents next line from failing
   ce[f"{xpu}-hours"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / SECONDS_PER_HOUR), axis="columns")
-  ce = ce[ce[f"{xpu}-seconds-all"] > 0]  # prevents next line from failing if cpu-only users in top 15 e.g., traverse
+  ce = ce[ce[f"{xpu}-seconds-all"] > 0]  # prevents next line from failing if cpu-only users in num_top_users e.g., traverse
   ce["coverage"] = ce.apply(lambda row: round(row[f"{xpu}-seconds-total"] / row[f"{xpu}-seconds-all"], 2), axis="columns")
   ce["eff(%)"] = ce["eff(%)"].apply(lambda x: round(x))
   ce["cores"] = ce["cores"].apply(lambda x: round(x, 1))
@@ -83,8 +83,8 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
         s += "\n"
         if xpu == "cpu":
           s += textwrap.dedent(f"""
-          Please investigate the reason(s) for the low efficiency. Common reasons for low
-          {xpu.upper()} efficiency include:
+          A good target value for CPU-Util is 90% and above. Please investigate the reason(s)
+          for the low efficiency. Common reasons for low {xpu.upper()} efficiency include:
 
             1. Running a serial code using multiple CPU-cores. Make sure that your code is
                written to run in parallel before using multiple CPU-cores. Learn more:
@@ -111,8 +111,8 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
           """)
         elif xpu == "gpu":
           s += textwrap.dedent(f"""
-          Please investigate the reason(s) for the low efficiency. Common reasons for low
-          {xpu.upper()} efficiency include:
+          A good target value for GPU-Util is 50% and above. Please investigate the reason(s)
+          for the low efficiency. Common reasons for low {xpu.upper()} efficiency include:
 
             1. Misconfigured application scripts. Be sure to read the documentation of the
                software to make sure that you are using it properly. This includes creating

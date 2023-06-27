@@ -101,8 +101,12 @@ class MultiInstanceGPU(Alert):
                 https://researchcomputing.princeton.edu/systems/della#gpus
 
               As an alternative to MIG, you may consider trying to improve the GPU
-              utilization of your code. A good place to start is the mailing list of
-              the software you are using.
+              utilization of your code. A good target value is greater than 50%. Consider
+              writing to the mailing list of the software you are using for guidance.
+
+              For general information about GPU computing:
+
+                https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
               Add the following lines to your Slurm scripts to receive an email report with
               GPU utilization information after each job finishes:

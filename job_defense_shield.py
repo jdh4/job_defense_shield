@@ -128,7 +128,9 @@ if __name__ == "__main__":
   parser.add_argument('-M', '--clusters', type=str, default="all",
                       help='Specify specific clusters (e.g., --clusters=della,traverse)')
   parser.add_argument('-r', '--partition', type=str, default="",
-                      help='Specify specific partitions (e.g., --partition=gpu,mig)')
+                      help='Specify partition(s) (e.g., --partition=gpu,mig)')
+  parser.add_argument('--num-top-users', type=int, default=15,
+                      help='Specify the number of users to consider')
   parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
                       help='Path to the underutilization files')
   parser.add_argument('--email', action='store_true', default=False,
@@ -320,7 +322,10 @@ if __name__ == "__main__":
   if args.low_xpu_efficiency:
     first_hit = False
     for cluster, cluster_name, partitions, xpu in cls:
-      un = xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, args.email, args.files)
+      un = xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu,
+                                              args.email,
+                                              args.files,
+                                              args.num_top_users)
       if not un.empty:
         if not first_hit:
           s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
@@ -340,7 +345,11 @@ if __name__ == "__main__":
                              vpath=args.files,
                              subject="Requesting too much CPU memory",
                              cluster=args.clusters,
-                             partition=args.partition)
+                             partition=args.partition,
+                             num_top_users=args.num_top_users,
+                             cores_per_node=28)
+      if args.email and is_today_a_work_day():
+          mem_hours.send_emails_to_users()
       title = "Memory-Hours (1+ hour jobs)"
       s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
