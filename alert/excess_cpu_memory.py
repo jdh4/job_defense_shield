@@ -4,11 +4,9 @@ from datetime import timedelta
 import textwrap
 from base import Alert
 from efficiency import cpu_memory_usage
-from utils import JOBSTATES
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
-import numpy as np
 import pandas as pd
 
 
@@ -27,7 +25,7 @@ class ExcessCPUMemory(Alert):
                           (self.df.state != "RUNNING") &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= 1)].copy()
-        self.gp = pd.DataFrame()
+        self.ad = pd.DataFrame()
         # add new fields
         if not self.df.empty:
             # only consider jobs that do not use (approximately) full nodes
@@ -46,23 +44,23 @@ class ExcessCPUMemory(Alert):
             self.df["mem-hrs-unused"] = self.df["mem-hrs-alloc"] - self.df["mem-hrs-used"]
             self.df["mean-ratio"]     = self.df["mem-hrs-used"] / self.df["mem-hrs-alloc"]
             self.df["median-ratio"]   = self.df["mem-hrs-used"] / self.df["mem-hrs-alloc"]
-            self.df.state = self.df.state.apply(lambda x: JOBSTATES[x])
             # compute various quantities by grouping by user
-            d = {"mem-hrs-used":np.sum,
-                 "mem-hrs-alloc":np.sum,
-                 "mem-hrs-unused":np.sum,
-                 "elapsed-hours":np.sum,
-                 "cpu-hours":np.sum,
+            d = {"mem-hrs-used":"sum",
+                 "mem-hrs-alloc":"sum",
+                 "mem-hrs-unused":"sum",
+                 "elapsed-hours":"sum",
+                 "cpu-hours":"sum",
                  "account":pd.Series.mode,
                  "mean-ratio":"mean",
                  "median-ratio":"median",
-                 "netid":np.size}
+                 "netid":"size"}
             self.gp = self.df.groupby("netid").agg(d)
             self.gp = self.gp.rename(columns={"netid":"jobs"})
+            self.gp.reset_index(drop=False, inplace=True)
+            # next line is safeguard against division by zero
             total_mem_hours = max(1, self.gp["mem-hrs-alloc"].sum())
             self.gp["proportion"] = self.gp["mem-hrs-alloc"] / total_mem_hours
             self.gp["ratio"] = self.gp["mem-hrs-used"] / self.gp["mem-hrs-alloc"]
-            self.gp.reset_index(drop=False, inplace=True)
             self.gp = self.gp.sort_values("mem-hrs-unused", ascending=False)
             cols = ["netid",
                     "account",
@@ -77,8 +75,8 @@ class ExcessCPUMemory(Alert):
                     "cpu-hours",
                     "jobs"]
             self.gp = self.gp[cols]
-            renamings = {"elapsed-hours":"hrs",
-                         "netid":"NetID",
+            renamings = {"netid":"NetID",
+                         "elapsed-hours":"hrs",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
             self.gp["emails"] = self.gp["NetID"].apply(self.get_emails_sent_count)
@@ -89,6 +87,7 @@ class ExcessCPUMemory(Alert):
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1
             self.gp = self.gp.head(self.num_top_users)
+            self.ad = self.gp.copy()
             self.gp = self.gp[(self.gp["mem-hrs-unused"] > 15 * self.days_between_emails) & 
                               (self.gp["ratio"] < 0.2) & 
                               (self.gp["mean-ratio"] < 0.2) & 
@@ -113,9 +112,9 @@ class ExcessCPUMemory(Alert):
                 num_disp = 10
                 total_jobs = jobs.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
-                pct = round(100 * usr['mean-ratio'].values[0])
-                unused = usr['mem-hrs-unused'].values[0]
-                jobs = jobs.sort_values(by=f"mem-unused", ascending=False).head(num_disp)
+                pct = round(100 * usr["mean-ratio"].values[0])
+                unused = usr["mem-hrs-unused"].values[0]
+                jobs = jobs.sort_values(by="mem-hrs-unused", ascending=False).head(num_disp)
                 jobs = jobs[["jobid", "netid", "mem-used", "mem-alloc", "mean-ratio", "elapsed-hours"]]
                 jobs["mem-used"]   = jobs["mem-used"].apply(lambda x: f"{round(x)} GB")
                 jobs["mem-alloc"]  = jobs["mem-alloc"].apply(lambda x: f"{round(x)} GB")
@@ -171,7 +170,7 @@ class ExcessCPUMemory(Alert):
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
@@ -180,7 +179,7 @@ class ExcessCPUMemory(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Drop and rename some of the columns."""
-        if self.gp.empty:
+        if self.ad.empty:
             return ""
         else:
             cols = ["NetID",
@@ -193,10 +192,10 @@ class ExcessCPUMemory(Alert):
                     "cpu-hrs",
                     "jobs",
                     "emails"]
-            self.gp = self.gp[cols]
-            renamings = {"mem-hrs-unused":"TB-Hours-unused",
-                         "mem-hrs-used":"TB-Hours-used",
+            self.ad = self.ad[cols]
+            renamings = {"mem-hrs-unused":"TB-hrs-unused",
+                         "mem-hrs-used":"TB-hrs-used",
                          "mean-ratio":"mean",
                          "median-ratio":"median"}
-            self.gp = self.gp.rename(columns=renamings)
-            return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+            self.ad = self.ad.rename(columns=renamings)
+            return add_dividers(self.ad.to_string(index=keep_index, justify="center"), title)
