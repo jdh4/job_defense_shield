@@ -65,6 +65,8 @@ def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
   print(" " * (max_netid + len("@princeton.edu") + day_ticks - 2) + "today")
   print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "|")
   print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "V")
+  X = 0
+  num_users = 0
   today = datetime.now().date()
   for f in files:
     netid = f.split("/")[-1].split(".")[0]
@@ -81,8 +83,13 @@ def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
         row.append(char)
     s = " " * (8 - len(netid)) + netid + "@princeton.edu "
     s += ''.join(row)[::-1]
-    if "X" in s: print(s)
+    if "X" in s:
+      print(s)
+      X += s.count("X")
+      num_users += 1
   print("\n" + "=" * width)
+  print(f"Number of X: {X}")
+  print(f"Number of users: {num_users}")
   return None
 
 def is_today_a_work_day() -> bool:

@@ -1,5 +1,6 @@
 import os
 import textwrap
+import random
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -43,7 +44,7 @@ def datascience_node_violators(df, email, vpath):
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
       is_physics = "physics" in usr.account.unique().tolist()
       small_physics = usr[usr["memory-alloc"] < 380].shape[0]
-      if bad_jobs > 0:
+      if (bad_jobs > 0) and (random.random() < bad_jobs / total_jobs):
         vfile = f"{vpath}/datascience/{netid}.email.csv"
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):

@@ -94,8 +94,8 @@ class ExcessiveTimeLimits(Alert):
 
                     #SBATCH --time=10:00:00
 
-                The value above includes an extra 20% for safety. A good target for Percent-Used
-                is 80%.
+                The value above includes an extra 20% for safety. This is important because jobs
+                that exceed the run time limit are killed. A good target for Percent-Used is 80%.
 
                 Time-Used is the time (wallclock) that the job needed. The total time allocated
                 for the job is Time-Allocated. The format is DD-HH:MM:SS where DD is days,

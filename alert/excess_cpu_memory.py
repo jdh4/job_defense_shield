@@ -49,6 +49,7 @@ class ExcessCPUMemory(Alert):
                  "mem-hrs-alloc":"sum",
                  "mem-hrs-unused":"sum",
                  "elapsed-hours":"sum",
+                 "cores":"mean",
                  "cpu-hours":"sum",
                  "account":pd.Series.mode,
                  "mean-ratio":"mean",
@@ -72,11 +73,13 @@ class ExcessCPUMemory(Alert):
                     "median-ratio",
                     "mean-ratio",
                     "elapsed-hours",
+                    "cores",
                     "cpu-hours",
                     "jobs"]
             self.gp = self.gp[cols]
             renamings = {"netid":"NetID",
                          "elapsed-hours":"hrs",
+                         "cores":"avg-cores",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
             self.gp["emails"] = self.gp["NetID"].apply(self.get_emails_sent_count)
@@ -84,6 +87,7 @@ class ExcessCPUMemory(Alert):
             self.gp[cols] = self.gp[cols].apply(round).astype("int64")
             cols = ["proportion", "ratio", "mean-ratio", "median-ratio"]
             self.gp[cols] = self.gp[cols].apply(lambda x: round(x, 2))
+            self.gp["avg-cores"] = self.gp["avg-cores"].apply(lambda x: round(x, 1))
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1
             self.gp = self.gp.head(self.num_top_users)
@@ -115,16 +119,21 @@ class ExcessCPUMemory(Alert):
                 pct = round(100 * usr["mean-ratio"].values[0])
                 unused = usr["mem-hrs-unused"].values[0]
                 jobs = jobs.sort_values(by="mem-hrs-unused", ascending=False).head(num_disp)
-                jobs = jobs[["jobid", "netid", "mem-used", "mem-alloc", "mean-ratio", "elapsed-hours"]]
+                jobs = jobs[["jobid",
+                             "mem-used",
+                             "mem-alloc",
+                             "mean-ratio",
+                             "cores",
+                             "elapsed-hours"]]
                 jobs["mem-used"]   = jobs["mem-used"].apply(lambda x: f"{round(x)} GB")
                 jobs["mem-alloc"]  = jobs["mem-alloc"].apply(lambda x: f"{round(x)} GB")
                 jobs["mean-ratio"] = jobs["mean-ratio"].apply(lambda x: f"{round(100 * x)}%")
                 jobs = jobs.sort_values(by="jobid")
                 renamings = {"jobid":"JobID",
-                             "netid":"NetID",
                              "mem-used":"Memory-Used",
                              "mem-alloc":"Memory-Allocated",
                              "mean-ratio":"Percent-Used",
+                             "cores":"Cores",
                              "elapsed-hours":"Hours"}
                 jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
@@ -144,8 +153,8 @@ class ExcessCPUMemory(Alert):
 
                     #SBATCH --mem=10G
 
-                The value above includes an extra 20% for safety. For more information about
-                allocating CPU memory with Slurm:
+                The value above includes an extra 20% for safety. A good target for Percent-Used
+                is 80%. For more information about allocating CPU memory with Slurm:
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/memory
 

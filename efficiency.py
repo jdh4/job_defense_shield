@@ -106,3 +106,15 @@ def num_gpus_with_zero_util(d):
         util = d['nodes'][node]['gpu_utilization'][gpu]
         if float(util) == 0: ct += 1
   return ct
+
+def cpu_nodes_with_zero_util(d):
+    ct = 0
+    for node in d['nodes']:
+      try:
+        cpu_time = d['nodes'][node]['total_time']
+      except:
+        print("total_time not found")
+        return 0
+      else:
+        if float(cpu_time) == 0: ct += 1
+    return ct

@@ -58,7 +58,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           version = "the GPU"
           usr["GPU-Util"] = "0%"
           zero = (
-          'We measure the utilization of each allocated GPU every 30 seconds. '
+          'The utilization of each allocated GPU is measured every 30 seconds. '
           'All measurements for the job above have been reported as 0%. '
           'You can see this by running the "jobstats" command, for example:'
           )
@@ -66,7 +66,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           version = "the GPUs"
           usr["GPU-Util"] = "0%"
           zero = (
-          'We measure the utilization of each allocated GPU every 30 seconds. '
+          'The utilization of each allocated GPU is measured every 30 seconds. '
           'All measurements for the job above have been reported as 0%. '
           'You can see this by running the "jobstats" command, for example:'
           )
@@ -74,7 +74,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           version = "all of the GPUs"
           usr["GPU-Unused-Util"] = "0%"
           zero = (
-          'We measure the utilization of each allocated GPU every 30 seconds. '
+          'The utilization of each allocated GPU is measured every 30 seconds. '
           'All measurements for at least one of the GPUs used in the job above have been reported as 0%. '
           'You can see this by running the "jobstats" command, for example:'
           )
@@ -82,7 +82,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           version = "the GPUs"
           usr["GPU-Util"] = "0%"
           zero = (
-          'We measure the utilization of each allocated GPU every 30 seconds. '
+          'The utilization of each allocated GPU is measured every 30 seconds. '
           'All measurements for the GPUs used in the jobs above have been reported as 0%. '
           'You can see this by running the "jobstats" command, for example:'
           )
@@ -90,7 +90,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           version = "the GPU(s)"
           usr["GPU-Unused-Util"] = "0%"
           zero = (
-          'We measure the utilization of each allocated GPU every 30 seconds. '
+          'The utilization of each allocated GPU is measured every 30 seconds. '
           'All measurements for at least one of the GPUs used in each job above have been reported as 0%. '
           'You can see this by running the "jobstats" command, for example:'
           )

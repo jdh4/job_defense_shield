@@ -27,12 +27,12 @@ from alert.fragmentation import multinode_cpu_fragmentation
 from alert.datascience import datascience_node_violators
 from alert.xpu_efficiency import xpu_efficiencies_of_heaviest_users
 from alert.zero_gpu_utilization import active_gpu_jobs_with_zero_utilization
-from alert.zero_cpu_utilization import cpu_jobs_zero_util
 
 from alert.mig import MultiInstanceGPU
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.gpu_fragmentation import MultinodeGPUFragmentation
 from alert.excess_cpu_memory import ExcessCPUMemory
+from alert.zero_cpu_utilization import ZeroCPU
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
 from alert.longest_queued import LongestQueuedJobs
@@ -396,6 +396,31 @@ if __name__ == "__main__":
   ## ZERO CPU UTIL ##
   ###################
   if args.zero_cpu_utilization:
+      zero_cpu = ZeroCPU(df,
+                         days_between_emails=args.days,
+                         violation="zero_cpu_utilization",
+                         vpath=args.files,
+                         subject="Jobs with Zero CPU Utilization",
+                         cluster=args.clusters)
+      #if args.email and is_today_a_work_day():
+
+
+
+
+
+
+
+
+
+      
+
+      # JON remove next line
+      if args.email:
+          zero_cpu.send_emails_to_users()
+      title = "Jobs with Zero CPU Utilization (1+ hours)"
+      s += zero_cpu.generate_report_for_admins(title, keep_index=False)
+
+  if 0 and args.zero_cpu_utilization:
     first_hit = False
     for cluster, cluster_name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
                                       ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
@@ -409,6 +434,9 @@ if __name__ == "__main__":
         df_str = zu.to_string(index=False, justify="center")
         s += add_dividers(df_str, title=cluster_name, pre="\n\n")
 
+  ######################
+  ## CPU FRAGMENTATION #
+  ######################
   if args.cpu_fragmentation:
     fg = multinode_cpu_fragmentation(df, args.email, args.files)
     if not fg.empty:

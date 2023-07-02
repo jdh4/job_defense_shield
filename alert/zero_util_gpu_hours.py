@@ -112,7 +112,7 @@ class ZeroUtilGPUHours(Alert):
 
                      https://researchcomputing.princeton.edu/systems/della#mig
 
-              Consider attending an in-person Research Computing help session:
+              Consider attending an in-person Research Computing help session for assistance:
 
                 https://researchcomputing.princeton.edu/support/help-sessions
 

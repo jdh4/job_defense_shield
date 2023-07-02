@@ -9,7 +9,7 @@ from utils import HOURS_PER_DAY
 from utils import send_email
 from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
-from pandas.tseries.holiday import USFederalHolidayCalendar # tdo check for holiday
+from pandas.tseries.holiday import USFederalHolidayCalendar
 
 def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email, vpath, num_top_users):
   # compute proportion using as much data as possible
@@ -141,7 +141,8 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
         s += textwrap.dedent(f"""
         Consult the documentation or write to the mailing list of the software that you
         are using for additional reasons for low {xpu.upper()} efficiency and for potential
-        solutions. You may also consider attending a Research Computing help session:
+        solutions. You may also consider attending an in-person Research Computing help
+        session:
 
              https://researchcomputing.princeton.edu/support/help-sessions
         """)
