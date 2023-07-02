@@ -55,36 +55,53 @@ class ZeroCPU(Alert):
                 usr = self.df[self.df.NetID == user].copy()
                 usr.drop(columns=["NetID"], inplace=True)
                 usr["Nodes-Used"] = usr["Nodes"] - usr["Nodes-Unused"]
-                cond1 = bool(usr.shape[0] == usr[usr["Nodes-Used"] == 1].shape[0])
-                cond2 = bool(usr.shape[0] == usr[usr["Nodes"] > 1].shape[0])
-                multi_node = bool(usr[usr["Nodes"] > 1].shape[0])
-                edays = self.days_between_emails
+                num_jobs = usr.shape[0]
+                all_single = bool(usr.shape[0] == usr[usr["Nodes"] == 1].shape[0])
+                all_multi =  bool(usr.shape[0] == usr[usr["Nodes"] > 1].shape[0])
+                all_used_1 = bool(usr.shape[0] == usr[usr["Nodes-Used"] == 1].shape[0])
+                usr.drop(columns=["Nodes-Used"], inplace=True)
+                if num_jobs == 1 and all_single:
+                    continue
                 s =  f"{get_first_name(user)},\n\n"
                 s += f"Below are your recent jobs that did not use all of the allocated nodes:\n\n"
-                s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+                usr_str = usr.to_string(index=False, justify="center")
+                s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
                 s += textwrap.dedent(f"""
                 The CPU utilization was found to be 0% on each of the unused nodes. You can see
                 this by running the \"jobstats\" command, for example:
 
                     $ jobstats {usr['JobID'].values[0]}
-
-                Please investigate the reason that the code is not using all of the allocated
-                nodes.
                 """)
-                if cond1 and cond2:
+                if all_single:
+                    s += textwrap.dedent(f"""
+                    Please investigate the reason(s) that the code is not using all of the allocated
+                    nodes before running additional jobs.
+                    """)
+                else:
+                    s += textwrap.dedent(f"""
+                    Please investigate the reason(s) that the code is not using all of the allocated
+                    nodes before running additional jobs. Be sure to allocate all of the cores on a
+                    single node before requesting multiple nodes.
+                    """)
+                if all_multi and all_used_1:
                     s += textwrap.dedent(f"""
                     Only 1 node was used for each of the jobs above. This suggests that your
                     code may not be capable of using multiple nodes. Please consult the
-                    documention or write to mailing list of your software to make sure that it
-                    is capable of using multiple nodes.
+                    documention or write to the mailing list of your software to make sure that
+                    it is capable of using multiple nodes. If your code cannot use multiple
+                    nodes then please use the following Slurm directive:
+
+                        #SBATCH --nodes=1
                     """)
                 s += textwrap.dedent(f"""
-                Please resolve this issue before running additional jobs.
-
                 See the following webpage for information about Slurm:
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm
+
+                For 1-on-1 assistance, attend an in-person Research Computing help session:
+
+                    https://researchcomputing.princeton.edu/support/help-sessions
 
                 Add the following lines to your Slurm scripts to receive an email report with
                 CPU utilization information after each job finishes:
@@ -96,10 +113,6 @@ class ZeroCPU(Alert):
                 the optimal number of CPU-cores to use:
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
-
-                For 1-on-1 assistance attend an in-person Research Computing help session:
-
-                    https://researchcomputing.princeton.edu/support/help-sessions
 
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.

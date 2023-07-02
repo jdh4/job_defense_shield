@@ -338,6 +338,10 @@ if __name__ == "__main__":
   #################
   if args.datascience:
       ds = datascience_node_violators(df, args.email, args.files)
+
+  #######################
+  ## EXCESS CPU MEMORY ##
+  #######################
   if args.excess_cpu_memory:
       mem_hours = ExcessCPUMemory(df,
                              days_between_emails=args.days,
@@ -400,39 +404,16 @@ if __name__ == "__main__":
                          days_between_emails=args.days,
                          violation="zero_cpu_utilization",
                          vpath=args.files,
-                         subject="Jobs with Zero CPU Utilization",
-                         cluster=args.clusters)
-      #if args.email and is_today_a_work_day():
-
-
-
-
-
-
-
-
-
-      
-
-      # JON remove next line
-      if args.email:
+                         subject="Jobs with Zero CPU Utilization")
+      if args.email and is_today_a_work_day():
           zero_cpu.send_emails_to_users()
       title = "Jobs with Zero CPU Utilization (1+ hours)"
       s += zero_cpu.generate_report_for_admins(title, keep_index=False)
 
-  if 0 and args.zero_cpu_utilization:
-    first_hit = False
-    for cluster, cluster_name, partitions in [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
-                                      ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
-                                      ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
-                                      ("stellar", "Stellar (AMD)", ("cimes",))]:
-      zu = cpu_jobs_zero_util(df, cluster, partitions)
-      if not zu.empty:
-        if not first_hit:
-          s += "\n\n\n    Zero utilization on a CPU (2+ hour jobs, ignoring running)"
-          first_hit = True
-        df_str = zu.to_string(index=False, justify="center")
-        s += add_dividers(df_str, title=cluster_name, pre="\n\n")
+    # [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
+    #  ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
+    #  ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
+    #  ("stellar", "Stellar (AMD)", ("cimes",))]:
 
   ######################
   ## CPU FRAGMENTATION #
