@@ -153,8 +153,8 @@ class ExcessCPUMemory(Alert):
 
                     #SBATCH --mem=10G
 
-                The value above includes an extra 20% for safety. A good target for Percent-Used
-                is 80%. For more information about allocating CPU memory with Slurm:
+                The value above includes an extra 20% for safety. A good target value for
+                Percent-Used is 80%. For more on allocating CPU memory with Slurm:
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
