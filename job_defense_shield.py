@@ -245,7 +245,9 @@ if __name__ == "__main__":
   df = add_new_and_derived_fields(df)
   df.reset_index(drop=True, inplace=True)
 
-  if not args.email:
+  #if not args.email:
+  #if debug:
+  if False:
       df.info()
       print(df.describe().astype("int64").T)
       print("\nTotal NaNs:", df.isnull().sum().sum())
@@ -457,7 +459,7 @@ if __name__ == "__main__":
                            violation="null",
                            vpath=args.files,
                            subject="")
-      title = "Longest queue times of PENDING jobs (1 job per user, ignoring job arrays)"
+      title = "Longest queue times (1 job per user, ignoring job arrays, 4+ days)"
       s += queued.generate_report_for_admins(title)
 
   ########################## 

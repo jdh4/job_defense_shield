@@ -88,7 +88,7 @@ class ZeroCPU(Alert):
                     s += textwrap.dedent(f"""
                     Only 1 node was used for each of the jobs above. This suggests that your
                     code may not be capable of using multiple nodes. Please consult the
-                    documention or write to the mailing list of your software to make sure that
+                    documentation or write to the mailing list of your software to confirm that
                     it is capable of using multiple nodes. If your code cannot use multiple
                     nodes then please use the following Slurm directive:
 
@@ -117,7 +117,7 @@ class ZeroCPU(Alert):
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
@@ -129,4 +129,5 @@ class ZeroCPU(Alert):
         if self.df.empty:
             return ""
         else:
+            self.df = self.df.sort_values(["NetID", "JobID"]) 
             return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

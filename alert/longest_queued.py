@@ -15,6 +15,7 @@ class LongestQueuedJobs(Alert):
     def _filter_and_add_new_fields(self):
         # filter the dataframe
         self.df = self.df[self.df.state == "PENDING"].copy()
+        self.df = self.df[self.df.jobid != "10018157"]
         # remove array jobs
         self.df = self.df[~self.df.jobid.str.contains("_")]
         # add new fields
