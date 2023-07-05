@@ -52,8 +52,8 @@ class SerialCodeUsingMultipleCores(Alert):
                            "NetID",
                            "Partition",
                            "CPU-cores",
-                           "100%/CPU-cores",
                            "CPU-Util",
+                           "100%/CPU-cores",
                            "Hours",
                            "cpu-hours"]]
         self.df = self.df.sort_values(by=["NetID", "JobID"])
@@ -78,7 +78,7 @@ class SerialCodeUsingMultipleCores(Alert):
                     100% divided by the number of allocated CPU-cores (100%/CPU-cores). This
                     suggests that you may be running a code that can only use 1 CPU-core. If this is
                     true then allocating more than 1 CPU-core is wasteful. A good target value for
-                    CPU-Util is 90% and above.
+                    CPU utilization is 90% and above.
 
                     Please consult the documentation of the software to see if it is parallelized.
                     For a general overview of parallel computing:
@@ -96,8 +96,8 @@ class SerialCodeUsingMultipleCores(Alert):
                     In some cases this will also allow you run more jobs simultaneously.
 
                     If you believe that the code is capable of using more than 1 CPU-core then
-                    consider attending a Research Computing help session for assistance with
-                    running parallel jobs:
+                    consider attending an in-person Research Computing help session for assistance
+                    with running parallel jobs:
 
                         https://researchcomputing.princeton.edu/support/help-sessions
 
@@ -132,8 +132,9 @@ class SerialCodeUsingMultipleCores(Alert):
             self.gp = self.gp[self.gp["CPU-hours"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]
             self.gp["CPU-hours"] = self.gp["CPU-hours"].apply(round)
             self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x: round(x, 1))
+            self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.gp = self.gp[["NetID", "CPU-hours", "CPU-cores", "Jobs"]]
+            self.gp = self.gp[["NetID", "CPU-hours", "AvgCores", "Jobs"]]
             self.gp = self.gp.sort_values(by="CPU-hours", ascending=False)
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1

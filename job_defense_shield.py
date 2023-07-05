@@ -23,7 +23,6 @@ from utils import show_history_of_emails_sent
 
 from efficiency import get_stats_dict
 
-from alert.fragmentation import multinode_cpu_fragmentation
 from alert.datascience import datascience_node_violators
 from alert.xpu_efficiency import xpu_efficiencies_of_heaviest_users
 from alert.zero_gpu_utilization import active_gpu_jobs_with_zero_utilization
@@ -38,6 +37,7 @@ from alert.most_cores import MostCores
 from alert.longest_queued import LongestQueuedJobs
 from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
+from alert.fragmentation import MultinodeCPUFragmentation
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -421,10 +421,15 @@ if __name__ == "__main__":
   ## CPU FRAGMENTATION #
   ######################
   if args.cpu_fragmentation:
-    fg = multinode_cpu_fragmentation(df, args.email, args.files)
-    if not fg.empty:
-      df_str = fg.to_string(index=False, justify="center")
-      s += add_dividers(df_str, title="Multinode CPU jobs with < 14 cores per node (all jobs, 2+ hours)", pre="\n\n\n")
+      cpu_frag = MultinodeCPUFragmentation(df,
+                                          days_between_emails=args.days,
+                                          violation="cpu_fragmentation",
+                                          vpath=args.files,
+                                          subject="Jobs Running Across Too Many Nodes")
+      if args.email and is_today_a_work_day():
+          cpu_frag.send_emails_to_users()
+      title = "CPU fragmentation (1+ hours)"
+      s += cpu_frag.generate_report_for_admins(title, keep_index=False)
 
   ################
   ## MOST CORES ##
