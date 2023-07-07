@@ -425,7 +425,7 @@ if __name__ == "__main__":
                                           days_between_emails=args.days,
                                           violation="cpu_fragmentation",
                                           vpath=args.files,
-                                          subject="Jobs Running Across Too Many Nodes")
+                                          subject="Jobs Using Too Many Nodes")
       if args.email and is_today_a_work_day():
           cpu_frag.send_emails_to_users()
       title = "CPU fragmentation (1+ hours)"

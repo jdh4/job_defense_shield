@@ -2,16 +2,10 @@ import math
 import textwrap
 from base import Alert
 from efficiency import cpu_memory_usage
-from efficiency import max_cpu_memory_used_per_node
-from efficiency import gpu_efficiency
 from efficiency import cpu_nodes_with_zero_util
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
-from utils import SECONDS_PER_MINUTE
-from utils import SECONDS_PER_HOUR
-from utils import MINUTES_PER_HOUR
-from utils import HOURS_PER_DAY
 
 
 class MultinodeCPUFragmentation(Alert):
@@ -57,7 +51,7 @@ class MultinodeCPUFragmentation(Alert):
     def min_nodes_needed(cluster, partition, nodes, cores, mem_per_node_used):
         def cores_vs_memory(cores, cores_max, memory, memory_max):
             min_nodes_by_cores = math.ceil(cores / cores_max)
-            min_nodes_by_memory = min(1, math.ceil(nodes * mem_per_node_used / ((1 - safety) * memory_max)))
+            min_nodes_by_memory = math.ceil(nodes * mem_per_node_used / ((1 - safety) * memory_max))
             return max(min_nodes_by_cores, min_nodes_by_memory)
         safety = 0.2
         if cluster == "della" and partition == "physics":
@@ -118,10 +112,11 @@ class MultinodeCPUFragmentation(Alert):
             cols = ["jobid",
                     "NetID",
                     "cluster",
+                    "partition",
                     "nodes",
-                    "min-nodes",
+                    "mem-per-node-used",
                     "cores-per-node",
-                    "mem-per-node-used"]
+                    "min-nodes"]
             self.df = self.df[cols]
 
     def send_emails_to_users(self):
@@ -129,7 +124,6 @@ class MultinodeCPUFragmentation(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
-                usr = usr.drop(columns=["NetID"])
                 renamings = {"jobid":"JobID",
                              "netid":"NetID",
                              "cluster":"Cluster",
@@ -139,77 +133,129 @@ class MultinodeCPUFragmentation(Alert):
                              "mem-per-node-used":"Memory-per-Node-Used",
                              "hours":"Hours"}
                 usr = usr.rename(columns=renamings)
-                is_della   = "della" in usr.cluster.tolist()
-                is_physics = "physics" in usr.partition.tolist()
-                is_stellar = "stellar" in usr.cluster.tolist()
-                is_tiger   = "tiger" in usr.cluster.tolist()
+                min_nodes = usr["Min-Nodes-Needed"].mode().values[0]
+                is_stellar = "stellar" in usr.Cluster.tolist()
+                is_tiger = "tiger" in usr.Cluster.tolist()
+                is_della = "della" in usr.Cluster.tolist()
+                della = usr[usr.Cluster == "della"].copy()
+                all_physics = "physics" in della.partition.tolist() and \
+                              bool(della[della.partition == "physics"].shape[0] == della.shape[0])
+                all_not_physics = bool(della[della.partition != "physics"].shape[0] == della.shape[0])
                 edays = self.days_between_emails
-                s = f"{get_first_name(user)},\n\n"
-                s += "Below are your jobs that ran in the past {edays} using more nodes than needed:"
+                s =  f"{get_first_name(user)},\n\n"
+                s += f"Below are your recent jobs which appear to be using more nodes than necessary:"
                 s += "\n\n"
+                usr = usr.drop(columns=["NetID", "partition"])
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([2 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
                 s += textwrap.dedent(f"""
-                The "Min-Nodes-Needed" column shows the minimum number of nodes needed to run
-                the job. This is based on the number of CPU-cores that you requested as well
-                as the CPU memory usage of the job. The value
-                of "Min-Nodes-Needed" is less than that of "Nodes" for all jobs above indicating
-                job fragmentation. When a job is ran using more nodes than needed
-                it prevents other users from running jobs that require full nodes and in
-                some cases it introduces data communication inefficiencies.
-                For future jobs, please try to use the minimum number of nodes for a given job by
-                decreasing the values of the --nodes, --ntasks, --ntasks-per-node Slurm directives.
-                This will eliminate job fragmentation which will allow all users to use the
-                cluster effectively. When a job is divided over more nodes than it needs to be
-                it prevents other users from running jobs that require full nodes.
+                The "Nodes" column shows the number of nodes used to run the job. The
+                "Min-Nodes-Needed" column shows the minimum number of nodes needed to run the
+                job (these values are based on the number of requested CPU-cores while taking
+                into account the CPU memory usage of the job).
+
+                When possible please try to minimize the number of nodes per job by using all
+                of the CPU-cores of each node. This will help to maximize the overall job
+                throughput of the cluster.
                 """)
-                s += "\n"
                 if is_della:
-                  s += "Della is mostly composed of nodes with 32 CPU-cores and 190 GB of CPU memory.\n"
-                  s+= "For more information about the nodes on Della:"
-                  s += "\n\n"
-                  s += "  https://researchcomputing.princeton.edu/systems/della"
+                    if all_not_physics:
+                        s += textwrap.dedent(f"""
+                        Della is composed of nodes with 32 CPU-cores and 190 GB of CPU memory. If your
+                        job requires {32*min_nodes} CPU-cores then use, for example:
+
+                          #SBATCH --nodes={min_nodes}
+                          #SBATCH --ntasks-per-node=32
+
+                        For more information about the nodes on Della:
+
+                          https://researchcomputing.princeton.edu/systems/della
+                        """)
+                    elif all_physics:
+                        s += textwrap.dedent(f"""
+                        Della (physics) is composed of nodes with 40 CPU-cores and 380 GB of CPU memory. If
+                        your job requires {40*min_nodes} CPU-cores then use, for example:
+
+                          #SBATCH --nodes={min_nodes}
+                          #SBATCH --ntasks-per-node=40
+
+                        For more information about the nodes on Della:
+
+                          https://researchcomputing.princeton.edu/systems/della
+                        """)
+                    else:
+                        s += textwrap.dedent(f"""
+                        Della (physics) is composed of nodes with 40 CPU-cores and 380 GB of CPU memory.
+                        while Della (cpu) is composed of nodes with 32 CPU-cores and 190 GB of CPU
+                        memory. If your job requires {40*min_nodes} CPU-cores then use, for example:
+
+                          #SBATCH --nodes={min_nodes}
+                          #SBATCH --ntasks-per-node=40
+
+                        For more information about the nodes on Della:
+
+                          https://researchcomputing.princeton.edu/systems/della
+                        """)
                 if is_tiger:
-                  s += "TigerCPU is composed of nodes with 40 CPU-cores and either 192 or 768 GB of\n"
-                  s += "CPU memory. For more information about the Tiger cluster:"
-                  s += "\n\n"
-                  s += "  https://researchcomputing.princeton.edu/systems/tiger"
-                if is_physics:
-                  s += "Della (physics) is composed of nodes with 40 CPU-cores and 380 GB of\n"
-                  s += "CPU memory. For more information about the Della cluster:"
-                  s += "\n\n"
-                  s += "  https://researchcomputing.princeton.edu/systems/della"
+                    s += textwrap.dedent(f"""
+                        Tiger is composed of nodes with 40 CPU-cores and either 192 or 768 GB of
+                        CPU memory. If your job requires {40*min_nodes} CPU-cores then use, for example:
+
+                          #SBATCH --nodes={min_nodes}
+                          #SBATCH --ntasks-per-node=40
+
+                        For more information about the nodes on Tiger:
+
+                          https://researchcomputing.princeton.edu/systems/tiger
+                        """)
                 if is_stellar:
-                  s += "Stellar (Intel) is composed of nodes with 96 CPU-cores and 768 GB of\n"
-                  s += "CPU memory. For more information about the Stellar cluster:"
-                  s += "\n\n"
-                  s += "  https://researchcomputing.princeton.edu/systems/stellar"
-                s += "\n"
+                    s += textwrap.dedent(f"""
+                        Stellar (Intel) is composed of nodes with 96 CPU-cores and 768 GB of CPU memory.
+                        If your job requires {96*min_nodes} CPU-cores then use, for example:
+
+                          #SBATCH --nodes={min_nodes}
+                          #SBATCH --ntasks-per-node=96
+
+                        For more information about the nodes on Stellar:
+
+                          https://researchcomputing.princeton.edu/systems/stellar
+                        """)
                 s += textwrap.dedent(f"""
-                If you are unsure about the meanings of --nodes, --ntasks, --ntasks-per-node
-                and --cpus-per-task, see these webpages:
-                  https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
+                If you are unsure about the meanings of --nodes, --ntasks, --ntasks-per-node and
+                --cpus-per-task, see our Slurm webpage:
+
                   https://researchcomputing.princeton.edu/support/knowledge-base/slurm
-                The optimal number nodes and CPU-cores to use for a given parallel code can be
-                obtained by conducting a scaling analysis:
+
+                Additionally, see this general overview on parallel computing:
+
+                  https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
+
+                It is very important to conduct a scaling analysis to find the optimal number
+                of nodes and CPU-cores to use for a given parallel job. The calculation of
+                "Min-Nodes-Needed" above is based on your choice of the total CPU-cores which
+                may not be optimal. For information on conducting a scaling analysis:
+
                   https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
-                """)
-                s += textwrap.dedent(f"""
+
+                See detailed information about each job by running the \"jobstats\" command:
+
+                  $ jobstats {usr['JobID'].values[0]}
+
                 Add the following lines to your Slurm scripts to receive an email report with
-                node information after each job finishes:
+                efficiency information after each job finishes:
 
                   #SBATCH --mail-type=end
                   #SBATCH --mail-user={user}@princeton.edu
 
                 Consider attending an in-person Research Computing help session for assistance:
 
-                     https://researchcomputing.princeton.edu/support/help-sessions
-                
+                  https://researchcomputing.princeton.edu/support/help-sessions
+ 
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
