@@ -57,7 +57,7 @@ To run the unit tests:
 
 ```
 $ module load anaconda3/2023.3
-$ pytest --capture=tee-sys tests
+$ pytest  --cov=. --capture=tee-sys tests
 ```
 
 ### How to use
