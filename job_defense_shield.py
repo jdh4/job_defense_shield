@@ -170,6 +170,16 @@ if __name__ == "__main__":
                                       "gpu_fragmentation",
                                       "1 GPU PER NODE",
                                       args.days)
+      if args.excess_cpu_memory:
+          show_history_of_emails_sent(args.files,
+                                      "excess_cpu_memory",
+                                      "EXCESS CPU MEMORY",
+                                      args.days)
+      if args.cpu_fragmentation:
+          show_history_of_emails_sent(args.files,
+                                      "cpu_fragmentation",
+                                      "CPU FRAGMENTATION PER NODE",
+                                      args.days)
       if args.datascience:
           show_history_of_emails_sent(args.files,
                                       "datascience",

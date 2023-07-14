@@ -59,8 +59,8 @@ def datascience_node_violators(df, email, vpath):
           renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "netid":"NetID", "memory-used":"Memory-Used", \
                        "cpu-hours":"CPU-hours", "memory-alloc":"Memory-Allocated"}
           usr = usr[cols].rename(columns=renamings)
-          s += "Below are jobs that ran on the large-memory (datascience) nodes on Della in the "
-          s += "\npast 7 days:"
+          s += "Below are your jobs that ran on the large-memory (datascience) nodes on Della in "
+          s += "\nthe past 7 days:"
           s += "\n\n"
           s += "\n".join([3 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
           s += "\n"

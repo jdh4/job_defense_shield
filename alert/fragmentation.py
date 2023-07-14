@@ -130,8 +130,7 @@ class MultinodeCPUFragmentation(Alert):
                              "nodes":"Nodes",
                              "min-nodes":"Min-Nodes-Needed",
                              "cores-per-node":"Cores-per-Node",
-                             "mem-per-node-used":"Memory-per-Node-Used",
-                             "hours":"Hours"}
+                             "mem-per-node-used":"Memory-per-Node-Used"}
                 usr = usr.rename(columns=renamings)
                 min_nodes = usr["Min-Nodes-Needed"].mode().values[0]
                 is_stellar = "stellar" in usr.Cluster.tolist()

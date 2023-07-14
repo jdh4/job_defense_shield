@@ -4,3 +4,4 @@ violations/
 log/
 .pytest_cache/
 cron.backup
+.coverage

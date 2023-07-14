@@ -81,7 +81,7 @@ def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
         if day_of_week >= 5: char = " "
         if dt in hits: char = "X"
         row.append(char)
-    s = " " * (8 - len(netid)) + netid + "@princeton.edu "
+    s = " " * (max_netid - len(netid)) + netid + "@princeton.edu "
     s += ''.join(row)[::-1]
     if "X" in s:
       print(s)
