@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
   parser = argparse.ArgumentParser(description='Job Defense Shield')
   parser.add_argument('--zero-cpu-utilization', action='store_true', default=False,
-                      help='Identify CPU jobs with zero utilization')
+                      help='Identify completed CPU jobs with zero utilization')
   parser.add_argument('--zero-gpu-utilization', action='store_true', default=False,
                       help='Identify running GPU jobs with zero utilization')
   parser.add_argument('--zero-util-gpu-hours', action='store_true', default=False,
@@ -104,35 +104,35 @@ if __name__ == "__main__":
   parser.add_argument('--low-xpu-efficiency', action='store_true', default=False,
                       help='Identify users with low CPU/GPU efficiency')
   parser.add_argument('--datascience', action='store_true', default=False,
-                      help='Identify users that unjustly used the datascience nodes')
+                      help='Identify jobs that unjustly used the datascience nodes')
   parser.add_argument('--excess-cpu-memory', action='store_true', default=False,
-                      help='Allocating too much CPU memory')
+                      help='Identify users that are allocating too much CPU memory')
   parser.add_argument('--mig', action='store_true', default=False,
-                      help='Identify users that should use MIG')
+                      help='Identify jobs that should use MIG')
   parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
-                      help='Identify users that are splitting CPU jobs across too many nodes')
+                      help='Identify CPU jobs that are split across too many nodes')
   parser.add_argument('--gpu-fragmentation', action='store_true', default=False,
-                      help='Identify users that are splitting GPU jobs across too many nodes')
+                      help='Identify GPU jobs that are splitt across too many nodes')
   parser.add_argument('--excessive-time', action='store_true', default=False,
-                      help='Identify users that are using excessive time limits')
+                      help='Identify users with excessive run time limits')
   parser.add_argument('--serial-using-multiple', action='store_true', default=False,
                       help='Indentify serial codes using multiple CPU-cores')
+  parser.add_argument('--longest-queued', action='store_true', default=False,
+                      help='List the longest queued jobs')
   parser.add_argument('--most-cores', action='store_true', default=False,
                       help='List the largest jobs by number of allocated CPU-cores')
   parser.add_argument('--most-gpus', action='store_true', default=False,
                       help='List the largest jobs by number of allocated GPUs')
-  parser.add_argument('--longest-queued', action='store_true', default=False,
-                      help='List the longest queued jobs')
   parser.add_argument('-d', '--days', type=int, default=14, metavar='N',
                       help='Use job data over N previous days from now (default: 14)')
   parser.add_argument('-M', '--clusters', type=str, default="all",
-                      help='Specify specific clusters (e.g., --clusters=della,traverse)')
+                      help='Specify cluster(s) (e.g., --clusters=della,traverse)')
   parser.add_argument('-r', '--partition', type=str, default="",
                       help='Specify partition(s) (e.g., --partition=gpu,mig)')
   parser.add_argument('--num-top-users', type=int, default=15,
                       help='Specify the number of users to consider')
   parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
-                      help='Path to the underutilization files')
+                      help='Path to the underutilization log files')
   parser.add_argument('--email', action='store_true', default=False,
                       help='Send email alerts to users')
   parser.add_argument('--report', action='store_true', default=False,
@@ -140,6 +140,11 @@ if __name__ == "__main__":
   parser.add_argument('--check', action='store_true', default=False,
                       help='Show the history of emails sent to users')
   args = parser.parse_args()
+
+
+  if args.email and (os.environ["USER"] != "jdh4"):
+      print("The --email flag can currently only used by jdh4 to send emails. Exiting ...")
+      sys.exit()
 
   #######################
   ## CHECK EMAILS SENT ##
@@ -195,6 +200,8 @@ if __name__ == "__main__":
                                       "excessive_time_limits",
                                       "EXCESSIVE TIME LIMITS",
                                       args.days)
+      if args.most_gpus or args.most_cores or args.longest_queued:
+          print("Nothing to check for --most-gpus, --most-cores or --longest-queued.")
       sys.exit()
 
   # pandas display settings
@@ -355,6 +362,9 @@ if __name__ == "__main__":
   ## EXCESS CPU MEMORY ##
   #######################
   if args.excess_cpu_memory:
+      if "," in args.clusters or "," in args.partition:
+          print("Must use 1 cluster and 1 partition for this alert. Exiting ...")
+          sys.exit()
       mem_hours = ExcessCPUMemory(df,
                              days_between_emails=args.days,
                              violation="excess_cpu_memory",

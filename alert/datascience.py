@@ -44,7 +44,7 @@ def datascience_node_violators(df, email, vpath):
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
       is_physics = "physics" in usr.account.unique().tolist()
       small_physics = usr[usr["memory-alloc"] < 380].shape[0]
-      if (bad_jobs > 0) and (random.random() < bad_jobs / total_jobs):
+      if (bad_jobs > 0) and (random.random() < (bad_jobs / total_jobs)**2):
         vfile = f"{vpath}/datascience/{netid}.email.csv"
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
@@ -72,13 +72,13 @@ def datascience_node_violators(df, email, vpath):
             overall memory requirement of each job is less than {max_mem}. You should use the
             smallest value possible but include an extra 20% for safety.
 
-            For more information on the Della large-memory nodes:
-
-               https://researchcomputing.princeton.edu/systems/della#large_memory
-
             Learn more about allocating CPU memory with Slurm:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+            For more information on the Della large-memory nodes:
+
+               https://researchcomputing.princeton.edu/systems/della#large_memory
 
             Users that continually run jobs on the large-memory nodes without justification
             risk losing access to these nodes since it prevents others from getting their
@@ -93,13 +93,13 @@ def datascience_node_violators(df, email, vpath):
             each job is less than {max_mem}. You should use the smallest value possible but include
             an extra 20% for safety.
 
-            For more information on the Della large-memory nodes:
-
-               https://researchcomputing.princeton.edu/systems/della#large_memory
-
             Learn more about allocating CPU memory with Slurm:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+            For more information on the Della large-memory nodes:
+
+               https://researchcomputing.princeton.edu/systems/della#large_memory
 
             Users that continually run jobs on the large-memory nodes without justification
             risk losing access to these nodes since it prevents others from getting their
@@ -116,13 +116,13 @@ def datascience_node_violators(df, email, vpath):
             We understand that for some jobs it can be very difficult or impossible to estimate
             the memory requirements. For those jobs please disregard this email.
 
-            For more information on the Della large-memory nodes:
-
-               https://researchcomputing.princeton.edu/systems/della#large_memory
-
             Learn more about allocating CPU memory with Slurm:
 
                https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+            For more information on the Della large-memory nodes:
+
+               https://researchcomputing.princeton.edu/systems/della#large_memory
             """)
 
           # if a physics user does not specify -p physics and they request more than 194G then it will go to datascience
