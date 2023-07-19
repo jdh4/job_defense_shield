@@ -121,6 +121,11 @@ class MultinodeCPUFragmentation(Alert):
 
     def send_emails_to_users(self):
         for user in self.df.NetID.unique():
+
+
+            if user == "martirez": continue  # EXCLUDED USER--HANDLE VIA CONFIG FILE
+
+
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
