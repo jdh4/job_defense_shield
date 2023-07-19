@@ -1,4 +1,4 @@
-![Tests](https://github.com/jdh4/job_defense_shield/actions/workflows/tests.yaml/badge.svg)
+[![Tests](https://github.com/jdh4/job_defense_shield/actions/workflows/tests.yml/badge.svg)](https://github.com/jdh4/job_defense_shield/actions?workflow=Tests)
 
 
 # Job Defense Shield
