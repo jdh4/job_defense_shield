@@ -1,3 +1,6 @@
+![Tests](https://github.com/jdh4/job_defense_shield/actions/workflows/tests.yaml/badge.svg)
+
+
 # Job Defense Shield
 
 The software in this repo creates a report of problem users and problem jobs on the large Research Computing clusters. The software identifies the following:
