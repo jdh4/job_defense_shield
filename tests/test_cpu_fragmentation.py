@@ -1,8 +1,5 @@
 import pytest
 import pandas as pd
-import sys
-sys.path.append("../")
-sys.path.append(".")
 from alert.fragmentation import MultinodeCPUFragmentation
 
 @pytest.fixture(autouse=True)

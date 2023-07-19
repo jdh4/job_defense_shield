@@ -1,8 +1,6 @@
 import pytest
 import pandas as pd
 import sys
-sys.path.append("../")
-sys.path.append(".")
 from utils import seconds_to_slurm_time_format
 
 @pytest.fixture(autouse=True)

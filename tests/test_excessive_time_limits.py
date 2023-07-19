@@ -1,9 +1,5 @@
 import pytest
 import pandas as pd
-import sys
-sys.path.append("../")
-sys.path.append(".")
-from base import Alert
 from alert.excessive_time_limits import ExcessiveTimeLimits
 
 @pytest.fixture(autouse=True)

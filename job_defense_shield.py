@@ -415,7 +415,7 @@ if __name__ == "__main__":
                                         subject="Serial Jobs Using Multiple CPU-cores")
       if args.email and is_today_a_work_day():
           serial.send_emails_to_users()
-      title = "Potential serial codes using multiple CPU-cores"
+      title = "Potential serial codes using multiple CPU-cores (Della cpu)"
       s += serial.generate_report_for_admins(title, keep_index=True)
 
   ###################

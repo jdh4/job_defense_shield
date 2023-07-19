@@ -1,8 +1,5 @@
 import pytest
 import pandas as pd
-import sys
-sys.path.append("../")
-sys.path.append(".")
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 
 @pytest.fixture(autouse=True)

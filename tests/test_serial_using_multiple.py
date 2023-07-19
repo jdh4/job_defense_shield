@@ -1,8 +1,5 @@
 import pytest
 import pandas as pd
-import sys
-sys.path.append("../")
-sys.path.append(".")
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 
 @pytest.fixture(autouse=True)

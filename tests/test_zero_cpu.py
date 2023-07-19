@@ -1,8 +1,5 @@
 import pytest
 import pandas as pd
-import sys
-sys.path.append("../")
-sys.path.append(".")
 from alert.zero_cpu_utilization import ZeroCPU
 
 @pytest.fixture(autouse=True)
