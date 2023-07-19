@@ -11,7 +11,7 @@ jobs:
           python-version: "3.7"
 
       - name: Install package
-        run: pip install pandas
+        run: pip install pandas pytest
 
       - name: Test package
         run: python -m pytest
