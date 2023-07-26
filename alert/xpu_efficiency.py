@@ -78,7 +78,7 @@ def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xp
         usr["AvgCores"] = usr["AvgCores"].apply(lambda x: str(x).replace(".0", ""))
         usage = usage.values[0]
         myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
-        s +=f"Over the last 8 days you have used {myrank} {xpu.upper()}-hours on {cluster_name} but\n"
+        s +=f"Over the last 7 days you have used {myrank} {xpu.upper()}-hours on {cluster_name} but\n"
         s +=f"your mean {xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
         s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
         s += "\n"

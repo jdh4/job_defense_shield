@@ -155,6 +155,11 @@ if __name__ == "__main__":
                                       "zero_gpu_utilization",
                                       "ZERO GPU UTILIZATION OF A RUNNING JOB",
                                       args.days)
+      if args.zero_cpu_utilization:
+          show_history_of_emails_sent(args.files,
+                                      "zero_cpu_utilization",
+                                      "ZERO CPU UTILIZATION OF A RUNNING JOB",
+                                      args.days)
       if args.mig:
           show_history_of_emails_sent(args.files,
                                       "should_be_using_mig",
@@ -336,6 +341,7 @@ if __name__ == "__main__":
          ("traverse", "Traverse (GPU)", ("all",), "gpu"))
   cls = (("della", "Della (CPU)", ("cpu",), "cpu"), \
          ("della", "Della (GPU)", ("gpu",), "gpu"), \
+         ("della", "Della (physics)", ("physics",), "cpu"), \
          ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
          ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
   if args.low_xpu_efficiency:

@@ -81,8 +81,8 @@ class ZeroCPU(Alert):
                 else:
                     s += textwrap.dedent(f"""
                     Please investigate the reason(s) that the code is not using all of the allocated
-                    nodes before running additional jobs. Be sure to allocate all of the cores on a
-                    single node before requesting multiple nodes.
+                    nodes before running additional jobs. When appropriate, please allocate all of
+                    the cores on a single node before requesting multiple nodes.
                     """)
                 if all_multi and all_used_1:
                     s += textwrap.dedent(f"""

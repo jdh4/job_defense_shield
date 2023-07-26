@@ -116,7 +116,8 @@ class MultinodeCPUFragmentation(Alert):
                     "nodes",
                     "mem-per-node-used",
                     "cores-per-node",
-                    "min-nodes"]
+                    "min-nodes",
+                    "hours"]
             self.df = self.df[cols]
 
     def send_emails_to_users(self):
@@ -133,11 +134,12 @@ class MultinodeCPUFragmentation(Alert):
                              "netid":"NetID",
                              "cluster":"Cluster",
                              "nodes":"Nodes",
-                             "min-nodes":"Min-Nodes-Needed",
+                             "mem-per-node-used":"Mem-per-Node",
                              "cores-per-node":"Cores-per-Node",
-                             "mem-per-node-used":"Memory-per-Node-Used"}
+                             "min-nodes":"Nodes-Needed",
+                             "hours":"Hours"}
                 usr = usr.rename(columns=renamings)
-                min_nodes = usr["Min-Nodes-Needed"].mode().values[0]
+                min_nodes = usr["Nodes-Needed"].mode().values[0]
                 is_stellar = "stellar" in usr.Cluster.tolist()
                 is_tiger = "tiger" in usr.Cluster.tolist()
                 is_della = "della" in usr.Cluster.tolist()
@@ -155,9 +157,10 @@ class MultinodeCPUFragmentation(Alert):
                 s += "\n"
                 s += textwrap.dedent(f"""
                 The "Nodes" column shows the number of nodes used to run the job. The
-                "Min-Nodes-Needed" column shows the minimum number of nodes needed to run the
-                job (these values are based on the number of requested CPU-cores while taking
-                into account the CPU memory usage of the job).
+                "Nodes-Needed" column shows the minimum number of nodes needed to run the
+                job (these values are calculated based on the number of requested CPU-cores
+                while taking into account the CPU memory usage of the job). "Mem-per-Node"
+                is the mean CPU memory used per node.
 
                 When possible please try to minimize the number of nodes per job by using all
                 of the CPU-cores of each node. This will help to maximize the overall job
@@ -167,7 +170,8 @@ class MultinodeCPUFragmentation(Alert):
                     if all_not_physics:
                         s += textwrap.dedent(f"""
                         Della is composed of nodes with 32 CPU-cores and 190 GB of CPU memory. If your
-                        job requires {32*min_nodes} CPU-cores then use, for example:
+                        job requires {32*min_nodes} CPU-cores (and you do not have high memory demands) then use,
+                        for example:
 
                           #SBATCH --nodes={min_nodes}
                           #SBATCH --ntasks-per-node=32
@@ -178,13 +182,14 @@ class MultinodeCPUFragmentation(Alert):
                         """)
                     elif all_physics:
                         s += textwrap.dedent(f"""
-                        Della (physics) is composed of nodes with 40 CPU-cores and 380 GB of CPU memory. If
-                        your job requires {40*min_nodes} CPU-cores then use, for example:
+                        Della (physics) is composed of nodes with 40 CPU-cores and 380 GB of CPU memory.
+                        If your job requires {40*min_nodes} CPU-cores (and you do not have high memory demands)
+                        then use, for example:
 
                           #SBATCH --nodes={min_nodes}
                           #SBATCH --ntasks-per-node=40
 
-                        For more information about the nodes on Della:
+                        For more information about the compute nodes on Della:
 
                           https://researchcomputing.princeton.edu/systems/della
                         """)
@@ -192,36 +197,39 @@ class MultinodeCPUFragmentation(Alert):
                         s += textwrap.dedent(f"""
                         Della (physics) is composed of nodes with 40 CPU-cores and 380 GB of CPU memory.
                         while Della (cpu) is composed of nodes with 32 CPU-cores and 190 GB of CPU
-                        memory. If your job requires {40*min_nodes} CPU-cores then use, for example:
+                        memory. If your job requires {40*min_nodes} CPU-cores (and you do not have high memory
+                        demands) then use, for example:
 
                           #SBATCH --nodes={min_nodes}
                           #SBATCH --ntasks-per-node=40
 
-                        For more information about the nodes on Della:
+                        For more information about the compute nodes on Della:
 
                           https://researchcomputing.princeton.edu/systems/della
                         """)
                 if is_tiger:
                     s += textwrap.dedent(f"""
                         Tiger is composed of nodes with 40 CPU-cores and either 192 or 768 GB of
-                        CPU memory. If your job requires {40*min_nodes} CPU-cores then use, for example:
+                        CPU memory. If your job requires {40*min_nodes} CPU-cores (and you do not have high memory
+                        demands) then use, for example:
 
                           #SBATCH --nodes={min_nodes}
                           #SBATCH --ntasks-per-node=40
 
-                        For more information about the nodes on Tiger:
+                        For more information about the compute nodes on Tiger:
 
                           https://researchcomputing.princeton.edu/systems/tiger
                         """)
                 if is_stellar:
                     s += textwrap.dedent(f"""
                         Stellar (Intel) is composed of nodes with 96 CPU-cores and 768 GB of CPU memory.
-                        If your job requires {96*min_nodes} CPU-cores then use, for example:
+                        If your job requires {96*min_nodes} CPU-cores (and you do not have high memory demands)
+                        then use, for example:
 
                           #SBATCH --nodes={min_nodes}
                           #SBATCH --ntasks-per-node=96
 
-                        For more information about the nodes on Stellar:
+                        For more information about the compute nodes on Stellar:
 
                           https://researchcomputing.princeton.edu/systems/stellar
                         """)
@@ -237,7 +245,7 @@ class MultinodeCPUFragmentation(Alert):
 
                 It is very important to conduct a scaling analysis to find the optimal number
                 of nodes and CPU-cores to use for a given parallel job. The calculation of
-                "Min-Nodes-Needed" above is based on your choice of the total CPU-cores which
+                "Nodes-Needed" above is based on your choice of the total CPU-cores which
                 may not be optimal. For information on conducting a scaling analysis:
 
                   https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis

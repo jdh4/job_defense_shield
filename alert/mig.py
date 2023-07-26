@@ -50,7 +50,7 @@ class MultiInstanceGPU(Alert):
                         (self.df["CPU-Mem-Used"] < cpu_mem_threshold)]
       self.df["CPU-Mem-Used"] = self.df["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
       self.df["GPU-Mem-Used"] = self.df["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
-      self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%" if x >= 0.5 else f"{round(x, 1)}%")
+      self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%" if x > 0.5 else f"{round(x, 1)}%")
       renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "netid":"NetID"}
       self.df = self.df.rename(columns=renamings)
       self.df = self.df[["JobID", "NetID", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
