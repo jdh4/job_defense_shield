@@ -44,23 +44,13 @@ class ZeroUtilGPUHours(Alert):
       self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
       self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
-  def get_emails_sent_count(self, user: str) -> int:
-      """Return the number of zero GPU utilization emails sent in the last 30 days."""
-      prev_violations = f"{self.vpath}/zero_gpu_utilization/{user}.violations.email.csv"
-      if os.path.exists(prev_violations):
-          d = pd.read_csv(prev_violations, parse_dates=["email_sent"])
-          start_date = datetime.now() - timedelta(days=30)
-          return d[d["email_sent"] >= start_date]["email_sent"].unique().size
-      else:
-          return 0
-
   def send_emails_to_users(self):
       for user in self.gp.NetID.unique():
           vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
           if self.has_sufficient_time_passed_since_last_email(vfile):
               usr = self.df[self.df.NetID == user].copy()
               zero_hours = round(self.gp[self.gp.NetID == user]["Zero-Util-GPU-Hours"].values[0])
-              emails_sent = self.get_emails_sent_count(user)
+              emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
               s =  f"Requestor: {user}@princeton.edu\n\n"
               s += f"{get_first_name(user)},\n\n"
               if emails_sent == 0:

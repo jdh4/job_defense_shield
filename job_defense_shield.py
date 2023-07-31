@@ -35,6 +35,7 @@ from alert.zero_cpu_utilization import ZeroCPU
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
 from alert.longest_queued import LongestQueuedJobs
+from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
@@ -123,6 +124,8 @@ if __name__ == "__main__":
                       help='List the largest jobs by number of allocated CPU-cores')
   parser.add_argument('--most-gpus', action='store_true', default=False,
                       help='List the largest jobs by number of allocated GPUs')
+  parser.add_argument('--jobs-overview', action='store_true', default=False,
+                      help='List the users with the most jobs')
   parser.add_argument('-d', '--days', type=int, default=14, metavar='N',
                       help='Use job data over N previous days from now (default: 14)')
   parser.add_argument('-M', '--clusters', type=str, default="all",
@@ -333,6 +336,7 @@ if __name__ == "__main__":
   ############################
   ## LOW CPU/GPU EFFICIENCY ##
   ############################
+  #def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email, vpath, num_top_users):
   cls = (("della", "Della (CPU)", ("cpu", "datasci", "physics"), "cpu"), \
          ("della", "Della (GPU)", ("gpu",), "gpu"), \
          ("stellar", "Stellar (AMD)", ("bigmem", "cimes"), "cpu"), \
@@ -347,6 +351,9 @@ if __name__ == "__main__":
   if args.low_xpu_efficiency:
     first_hit = False
     for cluster, cluster_name, partitions, xpu in cls:
+      #low_eff = LowEfficiency(df,
+      #                        days_between_emails=args.days,
+                              
       un = xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu,
                                               args.email,
                                               args.files,
@@ -376,8 +383,6 @@ if __name__ == "__main__":
                              violation="excess_cpu_memory",
                              vpath=args.files,
                              subject="Requesting too much CPU memory",
-                             cluster=args.clusters,
-                             partition=args.partition,
                              num_top_users=args.num_top_users,
                              cores_per_node=28)
       if args.email and is_today_a_work_day():
@@ -492,6 +497,18 @@ if __name__ == "__main__":
                            subject="")
       title = "Longest queue times (1 job per user, ignoring job arrays, 4+ days)"
       s += queued.generate_report_for_admins(title)
+
+  ###################
+  ## JOBS OVERVIEW ##
+  ###################
+  if args.jobs_overview:
+      jobs = JobsOverview(df,
+                          days_between_emails=args.days,
+                          violation="null",
+                          vpath=args.files,
+                          subject="")
+      title = "Most jobs (1 second or longer -- ignoring running and pending)"
+      s += jobs.generate_report_for_admins(title)
 
   ########################## 
   ## SEND EMAIL TO ADMINS ##

@@ -67,8 +67,6 @@ def test_excess_cpu_memory():
                            "",
                            "",
                            "Subject",
-                           cluster="della",
-                           partition="cpu",
                            cores_per_node=14,
                            num_top_users=5)
     actual = xmem.gp[["NetID", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]

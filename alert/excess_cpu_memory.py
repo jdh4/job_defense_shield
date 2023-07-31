@@ -1,13 +1,10 @@
-import os
-from datetime import datetime
-from datetime import timedelta
 import textwrap
+import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
-import pandas as pd
 
 
 class ExcessCPUMemory(Alert):
@@ -19,9 +16,7 @@ class ExcessCPUMemory(Alert):
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster == self.cluster) &
-                          (self.df.partition == self.partition) &
-                          (self.df.admincomment != {}) &
+        self.df = self.df[(self.df.admincomment != {}) &
                           (self.df.state != "RUNNING") &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= 1)].copy()
@@ -55,15 +50,17 @@ class ExcessCPUMemory(Alert):
                  "mean-ratio":"mean",
                  "median-ratio":"median",
                  "netid":"size"}
-            self.gp = self.df.groupby("netid").agg(d)
+            self.gp = self.df.groupby(["cluster", "partition", "netid"]).agg(d)
             self.gp = self.gp.rename(columns={"netid":"jobs"})
             self.gp.reset_index(drop=False, inplace=True)
-            # next line is safeguard against division by zero
-            total_mem_hours = max(1, self.gp["mem-hrs-alloc"].sum())
+            total_mem_hours = self.gp["mem-hrs-alloc"].sum()
+            assert total_mem_hours != 0, "total_mem_hours found to be zero"
             self.gp["proportion"] = self.gp["mem-hrs-alloc"] / total_mem_hours
             self.gp["ratio"] = self.gp["mem-hrs-used"] / self.gp["mem-hrs-alloc"]
             self.gp = self.gp.sort_values("mem-hrs-unused", ascending=False)
-            cols = ["netid",
+            cols = ["cluster",
+                    "partition",
+                    "netid",
                     "account",
                     "proportion",
                     "mem-hrs-unused",
@@ -82,7 +79,8 @@ class ExcessCPUMemory(Alert):
                          "cores":"avg-cores",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
-            self.gp["emails"] = self.gp["NetID"].apply(self.get_emails_sent_count)
+            self.gp["emails"] = self.gp["NetID"].apply(lambda netid:
+                                                 self.get_emails_sent_count(netid, "datascience"))
             cols = ["mem-hrs-unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
             self.gp[cols] = self.gp[cols].apply(round).astype("int64")
             cols = ["proportion", "ratio", "mean-ratio", "median-ratio"]
@@ -92,20 +90,14 @@ class ExcessCPUMemory(Alert):
             self.gp.index += 1
             self.gp = self.gp.head(self.num_top_users)
             self.ad = self.gp.copy()
+            # TODO remove della and cpu
             self.gp = self.gp[(self.gp["mem-hrs-unused"] > 15 * self.days_between_emails) & 
                               (self.gp["ratio"] < 0.2) & 
                               (self.gp["mean-ratio"] < 0.2) & 
+                              (self.gp["cluster"] == "della") & 
+                              (self.gp["partition"] == "cpu") & 
                               (self.gp["median-ratio"] < 0.2)]
-
-    def get_emails_sent_count(self, user: str) -> int:
-        """Return the number of datascience emails sent in the last 30 days."""
-        prev_violations = f"{self.vpath}/datascience/{user}.email.csv"
-        if os.path.exists(prev_violations):
-            d = pd.read_csv(prev_violations, parse_dates=["email_sent"])
-            start_date = datetime.now() - timedelta(days=30)
-            return d[d["email_sent"] >= start_date]["email_sent"].unique().size
-        else:
-            return 0
+            self.df = self.df[(self.df["cluster"] == "della") & (self.df["partition"] == "cpu")]
 
     def send_emails_to_users(self):
         for user in self.gp.NetID.unique():
@@ -191,7 +183,9 @@ class ExcessCPUMemory(Alert):
         if self.ad.empty:
             return ""
         else:
-            cols = ["NetID",
+            cols = ["cluster",
+                    "partition",
+                    "NetID",
                     "proportion",
                     "mem-hrs-unused",
                     "mem-hrs-used",

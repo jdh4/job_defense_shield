@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+from datetime import timedelta
 from utils import SECONDS_PER_HOUR
 from utils import HOURS_PER_DAY
 from abc import abstractmethod
@@ -55,12 +56,27 @@ class Alert:
 
     def has_sufficient_time_passed_since_last_email(self, vfile: str) -> bool:
         """Return boolean specifying whether sufficient time has passed."""
-        last_write_date = datetime(1970, 1, 1)
+        last_sent_email_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
-            last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
-        seconds_since_last_email = datetime.now().timestamp() - last_write_date.timestamp()
+            violation_history = pd.read_csv(vfile, parse_dates=["email_sent"])
+            last_sent_email_date = violation_history["email_sent"].max()
+        seconds_since_last_email = datetime.now().timestamp() - last_sent_email_date.timestamp()
         seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR
         return seconds_since_last_email >= seconds_threshold
+
+    def get_emails_sent_count(self, user: str, violation: str, days: int=30) -> int:
+        """Return the number of emails sent to a user for a given violation in the
+           last N days."""
+        root_violations = f"{self.vpath}/{violation}"
+        if not os.path.exists(root_violations):
+            print(f"Warning: {root_violations} not found in get_emails_sent_count()")
+        user_violations = f"{root_violations}/{user}.email.csv"
+        if os.path.exists(user_violations):
+            d = pd.read_csv(user_violations, parse_dates=["email_sent"])
+            start_date = datetime.now() - timedelta(days=days)
+            return d[d["email_sent"] >= start_date]["email_sent"].unique().size
+        else:
+            return 0
 
     @staticmethod
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
