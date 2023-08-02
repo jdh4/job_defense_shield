@@ -14,7 +14,6 @@ import pandas as pd
 from utils import SECONDS_PER_MINUTE
 from utils import SECONDS_PER_HOUR
 from utils import MINUTES_PER_HOUR
-from utils import HOURS_PER_DAY
 
 from utils import is_today_a_work_day
 from utils import add_dividers
@@ -24,7 +23,6 @@ from utils import show_history_of_emails_sent
 from efficiency import get_stats_dict
 
 from alert.datascience import datascience_node_violators
-from alert.xpu_efficiency import xpu_efficiencies_of_heaviest_users
 from alert.zero_gpu_utilization import active_gpu_jobs_with_zero_utilization
 
 from alert.mig import MultiInstanceGPU
@@ -39,6 +37,7 @@ from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
+from alert.xpu_efficiency import LowEfficiency
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -336,34 +335,35 @@ if __name__ == "__main__":
   ############################
   ## LOW CPU/GPU EFFICIENCY ##
   ############################
-  #def xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu, email, vpath, num_top_users):
-  cls = (("della", "Della (CPU)", ("cpu", "datasci", "physics"), "cpu"), \
-         ("della", "Della (GPU)", ("gpu",), "gpu"), \
-         ("stellar", "Stellar (AMD)", ("bigmem", "cimes"), "cpu"), \
-         ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
-         ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"), \
-         ("traverse", "Traverse (GPU)", ("all",), "gpu"))
   cls = (("della", "Della (CPU)", ("cpu",), "cpu"), \
          ("della", "Della (GPU)", ("gpu",), "gpu"), \
          ("della", "Della (physics)", ("physics",), "cpu"), \
          ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
          ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
   if args.low_xpu_efficiency:
-    first_hit = False
-    for cluster, cluster_name, partitions, xpu in cls:
-      #low_eff = LowEfficiency(df,
-      #                        days_between_emails=args.days,
-                              
-      un = xpu_efficiencies_of_heaviest_users(df, cluster, cluster_name, partitions, xpu,
-                                              args.email,
-                                              args.files,
-                                              args.num_top_users)
-      if not un.empty:
-        if not first_hit:
-          s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
-          first_hit = True
-        df_str = un.to_string(index=True, justify="center")
-        s += add_dividers(df_str, title=cluster_name, pre="\n\n")
+      low_eff = LowEfficiency(df,
+                              days_between_emails=args.days,
+                              violation="low_xpu_efficiency",
+                              vpath=args.files,
+                              subject="Jobs with Low Efficiency",
+                              cluster="della",
+                              partitions=("cpu",),
+                              xpu="cpu",
+                              num_top_users=args.num_top_users)
+      if args.email and is_today_a_work_day():
+          low_eff.send_emails_to_users()
+      title = "CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
+      s += low_eff.generate_report_for_admins(title, keep_index=True)
+ 
+      #first_hit = False
+      #for cluster, cluster_name, partitions, xpu in cls:
+      #  pass                       
+      #  if not un.empty:
+      #    if not first_hit:
+      #      s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
+      #      first_hit = True
+      #    df_str = un.to_string(index=True, justify="center")
+      #    s += add_dividers(df_str, title=cluster_name, pre="\n\n")
 
   #################
   ## DATASCIENCE ##
@@ -382,7 +382,7 @@ if __name__ == "__main__":
                              days_between_emails=args.days,
                              violation="excess_cpu_memory",
                              vpath=args.files,
-                             subject="Requesting too much CPU memory",
+                             subject="Requesting Too Much CPU Memory",
                              num_top_users=args.num_top_users,
                              cores_per_node=28)
       if args.email and is_today_a_work_day():

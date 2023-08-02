@@ -136,13 +136,8 @@ def datascience_node_violators(df, email, vpath):
             """)
         
           s += textwrap.dedent(f"""
-          Add the following lines to your Slurm scripts to receive an email report with
-          memory usage information after each job finishes:
-
-             #SBATCH --mail-type=end
-             #SBATCH --mail-user={netid}@princeton.edu
-
-          One can also see memory usage information by using the following command:
+          You can check the CPU memory utilization of completed and actively running jobs
+          by using the "jobstats" command. For example:
 
              $ jobstats {usr.JobID.values[0]}
 

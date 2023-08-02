@@ -254,12 +254,6 @@ class MultinodeCPUFragmentation(Alert):
 
                   $ jobstats {usr['JobID'].values[0]}
 
-                Add the following lines to your Slurm scripts to receive an email report with
-                efficiency information after each job finishes:
-
-                  #SBATCH --mail-type=end
-                  #SBATCH --mail-user={user}@princeton.edu
-
                 Consider attending an in-person Research Computing help session for assistance:
 
                   https://researchcomputing.princeton.edu/support/help-sessions

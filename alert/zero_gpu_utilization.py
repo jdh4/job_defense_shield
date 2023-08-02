@@ -116,7 +116,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
 
         version = "job" if single_job else "jobs"
         text = (
-        f'Please consider canceling the {version} listed above by using the "scancel" command, for example:'
+        f'Please consider canceling the {version} listed above by using the "scancel" command. For example:'
         )
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n\n"
@@ -126,12 +126,6 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s += "\n".join(textwrap.wrap(zero, width=80))
         s += "\n\n"
         s += f"     $ jobstats {usr.JobID.values[0]}"
-        s += "\n\n"
-
-        text = (
-        'Follow the link at the bottom of the "jobstats" output for more detailed information.'
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n\n"
 
         version = "GPU is" if single_job and (not multi_gpu_jobs) else "GPU(s) are"
@@ -151,18 +145,8 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         For general information about GPU computing at Princeton:
 
              https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-        Please monitor your jobs using the "jobstats" command and the web interface:
-
-             https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
         """)
         s += textwrap.dedent(f"""
-        Add the following lines to your Slurm scripts to receive an email report with
-        GPU utilization information after each job finishes:
-
-             #SBATCH --mail-type=end
-             #SBATCH --mail-user={netid}@princeton.edu
-
         Consider attending an in-person Research Computing help session for assistance:
 
              https://researchcomputing.princeton.edu/support/help-sessions

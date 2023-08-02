@@ -2,12 +2,6 @@ import pytest
 import pandas as pd
 from alert.zero_cpu_utilization import ZeroCPU
 
-@pytest.fixture(autouse=True)
-def setUp():
-    print()
-    print("setUp")
-    print("tearDown")
-
 def test_zero_cpu_utilization():
     n_jobs = 5
     wallclock_secs = 36000

@@ -106,12 +106,6 @@ class SerialCodeUsingMultipleCores(Alert):
 
                         $ jobstats {usr['JobID'].values[0]}
 
-                    Add the following lines to your Slurm scripts to receive an email report with
-                    CPU utilization information after each job finishes:
-
-                        #SBATCH --mail-type=end
-                        #SBATCH --mail-user={user}@princeton.edu
-
                     Replying to this automated email will open a support ticket with Research
                     Computing. Let us know if we can be of help.
                     """)
