@@ -114,6 +114,7 @@ class MultinodeCPUFragmentation(Alert):
                     "cluster",
                     "partition",
                     "nodes",
+                    "cores",
                     "mem-per-node-used",
                     "cores-per-node",
                     "min-nodes",
@@ -147,11 +148,13 @@ class MultinodeCPUFragmentation(Alert):
                 all_physics = "physics" in della.partition.tolist() and \
                               bool(della[della.partition == "physics"].shape[0] == della.shape[0])
                 all_not_physics = bool(della[della.partition != "physics"].shape[0] == della.shape[0])
+                max_cores = usr["cores"].max()
                 edays = self.days_between_emails
                 s =  f"{get_first_name(user)},\n\n"
-                s += f"Below are your recent jobs which appear to be using more nodes than necessary:"
+                s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
+                s += "than necessary:"
                 s += "\n\n"
-                usr = usr.drop(columns=["NetID", "partition"])
+                usr = usr.drop(columns=["NetID", "partition", "cores"])
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([2 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
@@ -168,15 +171,18 @@ class MultinodeCPUFragmentation(Alert):
                 """)
                 if is_della:
                     if all_not_physics:
+                        cores_per_node = 32
+                        if min_nodes == 1 and max_cores < cores_per_node:
+                            cores_per_node = max_cores
                         s += textwrap.dedent(f"""
-                        Della is composed of nodes with 32 CPU-cores and 190 GB of CPU memory. If your
-                        job requires {32*min_nodes} CPU-cores (and you do not have high memory demands) then use,
+                        Della is composed of nodes with {cores_per_node} CPU-cores and 190 GB of CPU memory. If your
+                        job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands) then use,
                         for example:
 
                           #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node=32
+                          #SBATCH --ntasks-per-node={cores_per_node}
 
-                        For more information about the nodes on Della:
+                        For more information about the compute nodes on Della:
 
                           https://researchcomputing.princeton.edu/systems/della
                         """)
@@ -221,13 +227,16 @@ class MultinodeCPUFragmentation(Alert):
                           https://researchcomputing.princeton.edu/systems/tiger
                         """)
                 if is_stellar:
+                    cores_per_node = 96
+                    if min_nodes == 1 and max_cores < cores_per_node:
+                        cores_per_node = max_cores
                     s += textwrap.dedent(f"""
-                        Stellar (Intel) is composed of nodes with 96 CPU-cores and 768 GB of CPU memory.
-                        If your job requires {96*min_nodes} CPU-cores (and you do not have high memory demands)
+                        Stellar (Intel) is composed of nodes with {cores_per_node} CPU-cores and 768 GB of CPU memory.
+                        If your job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands)
                         then use, for example:
 
                           #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node=96
+                          #SBATCH --ntasks-per-node={cores_per_node}
 
                         For more information about the compute nodes on Stellar:
 

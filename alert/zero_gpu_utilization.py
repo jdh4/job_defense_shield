@@ -35,9 +35,10 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
   em["jobstats"] = em.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]), axis='columns')
   em["GPUs-Unused"] = em.jobstats.apply(num_gpus_with_zero_util)
   em["interactive"] = em["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
+  em["salloc"] = em["jobname"].apply(lambda x: True if x.startswith("interactive") else False)
   msk = (em["interactive"]) & (em.gpus == 1) & (em["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
   em = em[~msk]
-  em = em[em["GPUs-Unused"] > 0][["jobid", "netid", "cluster", "gpus", "GPUs-Unused", "elapsedraw"]]
+  em = em[em["GPUs-Unused"] > 0][["jobid", "netid", "cluster", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
   renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "netid":"NetID", "cluster":"Cluster"}
   em.rename(columns=renamings, inplace=True)
 
@@ -51,6 +52,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         s = f"{get_first_name(netid)},\n\n"
         usr = em[em.NetID == netid].copy()
 
+        is_salloc = bool(usr["salloc"].sum())
         single_job = bool(usr.shape[0] == 1)
         multi_gpu_jobs = bool(usr[usr["GPUs-Allocated"] > 1].shape[0])
 
@@ -96,7 +98,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           )
 
         usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-        usr.drop(columns=["elapsedraw"], inplace=True)
+        usr.drop(columns=["elapsedraw", "salloc"], inplace=True)
 
         if single_job:
           text = (
@@ -141,12 +143,22 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         )
         s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n"
+
+        if is_salloc:
+            s += "\n"
+            text = (
+            f'For "salloc" sessions, use --mail-type=begin to receive an email when the session starts:'
+            )
+            s += "\n".join(textwrap.wrap(text, width=80))
+            s += "\n\n"
+            s += f"     $ salloc --nodes=1 --ntasks=1 --time=2:00:00 --gres=gpu:1 --mail-type=begin"
+            s += "\n"
+
         s += textwrap.dedent("""
         For general information about GPU computing at Princeton:
 
              https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-        """)
-        s += textwrap.dedent(f"""
+
         Consider attending an in-person Research Computing help session for assistance:
 
              https://researchcomputing.princeton.edu/support/help-sessions

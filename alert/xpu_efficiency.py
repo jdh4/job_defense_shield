@@ -207,7 +207,7 @@ class LowEfficiency(Alert):
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 

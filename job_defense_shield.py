@@ -335,12 +335,13 @@ if __name__ == "__main__":
   ############################
   ## LOW CPU/GPU EFFICIENCY ##
   ############################
-  cls = (("della", "Della (CPU)", ("cpu",), "cpu"), \
-         ("della", "Della (GPU)", ("gpu",), "gpu"), \
-         ("della", "Della (physics)", ("physics",), "cpu"), \
-         ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
-         ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
   if args.low_xpu_efficiency:
+      cls = (("della", "Della (CPU)", ("cpu",), "cpu"), \
+             ("della", "Della (GPU)", ("gpu",), "gpu"), \
+             ("della", "Della (physics)", ("physics",), "cpu"), \
+             ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
+             ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
+      #for cluster, cluster_name, partitions, xpu in cls:
       low_eff = LowEfficiency(df,
                               days_between_emails=args.days,
                               violation="low_xpu_efficiency",
@@ -354,16 +355,6 @@ if __name__ == "__main__":
           low_eff.send_emails_to_users()
       title = "CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
       s += low_eff.generate_report_for_admins(title, keep_index=True)
- 
-      #first_hit = False
-      #for cluster, cluster_name, partitions, xpu in cls:
-      #  pass                       
-      #  if not un.empty:
-      #    if not first_hit:
-      #      s += "\n\n\n      CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
-      #      first_hit = True
-      #    df_str = un.to_string(index=True, justify="center")
-      #    s += add_dividers(df_str, title=cluster_name, pre="\n\n")
 
   #################
   ## DATASCIENCE ##
@@ -375,6 +366,7 @@ if __name__ == "__main__":
   ## EXCESS CPU MEMORY ##
   #######################
   if args.excess_cpu_memory:
+      #TODO
       if "," in args.clusters or "," in args.partition:
           print("Must use 1 cluster and 1 partition for this alert. Exiting ...")
           sys.exit()
@@ -403,17 +395,6 @@ if __name__ == "__main__":
           low_time.send_emails_to_users()
       title = "Excessive time limits (all jobs, 1+ hours)"
       s += low_time.generate_report_for_admins(title)
-
-  if 0:
-    first_hit = False
-    for cluster, cluster_name, partitions, xpu in cls:
-      un = unused_allocated_hours_of_completed(df, cluster, cluster_name, partitions, xpu, args.email)
-      if not un.empty:
-        if not first_hit:
-          s += "\n\n\n           Unused allocated CPU/GPU-Hours (of COMPLETED 2+ hour jobs)"
-          first_hit = True
-        df_str = un.to_string(index=True, justify="center")
-        s += add_dividers(df_str, title=cluster_name, pre="\n\n")
 
   ######################################
   ## SERIAL CODE USING MULTIPLE CORES ##
