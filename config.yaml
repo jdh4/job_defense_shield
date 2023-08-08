@@ -1,0 +1,15 @@
+---
+excess-cpu-memory:
+  ratio_threshold: 0.2
+  mean_ratio_threshold: 0.2
+  median_ratio_threshold: 0.2
+  clusters:
+    - della
+  partition:
+    - cpu
+  cores_per_node: 28
+  tb_hours_per_day: 15
+  excluded_users:
+    - aturing
+    - einstein
+...

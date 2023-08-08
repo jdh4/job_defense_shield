@@ -9,7 +9,9 @@ from utils import add_dividers
 
 class ExcessCPUMemory(Alert):
 
-    """Cumulative memory use per user."""
+    """Cumulative memory use per user. Note that df is referenced in the
+       send email method. If using this alert for multiple clusters then
+       will need to prune df for each cluster. Similarly for proportion."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
@@ -19,8 +21,11 @@ class ExcessCPUMemory(Alert):
         self.df = self.df[(self.df.admincomment != {}) &
                           (self.df.state != "RUNNING") &
                           (self.df.state != "OUT_OF_MEMORY") &
+                          self.df.cluster.isin(self.clusters) &
+                          self.df.partition.isin(self.partition) &
+                          (~self.df.netid.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= 1)].copy()
-        self.ad = pd.DataFrame()
+        self.admin = pd.DataFrame()
         # add new fields
         if not self.df.empty:
             # only consider jobs that do not use (approximately) full nodes
@@ -89,15 +94,11 @@ class ExcessCPUMemory(Alert):
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1
             self.gp = self.gp.head(self.num_top_users)
-            self.ad = self.gp.copy()
-            # TODO remove della and cpu
-            self.gp = self.gp[(self.gp["mem-hrs-unused"] > 15 * self.days_between_emails) & 
-                              (self.gp["ratio"] < 0.2) & 
-                              (self.gp["mean-ratio"] < 0.2) & 
-                              (self.gp["cluster"] == "della") & 
-                              (self.gp["partition"] == "cpu") & 
-                              (self.gp["median-ratio"] < 0.2)]
-            self.df = self.df[(self.df["cluster"] == "della") & (self.df["partition"] == "cpu")]
+            self.admin = self.gp.copy()
+            self.gp = self.gp[(self.gp["mem-hrs-unused"] > self.tb_hours_per_day * self.days_between_emails) &
+                              (self.gp["ratio"] < self.ratio_threshold) &
+                              (self.gp["mean-ratio"] < self.mean_ratio_threshold) &
+                              (self.gp["median-ratio"] < self.median_ratio_threshold)]
 
     def send_emails_to_users(self):
         for user in self.gp.NetID.unique():
@@ -131,7 +132,8 @@ class ExcessCPUMemory(Alert):
                 edays = self.days_between_emails
                 s =  f"{get_first_name(user)},\n\n"
                 s += f"Below are {case} that ran on Della (CPU) in the past {edays} days:\n\n"
-                s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
+                jobs_str = jobs.to_string(index=False, justify="center")
+                s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])
                 s += "\n"
                 s += textwrap.dedent(f"""
                 It appears that you are requesting too much CPU memory for your jobs since you
@@ -180,7 +182,7 @@ class ExcessCPUMemory(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Drop and rename some of the columns."""
-        if self.ad.empty:
+        if self.admin.empty:
             return ""
         else:
             cols = ["cluster",
@@ -195,10 +197,10 @@ class ExcessCPUMemory(Alert):
                     "cpu-hrs",
                     "jobs",
                     "emails"]
-            self.ad = self.ad[cols]
+            self.admin = self.admin[cols]
             renamings = {"mem-hrs-unused":"TB-hrs-unused",
                          "mem-hrs-used":"TB-hrs-used",
                          "mean-ratio":"mean",
                          "median-ratio":"median"}
-            self.ad = self.ad.rename(columns=renamings)
-            return add_dividers(self.ad.to_string(index=keep_index, justify="center"), title)
+            self.admin = self.admin.rename(columns=renamings)
+            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

@@ -67,8 +67,15 @@ def test_excess_cpu_memory():
                            "",
                            "",
                            "Subject",
+                           num_top_users=5,
+                           tb_hours_per_day=15,
+                           ratio_threshold=0.2,
+                           mean_ratio_threshold=0.2,
+                           median_ratio_threshold=0.2,
                            cores_per_node=14,
-                           num_top_users=5)
+                           clusters=["della"],
+                           partition=["cpu"],
+                           excluded_users=["aturing"])
     actual = xmem.gp[["NetID", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]
     expected = pd.DataFrame({"NetID":["user1", "user2"],
                              "ratio":[(1+5+10)/(3*100), (10+1)/(2*100)],

@@ -10,6 +10,7 @@ import textwrap
 from datetime import datetime
 from datetime import timedelta
 import pandas as pd
+import yaml
 
 from utils import SECONDS_PER_MINUTE
 from utils import SECONDS_PER_HOUR
@@ -143,6 +144,8 @@ if __name__ == "__main__":
                       help='Show the history of emails sent to users')
   args = parser.parse_args()
 
+  with open("config.yaml", "r") as fp:
+      cfg = yaml.safe_load(fp)
 
   if args.email and (os.environ["USER"] != "jdh4"):
       print("The --email flag can currently only used by jdh4 to send emails. Exiting ...")
@@ -365,18 +368,14 @@ if __name__ == "__main__":
   #######################
   ## EXCESS CPU MEMORY ##
   #######################
-  if args.excess_cpu_memory:
-      #TODO
-      if "," in args.clusters or "," in args.partition:
-          print("Must use 1 cluster and 1 partition for this alert. Exiting ...")
-          sys.exit()
+  if args.excess_cpu_memory and "excess-cpu-memory" in cfg:
       mem_hours = ExcessCPUMemory(df,
-                             days_between_emails=args.days,
-                             violation="excess_cpu_memory",
-                             vpath=args.files,
-                             subject="Requesting Too Much CPU Memory",
-                             num_top_users=args.num_top_users,
-                             cores_per_node=28)
+                                  days_between_emails=args.days,
+                                  violation="excess_cpu_memory",
+                                  vpath=args.files,
+                                  subject="Requesting Too Much CPU Memory",
+                                  num_top_users=args.num_top_users,
+                                  **cfg["excess-cpu-memory"])
       if args.email and is_today_a_work_day():
           mem_hours.send_emails_to_users()
       title = "Memory-Hours (1+ hour jobs)"

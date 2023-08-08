@@ -24,6 +24,7 @@ class Alert:
         self.vbase = os.path.join(self.vpath, self.violation)
         self.subject = subject
         for key in props:
+            assert not hasattr(self, key), f"{key} is already an instance variable"
             setattr(self, key, props[key])
         self._filter_and_add_new_fields()
         # create directory to store user violations
