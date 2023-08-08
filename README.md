@@ -110,7 +110,7 @@ envs_dirs:
 
 ```
 $ module load anaconda3/2022.10
-$ conda create --name jds-env numpy pandas blessed requests -c conda-forge -y
+$ conda create --name jds-env numpy pandas blessed requests pyyaml -c conda-forge -y
 ```
 
 The above leads to the shebang line as:
