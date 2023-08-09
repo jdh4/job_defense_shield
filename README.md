@@ -127,3 +127,23 @@ If you do not need to inspect actively running jobs then you do not need `reques
 [jdh4@tigergpu ~]$ crontab -l
 30 8 * * 1,4 /home/jdh4/bin/jds-env/bin/python -u -B /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --email > /dev/null 2>&1
 ```
+
+## convert CSV to JSON
+
+```
+import glob
+import shutil
+
+files = glob.glob("*.csv")
+
+for f in files:
+  user = f.split(".")[0]
+  print(user, f)
+  shutil.copy(f, f"{user}.email.csv")
+
+if 0:
+  for f in files:
+    with open(f) as j:
+      data = j.readlines()
+    print(data[0])
+```
