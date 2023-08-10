@@ -1,12 +1,9 @@
 #!/home/jdh4/bin/jds-env/bin/python -uB
 
-import argparse
 import os
 import sys
-import time
-import glob
+import argparse
 import subprocess
-import textwrap
 from datetime import datetime
 from datetime import timedelta
 import pandas as pd
@@ -14,10 +11,7 @@ import yaml
 
 from utils import SECONDS_PER_MINUTE
 from utils import SECONDS_PER_HOUR
-from utils import MINUTES_PER_HOUR
-
 from utils import is_today_a_work_day
-from utils import add_dividers
 from utils import send_email
 from utils import show_history_of_emails_sent
 
@@ -77,7 +71,7 @@ def add_new_and_derived_fields(df):
   df["gpus"] = df.alloctres.apply(gpus_per_job)
   df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
   def is_gpu_job(tres):
-    return 1 if "gres/gpu=" in tres and not "gres/gpu=0" in tres else 0
+    return 1 if "gres/gpu=" in tres and "gres/gpu=0" not in tres else 0
   df["gpu-job"] = df.alloctres.apply(is_gpu_job)
   df["cpu-only-seconds"] = df.apply(lambda row: 0 if row["gpus"] else row["cpu-seconds"], axis="columns")
   df["elapsed-hours"] = df.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR))
@@ -90,7 +84,6 @@ def add_new_and_derived_fields(df):
   df["gpu-hours"] = df["gpu-seconds"] / SECONDS_PER_HOUR
   df["admincomment"] = df["admincomment"].apply(get_stats_dict)
   return df
-
 
 
 if __name__ == "__main__":
@@ -144,7 +137,9 @@ if __name__ == "__main__":
                       help='Show the history of emails sent to users')
   args = parser.parse_args()
 
-  with open("config.yaml", "r") as fp:
+  absolute_path_to_config_file = os.path.join("/tigress/jdh4/utilities/job_defense_shield",
+                                              "config.yaml")
+  with open(absolute_path_to_config_file, "r") as fp:
       cfg = yaml.safe_load(fp)
 
   if args.email and (os.environ["USER"] != "jdh4"):
@@ -339,25 +334,27 @@ if __name__ == "__main__":
   ## LOW CPU/GPU EFFICIENCY ##
   ############################
   if args.low_xpu_efficiency:
-      cls = (("della", "Della (CPU)", ("cpu",), "cpu"), \
-             ("della", "Della (GPU)", ("gpu",), "gpu"), \
-             ("della", "Della (physics)", ("physics",), "cpu"), \
-             ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"), \
+      cls = (("della", "Della (CPU)", ("cpu",), "cpu"),
+             ("della", "Della (GPU)", ("gpu",), "gpu"),
+             ("della", "Della (physics)", ("physics",), "cpu"),
+             ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"),
              ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
-      #for cluster, cluster_name, partitions, xpu in cls:
-      low_eff = LowEfficiency(df,
-                              days_between_emails=args.days,
-                              violation="low_xpu_efficiency",
-                              vpath=args.files,
-                              subject="Jobs with Low Efficiency",
-                              cluster="della",
-                              partitions=("cpu",),
-                              xpu="cpu",
-                              num_top_users=args.num_top_users)
-      if args.email and is_today_a_work_day():
-          low_eff.send_emails_to_users()
-      title = "CPU/GPU Efficiencies of top 15 users (30+ minute jobs, ignoring running)"
-      s += low_eff.generate_report_for_admins(title, keep_index=True)
+      cls = (("della", "Della (CPU)", ("cpu",), "cpu"),
+             ("della", "Della (GPU)", ("gpu",), "gpu"))
+      for cluster, cluster_name, partitions, xpu in cls:
+          low_eff = LowEfficiency(df,
+                                  days_between_emails=args.days,
+                                  violation="low_xpu_efficiency",
+                                  vpath=args.files,
+                                  subject="Jobs with Low Efficiency",
+                                  cluster=cluster,
+                                  partitions=partitions,
+                                  xpu=xpu,
+                                  num_top_users=args.num_top_users)
+          if args.email and is_today_a_work_day():
+              low_eff.send_emails_to_users()
+          title = f"{cluster_name} efficiencies of top 15 users (30+ minute jobs, ignoring running)"
+          s += low_eff.generate_report_for_admins(title, keep_index=True)
 
   #################
   ## DATASCIENCE ##
@@ -378,7 +375,7 @@ if __name__ == "__main__":
                                   **cfg["excess-cpu-memory"])
       if args.email and is_today_a_work_day():
           mem_hours.send_emails_to_users()
-      title = "Memory-Hours (1+ hour jobs)"
+      title = "Memory-Hours (1+ hour jobs, ignoring approximately full node jobs)"
       s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
   ###########################
@@ -423,11 +420,6 @@ if __name__ == "__main__":
       title = "Jobs with Zero CPU Utilization (1+ hours)"
       s += zero_cpu.generate_report_for_admins(title, keep_index=False)
 
-    # [("tiger", "TigerCPU", ("cpu", "ext", "serial")), \
-    #  ("della", "Della (CPU)", ("cpu", "datasci", "physics")), \
-    #  ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial")), \
-    #  ("stellar", "Stellar (AMD)", ("cimes",))]:
-
   ######################
   ## CPU FRAGMENTATION #
   ######################
@@ -441,30 +433,6 @@ if __name__ == "__main__":
           cpu_frag.send_emails_to_users()
       title = "CPU fragmentation (1+ hours)"
       s += cpu_frag.generate_report_for_admins(title, keep_index=False)
-
-  ################
-  ## MOST CORES ##
-  ################
-  if args.most_cores:
-      most_cores = MostCores(df,
-                             days_between_emails=args.days,
-                             violation="null",
-                             vpath=args.files,
-                             subject="")
-      title = "Jobs with the most CPU-cores (1 job per user)"
-      s += most_cores.generate_report_for_admins(title)
-
-  ###############
-  ## MOST GPUS ##
-  ###############
-  if args.most_gpus:
-      most_gpus = MostGPUs(df,
-                           days_between_emails=args.days,
-                           violation="null",
-                           vpath=args.files,
-                           subject="")
-      title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
-      s += most_gpus.generate_report_for_admins(title)
 
   #########################
   ## LONGEST QUEUED JOBS ##
@@ -489,6 +457,30 @@ if __name__ == "__main__":
                           subject="")
       title = "Most jobs (1 second or longer -- ignoring running and pending)"
       s += jobs.generate_report_for_admins(title)
+
+  ################
+  ## MOST CORES ##
+  ################
+  if args.most_cores:
+      most_cores = MostCores(df,
+                             days_between_emails=args.days,
+                             violation="null",
+                             vpath=args.files,
+                             subject="")
+      title = "Jobs with the most CPU-cores (1 job per user)"
+      s += most_cores.generate_report_for_admins(title)
+
+  ###############
+  ## MOST GPUS ##
+  ###############
+  if args.most_gpus:
+      most_gpus = MostGPUs(df,
+                           days_between_emails=args.days,
+                           violation="null",
+                           vpath=args.files,
+                           subject="")
+      title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
+      s += most_gpus.generate_report_for_admins(title)
 
   ########################## 
   ## SEND EMAIL TO ADMINS ##

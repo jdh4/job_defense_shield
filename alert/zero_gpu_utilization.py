@@ -44,7 +44,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
 
   if email:
     for netid in em.NetID.unique():
-      vfile = f"{vpath}/zero_gpu_utilization/{netid}.violations.email.csv"
+      vfile = f"{vpath}/zero_gpu_utilization/{netid}.email.csv"
       last_write_date = datetime(1970, 1, 1).date()
       if os.path.exists(vfile):
         last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
