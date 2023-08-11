@@ -41,7 +41,9 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
     print("\nUsing cache file.\n", flush=True)
     rw = pd.read_csv(fname, low_memory=False)
   else:
-    cmd = f"sacct {flags} -S {start_date.strftime('%Y-%m-%d')}T00:00:00 -E now -o {fields}"
+    ymd = start_date.strftime('%Y-%m-%d')
+    hms = start_date.strftime('%H:%M:%S')
+    cmd = f"sacct {flags} -S {ymd}T{hms} -E now -o {fields}"
     if use_cache: print("\nCalling sacct (which may require several seconds) ... ", end="", flush=True)
     output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=120, text=True, check=True)
     if use_cache: print("done.", flush=True)

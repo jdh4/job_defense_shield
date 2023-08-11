@@ -175,7 +175,7 @@ class MultinodeCPUFragmentation(Alert):
                         if min_nodes == 1 and max_cores < cores_per_node:
                             cores_per_node = max_cores
                         s += textwrap.dedent(f"""
-                        Della is composed of nodes with {cores_per_node} CPU-cores and 190 GB of CPU memory. If your
+                        Della is composed of nodes with 32 CPU-cores and 190 GB of CPU memory. If your
                         job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands) then use,
                         for example:
 
@@ -231,7 +231,7 @@ class MultinodeCPUFragmentation(Alert):
                     if min_nodes == 1 and max_cores < cores_per_node:
                         cores_per_node = max_cores
                     s += textwrap.dedent(f"""
-                        Stellar (Intel) is composed of nodes with {cores_per_node} CPU-cores and 768 GB of CPU memory.
+                        Stellar (Intel) is composed of nodes with 96 CPU-cores and 768 GB of CPU memory.
                         If your job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands)
                         then use, for example:
 

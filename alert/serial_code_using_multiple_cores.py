@@ -4,7 +4,6 @@ from utils import add_dividers
 from utils import get_first_name
 from utils import send_email
 from efficiency import cpu_efficiency
-import numpy as np
 
 
 class SerialCodeUsingMultipleCores(Alert):
@@ -120,7 +119,7 @@ class SerialCodeUsingMultipleCores(Alert):
         if self.df.empty:
             return ""
         else:
-            d = {"cpu-hours":np.sum, "NetID":np.size, "CPU-cores":np.mean}
+            d = {"cpu-hours":"sum", "NetID":"size", "CPU-cores":"mean"}
             self.gp = self.df.groupby("NetID").agg(d)
             self.gp = self.gp.rename(columns={"NetID":"Jobs", "cpu-hours":"CPU-hours"})
             self.gp = self.gp[self.gp["CPU-hours"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]

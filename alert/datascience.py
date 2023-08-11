@@ -154,7 +154,7 @@ def datascience_node_violators(df, email, vpath):
           cal = USFederalHolidayCalendar()
           us_holiday = date_today in cal.holidays()
           pu_holidays  = ["2022-07-05", "2022-11-25", "2022-12-23", "2022-12-26", "2022-12-30", "2023-01-02",
-                          "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19"]
+                          "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19", "2023-09-04"]
           pu_holiday = date_today in pu_holidays
           if email and not us_holiday and not pu_holiday:
             send_email(s,   f"{netid}@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")

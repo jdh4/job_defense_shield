@@ -7,7 +7,8 @@ from base import Alert
 
 class LongestQueuedJobs(Alert):
 
-    """Find the jobs with the longest queue times."""
+    """Find the pending jobs with the longest queue times while ignoring
+       array jobs."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
@@ -15,7 +16,6 @@ class LongestQueuedJobs(Alert):
     def _filter_and_add_new_fields(self):
         # filter the dataframe
         self.df = self.df[self.df.state == "PENDING"].copy()
-        self.df = self.df[self.df.jobid != "10018157"]
         # remove array jobs
         self.df = self.df[~self.df.jobid.str.contains("_")]
         # add new fields

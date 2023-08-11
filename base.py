@@ -82,7 +82,7 @@ class Alert:
     @staticmethod
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
         """Append the new violations to file."""
-        usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+        usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
         if os.path.exists(vfile):
             curr = pd.read_csv(vfile)
             curr = pd.concat([curr, usr]).drop_duplicates()
