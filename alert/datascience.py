@@ -159,7 +159,7 @@ def datascience_node_violators(df, email, vpath):
           if email and not us_holiday and not pu_holiday:
             send_email(s,   f"{netid}@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             send_email(s,  "halverson@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
-            usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+            usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
             if os.path.exists(vfile):
               curr = pd.read_csv(vfile)
               curr = pd.concat([curr, usr]).drop_duplicates()

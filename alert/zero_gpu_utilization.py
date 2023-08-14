@@ -177,7 +177,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         if not us_holiday and not pu_holiday:
           send_email(s,  f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
           send_email(s, "halverson@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
-          usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M")
+          usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
           if "GPU-Util"        in usr.columns: usr.drop(columns=["GPU-Util"],        inplace=True)
           if "GPU-Unused-Util" in usr.columns: usr.drop(columns=["GPU-Unused-Util"], inplace=True)
           if os.path.exists(vfile):
