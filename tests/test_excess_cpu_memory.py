@@ -2,12 +2,6 @@ import pytest
 import pandas as pd
 from alert.excess_cpu_memory import ExcessCPUMemory
 
-@pytest.fixture(autouse=True)
-def setUp():
-    print()
-    print("setUp")
-    print("tearDown")
-
 def test_excess_cpu_memory():
     n_jobs = 5
     wallclock_secs = 3600000

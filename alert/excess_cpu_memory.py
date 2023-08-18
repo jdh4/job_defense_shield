@@ -84,8 +84,11 @@ class ExcessCPUMemory(Alert):
                          "cores":"avg-cores",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
-            self.gp["emails"] = self.gp["NetID"].apply(lambda netid:
-                                                 self.get_emails_sent_count(netid, "datascience"))
+            # should email90 be computed for a specific cluster and partition?
+            self.gp["email90"] = self.gp["NetID"].apply(lambda netid:
+                                                 self.get_emails_sent_count(netid,
+                                                                            self.violation,
+                                                                            days=90))
             cols = ["mem-hrs-unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
             self.gp[cols] = self.gp[cols].apply(round).astype("int64")
             cols = ["proportion", "ratio", "mean-ratio", "median-ratio"]
@@ -111,6 +114,9 @@ class ExcessCPUMemory(Alert):
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
                 pct = round(100 * usr["mean-ratio"].values[0])
                 unused = usr["mem-hrs-unused"].values[0]
+                hours_per_week = 7 * 24
+                tb_mem_per_node = 190 / 1e3
+                num_wasted_nodes = round(unused / hours_per_week / tb_mem_per_node)
                 jobs = jobs.sort_values(by="mem-hrs-unused", ascending=False).head(num_disp)
                 jobs = jobs[["jobid",
                              "mem-used",
@@ -138,8 +144,9 @@ class ExcessCPUMemory(Alert):
                 s += textwrap.dedent(f"""
                 It appears that you are requesting too much CPU memory for your jobs since you
                 are only using on average {pct}% of the allocated memory (for the {total_jobs} jobs). This
-                has resulted in {unused} TB-hours of unused memory. A TB-hour is the allocation
-                of 1 terabyte of memory for 1 hour.
+                has resulted in {unused} TB-hours of unused memory which is equivalent to making
+                {num_wasted_nodes} nodes unavailable to all users (including yourself) for one week! A TB-hour is
+                the allocation of 1 terabyte of memory for 1 hour.
 
                 Please request less memory by modifying the --mem-per-cpu or --mem Slurm
                 directive. This will lower your queue times and make the resources available
@@ -159,12 +166,6 @@ class ExcessCPUMemory(Alert):
 
                 The command above can also be used to see suggested values for the --mem-per-cpu
                 and --mem Slurm directives.
-
-                Add the following lines to your Slurm scripts to receive an email report with
-                CPU memory utilization information after each job finishes:
-
-                    #SBATCH --mail-type=end
-                    #SBATCH --mail-user={user}@princeton.edu
 
                 Consider attending an in-person Research Computing help session for assistance:
 
@@ -196,7 +197,7 @@ class ExcessCPUMemory(Alert):
                     "median-ratio",
                     "cpu-hrs",
                     "jobs",
-                    "emails"]
+                    "email90"]
             self.admin = self.admin[cols]
             renamings = {"mem-hrs-unused":"TB-hrs-unused",
                          "mem-hrs-used":"TB-hrs-used",

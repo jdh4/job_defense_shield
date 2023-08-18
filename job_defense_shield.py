@@ -341,15 +341,14 @@ if __name__ == "__main__":
              ("della", "Della (physics)", ("physics",), "cpu"),
              ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"),
              ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
-      cls = (("della", "Della (CPU)", ("cpu",), "cpu"),
-             ("della", "Della (GPU)", ("gpu",), "gpu"))
       for cluster, cluster_name, partitions, xpu in cls:
           low_eff = LowEfficiency(df,
                                   days_between_emails=args.days,
                                   violation="low_xpu_efficiency",
                                   vpath=args.files,
-                                  subject="Jobs with Low Efficiency",
+                                  subject=f"Jobs with Low Efficiency on {cluster_name}",
                                   cluster=cluster,
+                                  cluster_name=cluster_name,
                                   partitions=partitions,
                                   xpu=xpu,
                                   num_top_users=args.num_top_users)
@@ -367,18 +366,19 @@ if __name__ == "__main__":
   #######################
   ## EXCESS CPU MEMORY ##
   #######################
-  if args.excess_cpu_memory and "excess-cpu-memory" in cfg:
-      mem_hours = ExcessCPUMemory(df,
-                                  days_between_emails=args.days,
-                                  violation="excess_cpu_memory",
-                                  vpath=args.files,
-                                  subject="Requesting Too Much CPU Memory",
-                                  num_top_users=args.num_top_users,
-                                  **cfg["excess-cpu-memory"])
-      if args.email and is_today_a_work_day():
-          mem_hours.send_emails_to_users()
-      title = "Memory-Hours (1+ hour jobs, ignoring approximately full node jobs)"
-      s += mem_hours.generate_report_for_admins(title, keep_index=True)
+  if args.excess_cpu_memory:
+      alerts = [alert for alert in cfg.keys() if "excess-cpu-memory" in alert]
+      for alert in alerts:
+          mem_hours = ExcessCPUMemory(df,
+                                      days_between_emails=args.days,
+                                      violation="excess_cpu_memory",
+                                      vpath=args.files,
+                                      subject="Requesting Too Much CPU Memory",
+                                      **cfg[alert])
+          if args.email and is_today_a_work_day():
+              mem_hours.send_emails_to_users()
+          title = "Memory-Hours (1+ hour jobs, ignoring approximately full node jobs)"
+          s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
   ###########################
   ## EXCESSIVE TIME LIMITS ##

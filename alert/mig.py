@@ -108,12 +108,6 @@ class MultiInstanceGPU(Alert):
 
                 https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
-              Add the following lines to your Slurm scripts to receive an email report with
-              GPU utilization information after each job finishes:
-
-                #SBATCH --mail-type=end
-                #SBATCH --mail-user={user}@princeton.edu
-
               Consider attending an in-person Research Computing help session for assistance:
 
                 https://researchcomputing.princeton.edu/support/help-sessions

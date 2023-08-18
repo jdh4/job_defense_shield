@@ -103,12 +103,6 @@ class ZeroCPU(Alert):
 
                     https://researchcomputing.princeton.edu/support/help-sessions
 
-                Add the following lines to your Slurm scripts to receive an email report with
-                CPU utilization information after each job finishes:
-
-                    #SBATCH --mail-type=end
-                    #SBATCH --mail-user={user}@princeton.edu
-
                 After resolving this issue, consider conducting a scaling analysis to find
                 the optimal number of CPU-cores to use:
 

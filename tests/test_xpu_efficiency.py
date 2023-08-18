@@ -69,6 +69,7 @@ def test_low_efficiency():
                             vpath="",
                             subject="",
                             cluster="della",
+                            cluster_name="Della (cpu)",
                             partitions=("cpu",),
                             xpu="cpu",
                             num_top_users=15)

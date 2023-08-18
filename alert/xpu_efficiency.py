@@ -68,7 +68,10 @@ class LowEfficiency(Alert):
         self.ce = self.ce.groupby("netid").agg(d).rename(columns={"netid":"jobs"})
         self.ce = self.ce.sort_values(by=f"{self.xpu}-seconds-total", ascending=False)
         self.ce = self.ce.reset_index(drop=False)
-        self.ce = self.ce.head(self.num_top_users)
+        if self.cluster_name == "Della (physics)":
+            self.ce = self.ce.head(5)
+        else:
+            self.ce = self.ce.head(self.num_top_users)
         self.ce["eff(%)"] = 100.0 * self.ce[f"{self.xpu}-seconds-used"] / self.ce[f"{self.xpu}-seconds-total"]
         # next line prevents (unlikely) failure when creating "{self.xpu}-hours"
         if self.ce.empty: return pd.DataFrame()
@@ -125,11 +128,10 @@ class LowEfficiency(Alert):
                 usr = usr[cols].rename(columns=renamings)
                 usr["AvgCores"] = usr["AvgCores"].apply(lambda x: str(x).replace(".0", ""))
                 myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
-                cluster_name = f"{self.cluster[0].upper()}{self.cluster[1:]}"
                 partitions = usr['Partition(s)'].values[0]
                 edays = self.days_between_emails
                 s = f"{get_first_name(user)},\n\n"
-                s +=f"Over the last {edays} days you have used {myrank} {self.xpu.upper()}-hours on {cluster_name} ({partitions}) but\n"
+                s +=f"Over the last {edays} days you have used {myrank} {self.xpu.upper()}-hours on {self.cluster_name} but\n"
                 s +=f"your mean {self.xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
                 s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
                 s += "\n"

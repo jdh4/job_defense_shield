@@ -2,12 +2,6 @@ import pytest
 import pandas as pd
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 
-@pytest.fixture(autouse=True)
-def setUp():
-    print()
-    print("setUp")
-    print("tearDown")
-
 def test_serial_using_multiple_cores():
     n_jobs = 5
     wallclock_secs = 100000

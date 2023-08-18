@@ -117,8 +117,8 @@ class MultinodeCPUFragmentation(Alert):
                     "cores",
                     "mem-per-node-used",
                     "cores-per-node",
-                    "min-nodes",
-                    "hours"]
+                    "hours",
+                    "min-nodes"]
             self.df = self.df[cols]
 
     def send_emails_to_users(self):
@@ -137,8 +137,8 @@ class MultinodeCPUFragmentation(Alert):
                              "nodes":"Nodes",
                              "mem-per-node-used":"Mem-per-Node",
                              "cores-per-node":"Cores-per-Node",
-                             "min-nodes":"Nodes-Needed",
-                             "hours":"Hours"}
+                             "hours":"Hours",
+                             "min-nodes":"Nodes-Needed"}
                 usr = usr.rename(columns=renamings)
                 min_nodes = usr["Nodes-Needed"].mode().values[0]
                 is_stellar = "stellar" in usr.Cluster.tolist()
@@ -156,7 +156,7 @@ class MultinodeCPUFragmentation(Alert):
                 s += "\n\n"
                 usr = usr.drop(columns=["NetID", "partition", "cores"])
                 usr_str = usr.to_string(index=False, justify="center")
-                s += "\n".join([2 * " " + row for row in usr_str.split("\n")])
+                s += "\n".join([4 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
                 s += textwrap.dedent(f"""
                 The "Nodes" column shows the number of nodes used to run the job. The
@@ -179,12 +179,12 @@ class MultinodeCPUFragmentation(Alert):
                         job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands) then use,
                         for example:
 
-                          #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node={cores_per_node}
+                            #SBATCH --nodes={min_nodes}
+                            #SBATCH --ntasks-per-node={cores_per_node}
 
                         For more information about the compute nodes on Della:
 
-                          https://researchcomputing.princeton.edu/systems/della
+                            https://researchcomputing.princeton.edu/systems/della
                         """)
                     elif all_physics:
                         s += textwrap.dedent(f"""
@@ -192,12 +192,12 @@ class MultinodeCPUFragmentation(Alert):
                         If your job requires {40*min_nodes} CPU-cores (and you do not have high memory demands)
                         then use, for example:
 
-                          #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node=40
+                            #SBATCH --nodes={min_nodes}
+                            #SBATCH --ntasks-per-node=40
 
                         For more information about the compute nodes on Della:
 
-                          https://researchcomputing.princeton.edu/systems/della
+                            https://researchcomputing.princeton.edu/systems/della
                         """)
                     else:
                         s += textwrap.dedent(f"""
@@ -206,12 +206,12 @@ class MultinodeCPUFragmentation(Alert):
                         memory. If your job requires {40*min_nodes} CPU-cores (and you do not have high memory
                         demands) then use, for example:
 
-                          #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node=40
+                            #SBATCH --nodes={min_nodes}
+                            #SBATCH --ntasks-per-node=40
 
                         For more information about the compute nodes on Della:
 
-                          https://researchcomputing.princeton.edu/systems/della
+                            https://researchcomputing.princeton.edu/systems/della
                         """)
                 if is_tiger:
                     s += textwrap.dedent(f"""
@@ -219,12 +219,12 @@ class MultinodeCPUFragmentation(Alert):
                         CPU memory. If your job requires {40*min_nodes} CPU-cores (and you do not have high memory
                         demands) then use, for example:
 
-                          #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node=40
+                            #SBATCH --nodes={min_nodes}
+                            #SBATCH --ntasks-per-node=40
 
                         For more information about the compute nodes on Tiger:
 
-                          https://researchcomputing.princeton.edu/systems/tiger
+                            https://researchcomputing.princeton.edu/systems/tiger
                         """)
                 if is_stellar:
                     cores_per_node = 96
@@ -235,37 +235,37 @@ class MultinodeCPUFragmentation(Alert):
                         If your job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands)
                         then use, for example:
 
-                          #SBATCH --nodes={min_nodes}
-                          #SBATCH --ntasks-per-node={cores_per_node}
+                            #SBATCH --nodes={min_nodes}
+                            #SBATCH --ntasks-per-node={cores_per_node}
 
                         For more information about the compute nodes on Stellar:
 
-                          https://researchcomputing.princeton.edu/systems/stellar
+                            https://researchcomputing.princeton.edu/systems/stellar
                         """)
                 s += textwrap.dedent(f"""
                 If you are unsure about the meanings of --nodes, --ntasks, --ntasks-per-node and
                 --cpus-per-task, see our Slurm webpage:
 
-                  https://researchcomputing.princeton.edu/support/knowledge-base/slurm
+                    https://researchcomputing.princeton.edu/support/knowledge-base/slurm
 
                 Additionally, see this general overview on parallel computing:
 
-                  https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
+                    https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
 
                 It is very important to conduct a scaling analysis to find the optimal number
                 of nodes and CPU-cores to use for a given parallel job. The calculation of
                 "Nodes-Needed" above is based on your choice of the total CPU-cores which
                 may not be optimal. For information on conducting a scaling analysis:
 
-                  https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
+                    https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
 
                 See detailed information about each job by running the \"jobstats\" command:
 
-                  $ jobstats {usr['JobID'].values[0]}
+                    $ jobstats {usr['JobID'].values[0]}
 
                 Consider attending an in-person Research Computing help session for assistance:
 
-                  https://researchcomputing.princeton.edu/support/help-sessions
+                    https://researchcomputing.princeton.edu/support/help-sessions
  
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
