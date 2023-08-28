@@ -1,6 +1,6 @@
 %YAML 1.1
 ---
-excess-cpu-memory-1:
+excess-cpu-memory-della-cpu:
   tb_hours_per_day: 10
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
@@ -10,13 +10,14 @@ excess-cpu-memory-1:
     - della
   partition:
     - cpu
+  combine_partitions: False
   cores_per_node: 28
   excluded_users:
     - aturing
     - einstein
 
-# scontrol show hostname della-i14g[1-20],della-i12g[1-2]
-OFF:
+
+excess-cpu-memory-della-datascience:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
@@ -25,37 +26,20 @@ OFF:
   clusters:
     - della
   partition:
-    - gpu
+    - datasci
+  combine_partitions: False
   cores_per_node: 10000
   excluded_users:
     - aturing
     - einstein
 
 
-# need to combine cpu, ext, serial
-excess-cpu-memory-3:
+excess-cpu-memory-stellar:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
   median_ratio_threshold: 0.25
-  num_top_users: 10
-  clusters:
-    - tiger
-  partition:
-    - cpu
-    - ext
-    - serial
-  cores_per_node: 40
-  excluded_users:
-    - aturing
-    - einstein
-
-excess-cpu-memory-4:
-  tb_hours_per_day: 10000
-  ratio_threshold: 0.25
-  mean_ratio_threshold: 0.25
-  median_ratio_threshold: 0.25
-  num_top_users: 10
+  num_top_users: 5
   clusters:
     - stellar
   partition:
@@ -63,7 +47,27 @@ excess-cpu-memory-4:
     - pppl
     - pu
     - serial
+  combine_partitions: True
   cores_per_node: 76.8
+  excluded_users:
+    - aturing
+    - einstein
+
+
+excess-cpu-memory-tiger:
+  tb_hours_per_day: 10000
+  ratio_threshold: 0.25
+  mean_ratio_threshold: 0.25
+  median_ratio_threshold: 0.25
+  num_top_users: 5
+  clusters:
+    - tiger
+  partition:
+    - cpu
+    - ext
+    - serial
+  combine_partitions: True
+  cores_per_node: 32
   excluded_users:
     - aturing
     - einstein

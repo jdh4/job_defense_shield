@@ -66,7 +66,8 @@ class SerialCodeUsingMultipleCores(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
                 cpu_hours_wasted = usr["CPU-Hours-Wasted"].sum()
-                usr = usr.drop(columns=["cpu-hours", "cores-minus-1", "CPU-Hours-Wasted"])
+                usr = usr.drop(columns=["cores-minus-1", "CPU-Hours-Wasted"])
+                prev_emails = self.get_emails_sent_count(user, self.violation, days=90)
                 if cpu_hours_wasted >= SerialCodeUsingMultipleCores.cpu_hours_threshold:
                     s =  f"{get_first_name(user)},\n\n"
                     s += f"Below are jobs that ran on Della in the past {self.days_between_emails} days:"
@@ -125,11 +126,15 @@ class SerialCodeUsingMultipleCores(Alert):
             self.gp = self.df.groupby("NetID").agg(d)
             self.gp = self.gp.rename(columns={"NetID":"Jobs"})
             self.gp = self.gp[self.gp["CPU-Hours-Wasted"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]
+            self.gp["email90"] = self.gp.NetID.apply(lambda netid:
+                                               self.get_emails_sent_count(netid,
+                                                                          self.violation,
+                                                                          days=90))
             self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
             self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x: round(x, 1))
             self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.gp = self.gp[["NetID", "CPU-Hours-Wasted", "AvgCores", "Jobs"]]
+            self.gp = self.gp[["NetID", "CPU-Hours-Wasted", "AvgCores", "Jobs", "email90"]]
             self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1

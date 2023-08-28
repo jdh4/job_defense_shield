@@ -65,7 +65,8 @@ def gpus_per_job(tres):
       if "gres/gpu=" in part:
         gpus = int(part.split("=")[-1])
         assert gpus > 0
-    return gpus
+        return gpus
+    raise Exception(f'Found "gres/gpu=" but number of GPUs not found: {tres}')
   else:
     return 0
 
@@ -250,7 +251,13 @@ if __name__ == "__main__":
                "nnodes":"nodes",
                "ncpus":"cores",
                "timelimitraw":"limit-minutes"}
-  numeric_fields = ["cpu-seconds", "elapsedraw", "limit-minutes", "nodes", "cores", "submit", "eligible"]
+  numeric_fields = ["cpu-seconds",
+                    "elapsedraw",
+                    "limit-minutes",
+                    "nodes",
+                    "cores",
+                    "submit",
+                    "eligible"]
   use_cache = False if (args.email or args.report) else True
   raw = raw_dataframe_from_sacct(flags, start_date, fields, renamings, numeric_fields, use_cache)
 
@@ -300,21 +307,6 @@ if __name__ == "__main__":
           zero_gpu_hours.send_emails_to_users()
       title="Zero Utilization GPU-Hours (of COMPLETED 1+ Hour Jobs)"
       s += zero_gpu_hours.generate_report_for_admins(title)
-
-  ####################################
-  ## JOBS THAT SHOULD HAVE USED MIG ##
-  ####################################
-  if args.mig:
-      mig = MultiInstanceGPU(df,
-                             days_between_emails=args.days,
-                             violation="should_be_using_mig",
-                             vpath=args.files,
-                             subject="Consider Using the MIG GPUs on Della",
-                             cluster="della",
-                             partition="gpu")
-      if args.email and is_today_a_work_day():
-          mig.send_emails_to_users()
-      s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
 
   #######################
   ## GPU FRAGMENTATION ##
@@ -377,7 +369,7 @@ if __name__ == "__main__":
                                       **cfg[alert])
           if args.email and is_today_a_work_day():
               mem_hours.send_emails_to_users()
-          title = "Memory-Hours (1+ hour jobs, ignoring approximately full node jobs)"
+          title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
           s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
   ###########################
@@ -435,6 +427,21 @@ if __name__ == "__main__":
           cpu_frag.send_emails_to_users()
       title = "CPU fragmentation (1+ hours)"
       s += cpu_frag.generate_report_for_admins(title, keep_index=False)
+
+  ####################################
+  ## JOBS THAT SHOULD HAVE USED MIG ##
+  ####################################
+  if args.mig:
+      mig = MultiInstanceGPU(df,
+                             days_between_emails=args.days,
+                             violation="should_be_using_mig",
+                             vpath=args.files,
+                             subject="Consider Using the MIG GPUs on Della",
+                             cluster="della",
+                             partition="gpu")
+      if args.email and is_today_a_work_day():
+          mig.send_emails_to_users()
+      s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
 
   #########################
   ## LONGEST QUEUED JOBS ##

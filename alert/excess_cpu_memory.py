@@ -25,6 +25,9 @@ class ExcessCPUMemory(Alert):
                           self.df.partition.isin(self.partition) &
                           (~self.df.netid.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= 1)].copy()
+        if self.combine_partitions:
+            self.df["partition"] = ",".join(sorted(self.partition))
+        self.gp = pd.DataFrame()
         self.admin = pd.DataFrame()
         # add new fields
         if not self.df.empty:
@@ -199,8 +202,8 @@ class ExcessCPUMemory(Alert):
                     "jobs",
                     "email90"]
             self.admin = self.admin[cols]
-            renamings = {"mem-hrs-unused":"TB-hrs-unused",
-                         "mem-hrs-used":"TB-hrs-used",
+            renamings = {"mem-hrs-unused":"unused",
+                         "mem-hrs-used":"used",
                          "mean-ratio":"mean",
                          "median-ratio":"median"}
             self.admin = self.admin.rename(columns=renamings)

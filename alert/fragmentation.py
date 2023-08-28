@@ -175,12 +175,13 @@ class MultinodeCPUFragmentation(Alert):
                         if min_nodes == 1 and max_cores < cores_per_node:
                             cores_per_node = max_cores
                         s += textwrap.dedent(f"""
-                        Della is composed of nodes with 32 CPU-cores and 190 GB of CPU memory. If your
-                        job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands) then use,
-                        for example:
+                        Della (cpu) is composed of nodes with 32 CPU-cores and 190 GB of CPU memory. If
+                        your job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands) then
+                        use, for example:
 
                             #SBATCH --nodes={min_nodes}
                             #SBATCH --ntasks-per-node={cores_per_node}
+                            #SBATCH --ntasks={cores_per_node*min_nodes}
 
                         For more information about the compute nodes on Della:
 
@@ -194,6 +195,7 @@ class MultinodeCPUFragmentation(Alert):
 
                             #SBATCH --nodes={min_nodes}
                             #SBATCH --ntasks-per-node=40
+                            #SBATCH --ntasks={40*min_nodes}
 
                         For more information about the compute nodes on Della:
 
@@ -208,6 +210,7 @@ class MultinodeCPUFragmentation(Alert):
 
                             #SBATCH --nodes={min_nodes}
                             #SBATCH --ntasks-per-node=40
+                            #SBATCH --ntasks={40*min_nodes}
 
                         For more information about the compute nodes on Della:
 
@@ -221,6 +224,7 @@ class MultinodeCPUFragmentation(Alert):
 
                             #SBATCH --nodes={min_nodes}
                             #SBATCH --ntasks-per-node=40
+                            #SBATCH --ntasks={40*min_nodes}
 
                         For more information about the compute nodes on Tiger:
 
@@ -232,11 +236,12 @@ class MultinodeCPUFragmentation(Alert):
                         cores_per_node = max_cores
                     s += textwrap.dedent(f"""
                         Stellar (Intel) is composed of nodes with 96 CPU-cores and 768 GB of CPU memory.
-                        If your job requires {cores_per_node*min_nodes} CPU-cores (and you do not have high memory demands)
+                        If your job requires {min_nodes*cores_per_node} CPU-cores (and you do not have high memory demands)
                         then use, for example:
 
                             #SBATCH --nodes={min_nodes}
                             #SBATCH --ntasks-per-node={cores_per_node}
+                            #SBATCH --ntasks={min_nodes*cores_per_node}
 
                         For more information about the compute nodes on Stellar:
 
