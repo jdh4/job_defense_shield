@@ -57,18 +57,19 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
     if use_cache: rw.to_csv(fname, index=False)
   return rw
 
-def gpus_per_job(tres):
-  # billing=8,cpu=4,mem=16G,node=1
-  # billing=112,cpu=112,gres/gpu=16,mem=33600M,node=4
-  if "gres/gpu=" in tres:
-    for part in tres.split(","):
-      if "gres/gpu=" in part:
-        gpus = int(part.split("=")[-1])
-        assert gpus > 0
-        return gpus
-    raise Exception(f'Found "gres/gpu=" but number of GPUs not found: {tres}')
-  else:
-    return 0
+def gpus_per_job(tres: str) -> int:
+    """Return the number of GPUs used."""
+    # billing=8,cpu=4,mem=16G,node=1
+    # billing=112,cpu=112,gres/gpu=16,mem=33600M,node=4
+    if "gres/gpu=" in tres:
+        for part in tres.split(","):
+            if "gres/gpu=" in part:
+                gpus = int(part.split("=")[-1])
+                assert gpus > 0
+                return gpus
+        raise Exception(f"GPU count not extracted for {tres}")
+    else:
+        return 0
 
 def add_new_and_derived_fields(df):
   df["gpus"] = df.alloctres.apply(gpus_per_job)
