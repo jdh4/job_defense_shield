@@ -99,7 +99,7 @@ class ZeroCPU(Alert):
 
                     https://researchcomputing.princeton.edu/support/knowledge-base/slurm
 
-                For 1-on-1 assistance, attend an in-person Research Computing help session:
+                Consider attending an in-person Research Computing help session for assistance:
 
                     https://researchcomputing.princeton.edu/support/help-sessions
 

@@ -27,7 +27,7 @@ class ExcessCPUMemory(Alert):
                           (self.df["elapsed-hours"] >= 1)].copy()
         if self.combine_partitions:
             self.df["partition"] = ",".join(sorted(self.partition))
-        self.gp = pd.DataFrame()
+        self.gp = pd.DataFrame({"NetID":[]})
         self.admin = pd.DataFrame()
         # add new fields
         if not self.df.empty:

@@ -117,6 +117,7 @@ class LowEfficiency(Alert):
                         f"{self.xpu.upper()}-rank",
                         "eff(%)",
                         "cores"]
+                usr["cores"] = usr["cores"].apply(lambda x: str(x).replace(".0", ""))
                 if self.xpu == "gpu":
                     cols.remove("cores")
                 renamings = {"netid":"NetID",
@@ -126,7 +127,6 @@ class LowEfficiency(Alert):
                              "eff(%)":"Efficiency",
                              "cores":"AvgCores"}
                 usr = usr[cols].rename(columns=renamings)
-                usr["AvgCores"] = usr["AvgCores"].apply(lambda x: str(x).replace(".0", ""))
                 myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
                 partitions = usr['Partition(s)'].values[0]
                 edays = self.days_between_emails

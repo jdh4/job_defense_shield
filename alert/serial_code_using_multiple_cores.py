@@ -126,14 +126,14 @@ class SerialCodeUsingMultipleCores(Alert):
             self.gp = self.df.groupby("NetID").agg(d)
             self.gp = self.gp.rename(columns={"NetID":"Jobs"})
             self.gp = self.gp[self.gp["CPU-Hours-Wasted"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]
-            self.gp["email90"] = self.gp.NetID.apply(lambda netid:
-                                               self.get_emails_sent_count(netid,
-                                                                          self.violation,
-                                                                          days=90))
             self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
             self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x: round(x, 1))
             self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
             self.gp.reset_index(drop=False, inplace=True)
+            self.gp["email90"] = self.gp.NetID.apply(lambda netid:
+                                               self.get_emails_sent_count(netid,
+                                                                          self.violation,
+                                                                          days=90))
             self.gp = self.gp[["NetID", "CPU-Hours-Wasted", "AvgCores", "Jobs", "email90"]]
             self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
             self.gp.reset_index(drop=True, inplace=True)
