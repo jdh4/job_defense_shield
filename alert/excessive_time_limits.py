@@ -1,11 +1,11 @@
 import textwrap
+import pandas as pd
 from base import Alert
 from utils import SECONDS_PER_MINUTE
 from utils import seconds_to_slurm_time_format
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
-import numpy as np
 
 
 class ExcessiveTimeLimits(Alert):
@@ -21,14 +21,15 @@ class ExcessiveTimeLimits(Alert):
                           (self.df.partition == "cpu") &
                           (self.df.state == "COMPLETED") &
                           (self.df["elapsed-hours"] >= 1)].copy()
+        self.gp = pd.DataFrame({"NetID":[]})
         # add new fields
         if not self.df.empty:
             xpu = "cpu"
             self.df["ratio"] = 100 * self.df[f"{xpu}-hours"] / self.df[f"{xpu}-alloc-hours"]
-            d = {f"{xpu}-waste-hours":np.sum,
-                 f"{xpu}-alloc-hours":np.sum,
-                 f"{xpu}-hours":np.sum,
-                 "netid":np.size,
+            d = {f"{xpu}-waste-hours":"sum",
+                 f"{xpu}-alloc-hours":"sum",
+                 f"{xpu}-hours":"sum",
+                 "netid":"size",
                  "partition":lambda series: ",".join(sorted(set(series))),
                  "ratio":"median"}
             self.gp = self.df.groupby("netid").agg(d).rename(columns={"netid":"jobs", "ratio":"median(%)"})

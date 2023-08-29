@@ -1,12 +1,5 @@
-import pytest
 import pandas as pd
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
-
-@pytest.fixture(autouse=True)
-def setUp():
-    print()
-    print("setUp")
-    print("tearDown")
 
 def test_zero_util_gpu_hours():
     n_jobs = 5
