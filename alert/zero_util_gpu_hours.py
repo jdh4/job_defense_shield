@@ -36,7 +36,7 @@ class ZeroUtilGPUHours(Alert):
             self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":"sum", "NetID":"size"})
             self.gp = self.gp.rename(columns={"NetID":"Jobs"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.rw = self.gp.copy()
+            self.admin = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 25].copy()
             # apply a threshold to focus on the heaviest offenders
             self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
             self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
@@ -125,12 +125,11 @@ class ZeroUtilGPUHours(Alert):
                 Alert.update_violation_log(usr, vfile)
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-        if self.rw.empty:
+        if self.admin.empty:
             return ""
         else:
-            self.rw = self.rw[self.rw["Zero-Util-GPU-Hours"] >= 25]
-            self.rw = self.rw.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
-            self.rw["Zero-Util-GPU-Hours"] = self.rw["Zero-Util-GPU-Hours"].apply(round)
-            self.rw.reset_index(drop=True, inplace=True)
-            self.rw.index += 1
-            return add_dividers(self.rw.to_string(index=keep_index, justify="center"), title)
+            self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
+            self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
+            self.admin.reset_index(drop=True, inplace=True)
+            self.admin.index += 1
+            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

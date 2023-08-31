@@ -98,8 +98,7 @@ class SerialCodeUsingMultipleCores(Alert):
                     In some cases this will also allow you run more jobs simultaneously.
 
                     If you believe that the code is capable of using more than 1 CPU-core then
-                    consider attending an in-person Research Computing help session for assistance
-                    with running parallel jobs:
+                    consider attending an in-person Research Computing help session for assistance:
 
                         https://researchcomputing.princeton.edu/support/help-sessions
 

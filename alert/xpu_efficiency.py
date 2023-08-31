@@ -89,7 +89,9 @@ class LowEfficiency(Alert):
         self.ce.index += 1
         eff_thres = 60 if self.xpu == "cpu" else 15
         filters = (self.ce["eff(%)"] <= eff_thres) & (self.ce["proportion(%)"] >= 2)
+        self.ce["cluster"] = self.cluster
         cols = ["netid",
+                "cluster",
                 "partition",
                 f"{self.xpu}-hours",
                 "proportion(%)",
@@ -110,17 +112,19 @@ class LowEfficiency(Alert):
                 rank = self.ce.index[self.ce.netid == user].tolist()[0]
                 usr[f"{self.xpu.upper()}-rank"] = f"{rank}/{self.pr.shape[0]}"
                 usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%")
+                usr["cores"] = usr["cores"].apply(lambda x: str(x).replace(".0", ""))
                 cols = ["netid",
+                        "cluster",
                         "partition",
                         "jobs",
                         f"{self.xpu}-hours",
                         f"{self.xpu.upper()}-rank",
                         "eff(%)",
                         "cores"]
-                usr["cores"] = usr["cores"].apply(lambda x: str(x).replace(".0", ""))
                 if self.xpu == "gpu":
                     cols.remove("cores")
                 renamings = {"netid":"NetID",
+                             "cluster":"Cluster",
                              "partition":"Partition(s)",
                              "jobs":"Jobs",
                              f"{self.xpu}-hours":f"{self.xpu.upper()}-hours",
@@ -133,7 +137,8 @@ class LowEfficiency(Alert):
                 s = f"{get_first_name(user)},\n\n"
                 s +=f"Over the last {edays} days you have used {myrank} {self.xpu.upper()}-hours on {self.cluster_name} but\n"
                 s +=f"your mean {self.xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
-                s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+                usr_str = usr.drop(columns=["Cluster"]).to_string(index=False, justify="center")
+                s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
                 if self.xpu == "cpu":
                     s += textwrap.dedent(f"""

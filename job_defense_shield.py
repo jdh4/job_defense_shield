@@ -110,7 +110,7 @@ if __name__ == "__main__":
   parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
                       help='Identify CPU jobs that are split across too many nodes')
   parser.add_argument('--gpu-fragmentation', action='store_true', default=False,
-                      help='Identify GPU jobs that are splitt across too many nodes')
+                      help='Identify GPU jobs that are split across too many nodes')
   parser.add_argument('--excessive-time', action='store_true', default=False,
                       help='Identify users with excessive run time limits')
   parser.add_argument('--serial-using-multiple', action='store_true', default=False,
@@ -329,6 +329,7 @@ if __name__ == "__main__":
   ## LOW CPU/GPU EFFICIENCY ##
   ############################
   if args.low_xpu_efficiency:
+      #       ("della", "Della (cli)", ("cli",), "gpu"),
       cls = (("della", "Della (CPU)", ("cpu",), "cpu"),
              ("della", "Della (GPU)", ("gpu",), "gpu"),
              ("della", "Della (physics)", ("physics",), "cpu"),
@@ -381,7 +382,9 @@ if __name__ == "__main__":
                              days_between_emails=args.days,
                              violation="excessive_time_limits",
                              vpath=args.files,
-                             subject="Requesting Too Much Time for Jobs on Della")
+                             subject="Requesting Too Much Time for Jobs on Della",
+                             cluster="della",
+                             partition="cpu")
       if args.email and is_today_a_work_day():
           low_time.send_emails_to_users()
       title = "Excessive time limits (all jobs, 1+ hours)"

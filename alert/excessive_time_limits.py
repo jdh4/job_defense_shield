@@ -17,8 +17,8 @@ class ExcessiveTimeLimits(Alert):
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster == "della") &
-                          (self.df.partition == "cpu") &
+        self.df = self.df[(self.df.cluster == self.cluster) &
+                          (self.df.partition == self.partition) &
                           (self.df.state == "COMPLETED") &
                           (self.df["elapsed-hours"] >= 1)].copy()
         self.gp = pd.DataFrame({"NetID":[]})
@@ -56,6 +56,7 @@ class ExcessiveTimeLimits(Alert):
                     "jobs",
                     "partition"]
             self.gp = self.gp[cols]
+            self.gp["cluster"] = self.cluster
             renamings = {"netid":"NetID",
                          f"{xpu}-waste-hours":f"{xpu.upper()}-Hours-Unused"}
             self.gp = self.gp.rename(columns=renamings)

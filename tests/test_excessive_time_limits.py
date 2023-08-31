@@ -20,7 +20,7 @@ def test_excessive_time_limits():
                        "cpu-alloc-hours":[wallclock_hrs * cpus] * n_jobs,
                        "cpu-hours":[95e3, 5e3, 10e3, 19e3, 15e3, 19e3]})
     df["cpu-waste-hours"] = df["cpu-alloc-hours"] - df["cpu-hours"]
-    limits = ExcessiveTimeLimits(df, 0, "", "", "Subject")
+    limits = ExcessiveTimeLimits(df, 0, "", "", "Subject", cluster="della", partition="cpu")
     actual = limits.gp[["NetID", "CPU-Hours-Unused", "median(%)", "rank", "jobs"]]
     expected = pd.DataFrame({"NetID":["user1", "user2"],
                              "CPU-Hours-Unused":[95e3+90e3+85e3, 81e3+81e3],
