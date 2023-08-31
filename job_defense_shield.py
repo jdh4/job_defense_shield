@@ -24,6 +24,7 @@ from alert.mig import MultiInstanceGPU
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.gpu_fragmentation import MultinodeGPUFragmentation
 from alert.excess_cpu_memory import ExcessCPUMemory
+from alert.hard_warning_cpu_memory import HardWarningCPUMemory
 from alert.zero_cpu_utilization import ZeroCPU
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
@@ -105,6 +106,8 @@ if __name__ == "__main__":
                       help='Identify jobs that unjustly used the datascience nodes')
   parser.add_argument('--excess-cpu-memory', action='store_true', default=False,
                       help='Identify users that are allocating too much CPU memory')
+  parser.add_argument('--hard-warning-cpu-memory', action='store_true', default=False,
+                      help='Send a hard warning email to users that are allocating too much CPU memory')
   parser.add_argument('--mig', action='store_true', default=False,
                       help='Identify jobs that should use MIG')
   parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
@@ -373,6 +376,17 @@ if __name__ == "__main__":
               mem_hours.send_emails_to_users()
           title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
           s += mem_hours.generate_report_for_admins(title, keep_index=True)
+
+  if args.hard_warning_cpu_memory:
+      mem = HardWarningCPUMemory(df,
+                                 days_between_emails=90,
+                                 violation="hard_warning_cpu_memory",
+                                 vpath=args.files,
+                                 subject="ACTION REQUIRED: Requesting Too Much CPU Memory",
+                                 cluster="della",
+                                 partition="cpu")
+      if args.email and is_today_a_work_day():
+          mem.send_emails_to_users()
 
   ###########################
   ## EXCESSIVE TIME LIMITS ##

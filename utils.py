@@ -123,7 +123,7 @@ def seconds_to_slurm_time_format(seconds: int) -> str:
     return "%s%02d:%02d" % (hour, minutes, seconds)
 
 
-def get_first_name(netid: str) -> str:
+def get_first_name(netid: str, formal: bool=False) -> str:
     """Get the first name of the user by calling ldapsearch."""
     cmd = f"ldapsearch -x uid={netid} displayname"
     output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=5, text=True, check=True)
@@ -134,7 +134,7 @@ def get_first_name(netid: str) -> str:
             if ": " in full_name:
                 full_name = b64decode(full_name).decode("utf-8")
             if full_name.replace(".", "").replace(",", "").replace(" ", "").replace("-", "").isalpha():
-                return f"Hi {full_name.split()[0]}"
+                return f"Dear {full_name.split()[0]}" if formal else f"Hi {full_name.split()[0]}"
     return "Hello"
 
 def send_email(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
