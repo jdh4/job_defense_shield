@@ -38,7 +38,10 @@ class HardWarningCPUMemory(Alert):
                     tb_hrs_used   = usr["mem-hrs-used"].sum()
                     hours_per_week = 7 * 24
                     num_wasted_nodes = round(tb_hrs_unused / (0.190 * hours_per_week))
-                    usr["Week-Ending-On"] = usr["email_sent"].apply(lambda d: d.strftime("%-m/%-d/%Y"))
+                    def date_range(end: datetime) -> str:
+                        start = end - timedelta(days=7)
+                        return f'{start.strftime("%-m/%-d")}-{end.strftime("%-m/%-d")}'
+                    usr["Date Range"] = usr["email_sent"].apply(date_range)
                     dt = datetime.now() - usr.email_sent.min()
                     assert dt.days > 1
                     s =  f"Requestor: {user}@princeton.edu\n\n"
@@ -50,17 +53,16 @@ class HardWarningCPUMemory(Alert):
                             "partition",
                             "mem-hrs-unused",
                             "mem-hrs-used",
-                            "Week-Ending-On"]
+                            "Date Range"]
                     renamings = {"cluster":"Cluster",
                                  "partition":"Partition",
                                  "mem-hrs-unused":"Mem-Unused",
-                                 "mem-hrs-used":"Mem-Used",
-                                 "email_sent":"Email Sent"}
+                                 "mem-hrs-used":"Mem-Used"}
                     usr = usr[cols].rename(columns=renamings)
                     usr["Mem-Unused"] = usr["Mem-Unused"].apply(lambda x: f"{x} TB-hours")
                     usr["Mem-Used"]   = usr["Mem-Used"].apply(lambda x: f"{x} TB-hours")
                     usr_str = usr.to_string(index=False, justify="center", col_space=14)
-                    s +=  "\n".join([1 * " " + row for row in usr_str.split("\n")])
+                    s += "\n".join([1 * " " + row for row in usr_str.split("\n")])
                     s += "\n"
                     s += textwrap.dedent(f"""
                     Each row in the table above represents a 1-week period. Your Slurm allocations

@@ -49,7 +49,7 @@ class ZeroUtilGPUHours(Alert):
                 zero_hours = round(self.gp[self.gp.NetID == user]["Zero-Util-GPU-Hours"].values[0])
                 emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
                 s =  f"Requestor: {user}@princeton.edu\n\n"
-                s += f"{get_first_name(user)},\n\n"
+                s += f"{get_first_name(user, formal=True)},\n\n"
                 if emails_sent == 0:
                     s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
                     s +=  "Della. This is a waste of valuable resources.\n"
