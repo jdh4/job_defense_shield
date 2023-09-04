@@ -1,5 +1,5 @@
 [![Tests](https://github.com/jdh4/job_defense_shield/actions/workflows/tests.yml/badge.svg)](https://github.com/jdh4/job_defense_shield/actions?workflow=Tests)
-
+[![License: GPL v2](https://img.shields.io/badge/License-GPL_v2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 
 # Job Defense Shield
 
