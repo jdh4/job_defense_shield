@@ -47,7 +47,7 @@ excess-cpu-memory-stellar:
     - pppl
     - pu
     - serial
-  combine_partitions: True
+  combine_partitions: False
   cores_per_node: 76.8
   excluded_users:
     - aturing

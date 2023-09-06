@@ -14,6 +14,7 @@ from utils import SECONDS_PER_HOUR
 from utils import is_today_a_work_day
 from utils import send_email
 from utils import show_history_of_emails_sent
+from utils import add_dividers
 
 from efficiency import get_stats_dict
 
@@ -288,9 +289,20 @@ if __name__ == "__main__":
       print("\nTotal NaNs:", df.isnull().sum().sum())
 
   fmt = "%a %b %-d"
-  s =  f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}\n\n"
-  s += f"Total users: {raw.netid.unique().size}\n"
-  s += f"Total jobs:  {raw.shape[0]}"
+  s = f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}"
+  d = {"netid":lambda series: series.unique().size,
+       "cpu-hours":"sum",
+       "gpu-hours":"sum",
+       "jobid":"size"}
+  by_cluster = df.groupby(["cluster"]).agg(d)
+  renamings = {"netid":"users", "jobid":"jobs"}
+  by_cluster = by_cluster.rename(columns=renamings).sort_index().reset_index()
+  cols = ["cpu-hours", "gpu-hours"]
+  by_cluster[cols] = by_cluster[cols].apply(round).astype("int64")
+  for column in ["cpu-hours", "gpu-hours", "jobs"]:
+    total = by_cluster[column].sum()
+    by_cluster[column] = by_cluster[column].apply(lambda x: f"{x} ({round(100 * x / total)}%)")
+  s += add_dividers(by_cluster.to_string(index=False, col_space=14)) + "\n\n"
 
   ############################################
   ## RUNNING JOBS WITH ZERO GPU UTILIZATION ##

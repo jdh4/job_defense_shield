@@ -36,8 +36,9 @@ class HardWarningCPUMemory(Alert):
                 if num_warnings >= 3:
                     tb_hrs_unused = usr["mem-hrs-unused"].sum()
                     tb_hrs_used   = usr["mem-hrs-used"].sum()
+                    tb_mem_per_node = 190 / 1e3
                     hours_per_week = 7 * 24
-                    num_wasted_nodes = round(tb_hrs_unused / (0.190 * hours_per_week))
+                    num_wasted_nodes = round(tb_hrs_unused / hours_per_week / tb_mem_per_node)
                     def date_range(end: datetime) -> str:
                         start = end - timedelta(days=7)
                         return f'{start.strftime("%-m/%-d")}-{end.strftime("%-m/%-d")}'
@@ -47,7 +48,7 @@ class HardWarningCPUMemory(Alert):
                     s =  f"Requestor: {user}@princeton.edu\n\n"
                     s += f"{get_first_name(user, formal=True)},\n\n"
                     s += f'Over the past {dt.days+1} days you were sent {num_warnings} emails with the subject "Requesting Too\n'
-                    s += f'Much CPU Memory". The data associated with these emails is shown below:\n\n'
+                    s += 'Much CPU Memory". The data associated with these emails is shown below:\n\n'
                     cols = ["NetID",
                             "cluster",
                             "partition",
