@@ -35,6 +35,7 @@ from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
 from alert.xpu_efficiency import LowEfficiency
+from alert.active_cpu_memory import ActiveCPUMemory
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -109,6 +110,8 @@ if __name__ == "__main__":
                       help='Identify users that are allocating too much CPU memory')
   parser.add_argument('--hard-warning-cpu-memory', action='store_true', default=False,
                       help='Send a hard warning email to users that are allocating too much CPU memory')
+  parser.add_argument('--active-cpu-memory', action='store_true', default=False,
+                      help='Identify running jobs that are allocating too much CPU memory')
   parser.add_argument('--mig', action='store_true', default=False,
                       help='Identify jobs that should use MIG')
   parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
@@ -300,8 +303,9 @@ if __name__ == "__main__":
   cols = ["cpu-hours", "gpu-hours"]
   by_cluster[cols] = by_cluster[cols].apply(round).astype("int64")
   for column in ["cpu-hours", "gpu-hours", "jobs"]:
-    total = by_cluster[column].sum()
-    by_cluster[column] = by_cluster[column].apply(lambda x: f"{x} ({round(100 * x / total)}%)")
+      total = by_cluster[column].sum()
+      if total != 0:
+          by_cluster[column] = by_cluster[column].apply(lambda x: f"{x} ({round(100 * x / total)}%)")
   s += add_dividers(by_cluster.to_string(index=False, col_space=14)) + "\n\n"
 
   ############################################
@@ -399,6 +403,20 @@ if __name__ == "__main__":
                                  partition="cpu")
       if args.email and is_today_a_work_day():
           mem.send_emails_to_users()
+
+  #######################
+  ## ACTIVE CPU MEMORY ##
+  #######################
+  if args.active_cpu_memory:
+      mem = ActiveCPUMemory(df,
+                            days_between_emails=args.days,
+                            violation="active_cpu_memory",
+                            vpath=args.files,
+                            subject="Requesting Too Much CPU Memory for Jobs on Della")
+      if args.email and is_today_a_work_day():
+          mem.send_emails_to_users()
+      title = "Actively running jobs allocating too much memory"
+      s += mem.generate_report_for_admins(title)
 
   ###########################
   ## EXCESSIVE TIME LIMITS ##

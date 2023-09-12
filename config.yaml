@@ -2,9 +2,9 @@
 ---
 excess-cpu-memory-della-cpu:
   tb_hours_per_day: 10
-  ratio_threshold: 0.25
-  mean_ratio_threshold: 0.25
-  median_ratio_threshold: 0.25
+  ratio_threshold: 0.35
+  mean_ratio_threshold: 0.35
+  median_ratio_threshold: 0.35
   num_top_users: 10
   clusters:
     - della

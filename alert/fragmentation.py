@@ -126,6 +126,7 @@ class MultinodeCPUFragmentation(Alert):
 
 
             if user == "martirez": continue  # EXCLUDED USER--HANDLE VIA CONFIG FILE
+            if user == "mcreamer": continue  # EXCLUDED USER--HANDLE VIA CONFIG FILE
 
 
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"

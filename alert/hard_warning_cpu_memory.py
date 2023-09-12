@@ -42,11 +42,13 @@ class HardWarningCPUMemory(Alert):
                     def date_range(end: datetime) -> str:
                         start = end - timedelta(days=7)
                         return f'{start.strftime("%-m/%-d")}-{end.strftime("%-m/%-d")}'
-                    usr["Date Range"] = usr["email_sent"].apply(date_range)
+                    usr["Date-Range"] = usr["email_sent"].apply(date_range)
                     dt = datetime.now() - usr.email_sent.min()
-                    assert dt.days > 1
+                    #assert dt.days > 1
                     s =  f"Requestor: {user}@princeton.edu\n\n"
                     s += f"{get_first_name(user, formal=True)},\n\n"
+                    #s += f'You recently received an email with the subject "Requesting Too Much CPU Memory".\n'
+                    #s += 'The data associated with this email is shown below:\n\n'
                     s += f'Over the past {dt.days+1} days you were sent {num_warnings} emails with the subject "Requesting Too\n'
                     s += 'Much CPU Memory". The data associated with these emails is shown below:\n\n'
                     cols = ["NetID",
@@ -54,7 +56,7 @@ class HardWarningCPUMemory(Alert):
                             "partition",
                             "mem-hrs-unused",
                             "mem-hrs-used",
-                            "Date Range"]
+                            "Date-Range"]
                     renamings = {"cluster":"Cluster",
                                  "partition":"Partition",
                                  "mem-hrs-unused":"Mem-Unused",
@@ -76,6 +78,7 @@ class HardWarningCPUMemory(Alert):
 
                     We will be forced to prevent you from running jobs if no action is taken.
                     """)
+
                     send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="jdh4@princeton.edu")
                     send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                     print(s)
