@@ -29,6 +29,8 @@ from alert.hard_warning_cpu_memory import HardWarningCPUMemory
 from alert.zero_cpu_utilization import ZeroCPU
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
+from alert.utilization_overview import UtilizationOverview
+from alert.utilization_by_slurm_account import UtilizationBySlurmAccount
 from alert.longest_queued import LongestQueuedJobs
 from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
@@ -122,6 +124,10 @@ if __name__ == "__main__":
                       help='Identify users with excessive run time limits')
   parser.add_argument('--serial-using-multiple', action='store_true', default=False,
                       help='Indentify serial codes using multiple CPU-cores')
+  parser.add_argument('--utilization-overview', action='store_true', default=False,
+                      help='Generate a utilization report by cluster and partition')
+  parser.add_argument('--utilization-by-slurm-account', action='store_true', default=False,
+                      help='Generate a utilization report by cluster, partition and account')
   parser.add_argument('--longest-queued', action='store_true', default=False,
                       help='List the longest queued jobs')
   parser.add_argument('--most-cores', action='store_true', default=False,
@@ -293,21 +299,7 @@ if __name__ == "__main__":
 
   fmt = "%a %b %-d"
   s = f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}"
-  d = {"netid":lambda series: series.unique().size,
-       "cpu-hours":"sum",
-       "gpu-hours":"sum",
-       "jobid":"size"}
-  by_cluster = df.groupby(["cluster"]).agg(d)
-  renamings = {"netid":"users", "jobid":"jobs"}
-  by_cluster = by_cluster.rename(columns=renamings).sort_index().reset_index()
-  cols = ["cpu-hours", "gpu-hours"]
-  by_cluster[cols] = by_cluster[cols].apply(round).astype("int64")
-  for column in ["cpu-hours", "gpu-hours", "jobs"]:
-      total = by_cluster[column].sum()
-      if total != 0:
-          by_cluster[column] = by_cluster[column].apply(lambda x: f"{x} ({round(100 * x / total)}%)")
-  s += add_dividers(by_cluster.to_string(index=False, col_space=14)) + "\n\n"
-
+ 
   ############################################
   ## RUNNING JOBS WITH ZERO GPU UTILIZATION ##
   ############################################
@@ -491,6 +483,31 @@ if __name__ == "__main__":
           mig.send_emails_to_users()
       s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
 
+
+  ##########################
+  ## UTILIZATION OVERVIEW ##
+  ##########################
+  if args.utilization_overview:
+      util = UtilizationOverview(df,
+                                 days_between_emails=args.days,
+                                 violation="null",
+                                 vpath=args.files,
+                                 subject="")
+      title = "Utilization Overview"
+      s += util.generate_report_for_admins(title)
+
+  ##################################
+  ## UTILIZATION BY SLURM ACCOUNT ##
+  ##################################
+  if args.utilization_by_slurm_account:
+      util = UtilizationBySlurmAccount(df,
+                                       days_between_emails=args.days,
+                                       violation="null",
+                                       vpath=args.files,
+                                       subject="")
+      title = "Utilization by Slurm Account"
+      s += util.generate_report_for_admins(title)
+
   #########################
   ## LONGEST QUEUED JOBS ##
   #########################
@@ -545,5 +562,5 @@ if __name__ == "__main__":
   if args.report:
     send_email(s, "halverson@princeton.edu", subject="Cluster utilization report", sender="halverson@princeton.edu")
 
-  print(s)
+  print(s, end="\n\n")
   print(datetime.now())

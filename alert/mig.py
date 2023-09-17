@@ -84,16 +84,6 @@ class MultiInstanceGPU(Alert):
                 If you are using Jupyter OnDemand then set the "Custom partition" to "mig" when
                 creating the session.
 
-                A job can use a MIG GPU when the following constraints are satisfied:
-
-                  1. The required number of GPUs is 1
-                  2. The required number of CPU-cores is 1
-                  3. The required GPU memory is less than 10 GB
-                  4. The required CPU memory is less than 32 GB
-
-                All MIG jobs are automatically allocated 32 GB of CPU memory and 10 GB of GPU
-                memory.
-
                 By running future jobs on the MIG GPUs you will experience shorter queue
                 times and you will help keep A100 GPUs free for jobs that need them. Since
                 your jobs satisfy the above constraints, please use the MIG GPUs. For more:
@@ -104,7 +94,7 @@ class MultiInstanceGPU(Alert):
                 utilization of your code. A good target value is greater than 50%. Consider
                 writing to the mailing list of the software you are using for guidance.
 
-                For general information about GPU computing:
+                For general information about GPU computing at Princeton:
 
                   https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
