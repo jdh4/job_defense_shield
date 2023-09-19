@@ -156,7 +156,7 @@ if __name__ == "__main__":
 
   absolute_path_to_config_file = os.path.join("/tigress/jdh4/utilities/job_defense_shield",
                                               "config.yaml")
-  with open(absolute_path_to_config_file, "r") as fp:
+  with open(absolute_path_to_config_file, "r", encoding="utf-8") as fp:
       cfg = yaml.safe_load(fp)
 
   if args.email and (os.environ["USER"] != "jdh4"):

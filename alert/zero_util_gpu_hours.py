@@ -74,30 +74,10 @@ class ZeroUtilGPUHours(Alert):
                     and they must be used efficiently.
                     """)
                 s += textwrap.dedent(f"""
-                Please reply to this email if you would like assistance in resolving this issue.
+                See this webpage for three common reasons why a user may encounter 0% GPU
+                utilization:
 
-                Below are three common reasons why a user may encounter 0% GPU utilization:
-
-                  1. Is your code GPU-enabled? Only codes that have been explicitly written
-                     to use GPUs can take advantage of them. Please consult the documentation
-                     for your software. If your code is not GPU-enabled then please remove the
-                     --gres Slurm directive when submitting jobs. For more information:
-
-                       https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-                  2. Make sure your software environment is properly configured. In some cases
-                     certain libraries must be available for your code to run on GPUs. The
-                     solution can be to load an environment module or to install a specific
-                     software dependency. If your code uses CUDA then the CUDA Toolkit 11 or
-                     higher should be used on Della. Please check your software environment
-                     against the installation directions of your code.
-
-                  3. Please do not create "salloc" sessions for long periods of time. For
-                     example, allocating a GPU for 24 hours is wasteful unless you plan to work
-                     intensively during the entire period. For interactive work, please
-                     consider using the MIG GPUs:
-
-                       https://researchcomputing.princeton.edu/systems/della#mig
+                  https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
                 Consider attending an in-person Research Computing help session for assistance:
 
@@ -105,13 +85,15 @@ class ZeroUtilGPUHours(Alert):
 
                 It is your responsibility to ensure that the GPUs and other resources are being
                 used efficiently by your jobs. Please monitor your jobs using the "jobstats"
-                command and the web interface:
-
-                  https://researchcomputing.princeton.edu/support/knowledge-base/job-stats
+                command:
                 """)
+                s += "\n"
+                s += f"  $ jobstats {usr.JobID.values[0]}"
+                s += "\n\n"
                 s += f"\nBelow are the jobs that ran in the past {self.days_between_emails} days with 0% GPU utilization:\n\n"
                 s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-                s +=  "\n\nPlease reply to this support ticket if you need assistance."
+                s +=  "\n\nPlease reply to this support ticket if you would like assistance in resolving"
+                s +=  "\nthis issue."
 
                 if emails_sent <= 1:
                     self.subject = "Underutilization of the GPUs on Della"

@@ -16,9 +16,9 @@ class UtilizationOverview(Alert):
                  "cpu-hours":"sum",
                  "gpu-hours":"sum"}
             gp = self.df.groupby(fields).agg(d)
-            renamings = {"netid":"users"}
-            gp = gp.rename(columns=renamings)
-            gp = gp.sort_index().reset_index()
+            gp = gp.rename(columns={"netid":"users"})
+            gp = gp.reset_index().sort_values(by=["cluster", "cpu-hours"],
+                                              ascending=[True, False])
             cols = ["cpu-hours", "gpu-hours"]
             gp[cols] = gp[cols].apply(round).astype("int64")
             if simple:
@@ -41,6 +41,22 @@ class UtilizationOverview(Alert):
         self.df = self.df[self.df["elapsedraw"] > 0].copy()
         self.by_cluster = compute_utilization(["cluster"])
         self.by_partition = compute_utilization(["cluster", "partition"], simple=False)
+        
+        # add max usage for specific partitions (to be removed)
+        period_hours = 24 * self.days_between_emails
+        self.special = self.by_partition.copy()
+        self.special["Usage(%)"] = -1
+        self.special = self.special.set_index(["cluster", "partition"])
+        # gpu usage on della gpu
+        gpu = self.special.at[("della", "gpu"), "gpu-hours"]
+        gpu = int(gpu.split("(")[0].strip())
+        gpu = round(gpu / 316 / period_hours, 2)
+        self.special.at[("della", "gpu"), "Usage(%)"] = gpu
+        # gpu usage on della mig
+        mig = self.special.at[("della", "mig"), "gpu-hours"]
+        mig = int(mig.split("(")[0].strip())
+        mig = round(mig / 56 / period_hours, 2)
+        self.special.at[("della", "mig"), "Usage(%)"] = mig
 
     def send_emails_to_users(self):
         """There are no emails for this alert."""
@@ -48,5 +64,5 @@ class UtilizationOverview(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         clus = self.by_cluster.to_string(index=keep_index, justify="center")
-        part = self.by_partition.to_string(index=keep_index, justify="center")
+        part = self.special.to_string(index=True, justify="center")
         return add_dividers(clus, title) + add_dividers(part, f"{title} by Partition")

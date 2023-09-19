@@ -140,7 +140,7 @@ class ExcessCPUMemory(Alert):
                 jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
                 s =  f"{get_first_name(user)},\n\n"
-                s += f"Below are {case} that ran on Della (CPU) in the past {edays} days:\n\n"
+                s += f"Below are {case} that ran on Della (cpu) in the past {edays} days:\n\n"
                 jobs_str = jobs.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])
                 s += "\n"

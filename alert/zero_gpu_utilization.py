@@ -98,7 +98,7 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           )
 
         usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-        usr.drop(columns=["elapsedraw", "salloc"], inplace=True)
+        usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
 
         if single_job:
           text = (
@@ -113,7 +113,8 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
           )
           s += "\n".join(textwrap.wrap(text, width=80))
         s += "\n\n"
-        s += "\n".join([5 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+        usr_str = usr.to_string(index=False, justify="center")
+        s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
         s += "\n\n"
 
         version = "job" if single_job else "jobs"

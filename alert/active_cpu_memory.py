@@ -50,7 +50,9 @@ class ActiveCPUMemory(Alert):
         spec = importlib.util.spec_from_loader('jobstats', loader)
         mymodule = importlib.util.module_from_spec(spec)
         loader.exec_module(mymodule)
-        stats = mymodule.JobStats(jobid=jobid, cluster=cluster, prom_server="http://vigilant2:8480")
+        stats = mymodule.JobStats(jobid=jobid,
+                                  cluster=cluster,
+                                  prom_server="http://vigilant2:8480")
         sleep(1)
         return eval(stats.report_job_json(False))
 
@@ -79,8 +81,7 @@ class ActiveCPUMemory(Alert):
             return 0
         self.df["mem"] = self.df["alloctres"].apply(mem_from_alloctres)
         self.df = self.df[self.df["mem"] >= 50]
-        print(self.df[["jobid", "mem", "alloctres", "cores"]].to_string())
-        
+ 
         self.admin = pd.DataFrame()
         if not self.df.empty:
             self.df["jobstats"] = self.df.apply(lambda row:
@@ -96,13 +97,10 @@ class ActiveCPUMemory(Alert):
             self.df["mem-alloc"] = self.df["memory-tuple"].apply(lambda x: x[1])
             # next line guards against division by zero when computing self.df.ratio
             self.df = self.df[self.df["mem-alloc"] >= 50]
+            self.df["GB-per-core"] = self.df["mem-alloc"] / self.df["cores"]
             self.df["ratio"] = self.df["mem-used"] / self.df["mem-alloc"]
-            self.df = self.df[self.df["ratio"] < 0.4]
-            # 125 GB, 2 cores, 1 GB
-            # 190 - 125 = 65 -> 65/4=16 cores remain then available = min(32 - 2, 16)
-            # by_cores = 32 - 2
-            # by_mem = (190 - mem_unused) / 4
-            self.df["blocked-cores"] = 32 - (190 - self.df["mem-alloc"]) / 4
+            self.df = self.df[(self.df["ratio"] < 0.4) & (self.df["GB-per-core"] > 5)]
+            self.df["blocked-cores"] = 32 - self.df["cores"] - (190 - self.df["mem-alloc"]) / 4
             self.df["Limit-Hours"] = self.df["limit-minutes"].apply(lambda x:
                                                                     round(x / MINUTES_PER_HOUR))
             self.admin = self.df.copy()
@@ -182,6 +180,7 @@ class ActiveCPUMemory(Alert):
                     "mem-alloc",
                     "mem-used",
                     "ratio",
+                    "blocked-cores",
                     "elapsed-hours",
                     "Limit-Hours"]
             self.admin = self.admin[cols]

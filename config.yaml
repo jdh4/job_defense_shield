@@ -15,6 +15,7 @@ excess-cpu-memory-della-cpu:
   excluded_users:
     - aturing
     - einstein
+    - vonholdt
 
 
 excess-cpu-memory-della-datascience:

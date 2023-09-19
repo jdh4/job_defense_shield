@@ -26,6 +26,7 @@ def datascience_node_violators(df, email, vpath):
           (df.partition == "datasci") &
           (df.state != "OUT_OF_MEMORY") &
           (df.admincomment != {}) &
+          (~df.netid.isin(["vonholdt"])) &
           (df["elapsed-hours"] >= 1)].copy()
 
   ds["memory-tuple"] = ds.apply(lambda row: cpu_memory_usage(row["admincomment"], row["jobid"], row["cluster"], precision=None), axis="columns")
