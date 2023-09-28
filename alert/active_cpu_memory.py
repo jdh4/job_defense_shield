@@ -9,6 +9,7 @@ from utils import MINUTES_PER_HOUR
 from utils import HOURS_PER_DAY
 from utils import get_first_name
 from utils import send_email
+from utils import send_email_html
 from utils import add_dividers
 
 class ActiveCPUMemory(Alert):
@@ -128,8 +129,9 @@ class ActiveCPUMemory(Alert):
                 usr = usr[cols].rename(columns=renamings)
                 s =  f"{get_first_name(user)},\n\n"
                 s += "Below are jobs currently running on Della (cpu):\n\n"
-                usr_str = usr.to_string(index=False, justify="center")
-                s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])
+                #usr_str = usr.to_string(index=False, justify="center")
+                #s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])
+                s += usr.to_html(index=False, border=1, justify="center").replace('<td>', '<td align="center">')
                 s += "\n"
                 s += textwrap.dedent(f"""
                 It appears that the jobs above have allocated too much memory since
@@ -163,6 +165,19 @@ class ActiveCPUMemory(Alert):
 
                 #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                s = '<p align="left">Hi Alan:</p>' + \
+                    '<p align="left">Below is a table showing underutilization on the clusters:</p>' + \
+                    '<font face="Courier New, Courier, monospace">' + \
+                    usr.to_html(index=False, border=0, justify="center").replace('<td>', '<td align="center">') + \
+                    '</font>' + \
+                    '<p align="left">By using accurate values for the allocated memory you will experience shorter queues times. When you allocate excess CPU memory you prevent yourself and other resources from using the remaingin CPU-cores on the node.</p>' + \
+                    '<p align="left">You can check the CPU memory utilization of completed and actively running jobs by using the "jobstats" command. For example:</p>' + \
+                    '<p align="left"><font face="Courier New, Courier, monospace">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$ jobstats 1234567</font></p>' + \
+                    '<p align="left">Learn more about <a href="https://researchcomputing.princeton.edu/support/knowledge-base/memory">allocating CPU memory with Slurm</a>.</p>' + \
+                    '<p align="left">Consider attending an in-person <a href="https://researchcomputing.princeton.edu/support/help-sessions">Research Computing help session</a> for assistance. ' + \
+                    'Replying to this automated email will open a support ticket with <a href="https://researchcomputing.princeton.edu">Research Computing</a>. Let us know if we can be of help.</p>'
+                send_email_html(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email_html(s, "halverson.jonathan@gmail.com", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
                 # append the new violations to the log file

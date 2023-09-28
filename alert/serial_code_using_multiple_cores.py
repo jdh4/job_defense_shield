@@ -10,7 +10,7 @@ class SerialCodeUsingMultipleCores(Alert):
 
     """Find serial codes that are using multiple CPU-cores."""
 
-    cpu_hours_threshold = 50
+    cpu_hours_threshold = 100
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
@@ -19,6 +19,7 @@ class SerialCodeUsingMultipleCores(Alert):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == "della") &
                           (self.df.partition == "cpu") &
+                          (~self.df.netid.isin(["vonholdt"])) &
                           (self.df.nodes == 1) &
                           (self.df.cores > 1) &
                           (self.df.admincomment != {}) &
@@ -66,13 +67,19 @@ class SerialCodeUsingMultipleCores(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
                 cpu_hours_wasted = usr["CPU-Hours-Wasted"].sum()
-                usr = usr.drop(columns=["cores-minus-1", "CPU-Hours-Wasted"])
+                usr = usr.drop(columns=["NetID", "cores-minus-1", "CPU-Hours-Wasted"])
                 prev_emails = self.get_emails_sent_count(user, self.violation, days=90)
+                num_disp = 15
+                total_jobs = usr.shape[0]
+                case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
+                cores_per_node = 32
+                hours_per_week = 24 * 7
+                num_wasted_nodes = round(cpu_hours_wasted / cores_per_node / hours_per_week)
                 if cpu_hours_wasted >= SerialCodeUsingMultipleCores.cpu_hours_threshold:
                     s =  f"{get_first_name(user)},\n\n"
-                    s += f"Below are jobs that ran on Della in the past {self.days_between_emails} days:"
+                    s += f"Below are {case} that ran on Della (cpu) in the past {self.days_between_emails} days:"
                     s +=  "\n\n"
-                    usr_str = usr.to_string(index=False, justify="center").split("\n")
+                    usr_str = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
                     s +=  "\n".join([4 * " " + row for row in usr_str])
                     s +=  "\n"
                     s += textwrap.dedent(f"""
@@ -81,7 +88,13 @@ class SerialCodeUsingMultipleCores(Alert):
                     suggests that you may be running a code that can only use 1 CPU-core. If this is
                     true then allocating more than 1 CPU-core is wasteful. A good target value for
                     CPU utilization is 90% and above.
+                    """)
 
+                    if num_wasted_nodes > 1:
+                        s += f"\nYour jobs allocated {cpu_hours_wasted} CPU-hours that were never used. This is equivalent to\n"
+                        s += f"making {num_wasted_nodes} nodes unavailable to all users (including yourself) for 1 week!\n"
+
+                    s += textwrap.dedent(f"""
                     Please consult the documentation of the software to see if it is parallelized.
                     For a general overview of parallel computing:
         

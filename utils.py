@@ -165,3 +165,17 @@ def send_email_cses(s, addressee, subject="Slurm job alerts", sender="halverson@
   s = smtplib.SMTP('localhost')
   s.sendmail(sender, addressee, msg.as_string())
   s.quit()
+
+def send_email_html(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
+  """Send an email in HTML to the user. Use nested tables and styles: https://kinsta.com/blog/html-email/
+     and https://www.emailvendorselection.com/create-html-email/"""
+  from email.message import EmailMessage
+  msg = EmailMessage()
+  msg['Subject'] = subject
+  msg['From'] = sender
+  msg['To'] = addressee
+  html = f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title></head><body><table width="700" border="0"><tr><td align="center">{s}</td></tr></table></body></html>'
+  msg.set_content(html, subtype="html")
+  # add alternative
+  with smtplib.SMTP('localhost') as s:
+      s.send_message(msg)

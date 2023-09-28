@@ -77,6 +77,7 @@ def gpus_per_job(tres: str) -> int:
         return 0
 
 def add_new_and_derived_fields(df):
+  df["cpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["cores"], axis='columns')
   df["gpus"] = df.alloctres.apply(gpus_per_job)
   df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
   def is_gpu_job(tres):
@@ -287,6 +288,13 @@ if __name__ == "__main__":
   df = raw.copy()
   df = df[pd.notnull(df.alloctres) & (df.alloctres != "")]
   df.start = df.start.astype("int64")
+
+  correction = True
+  if correction:
+      df["secs-from-start"] = df["start"] - start_date.timestamp()
+      df["secs-from-start"] = df["secs-from-start"].apply(lambda x: x if x < 0 else 0)
+      df["elapsedraw"] = df["elapsedraw"] + df["secs-from-start"]
+
   df = add_new_and_derived_fields(df)
   df.reset_index(drop=True, inplace=True)
 
@@ -405,8 +413,8 @@ if __name__ == "__main__":
                             violation="active_cpu_memory",
                             vpath=args.files,
                             subject="Requesting Too Much CPU Memory for Jobs on Della")
-      if args.email and is_today_a_work_day():
-          mem.send_emails_to_users()
+      #if args.email and is_today_a_work_day():
+      mem.send_emails_to_users()
       title = "Actively running jobs allocating too much memory"
       s += mem.generate_report_for_admins(title)
 
