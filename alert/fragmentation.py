@@ -23,6 +23,7 @@ class MultinodeCPUFragmentation(Alert):
 
     @staticmethod
     def is_fragmented(cluster, partition, cores_per_node, mem_per_node_used):
+        # value for della is hard-coded at the moment
         safety = 0.2
         cores_frac = 0.8
         if cluster == "tiger" and \
@@ -36,7 +37,7 @@ class MultinodeCPUFragmentation(Alert):
             return True
         elif cluster == "della" and \
            partition != "physics" and \
-           cores_per_node < cores_frac * 32 and \
+           cores_per_node < 16 and \
            mem_per_node_used < (1 - safety) * 190:
             return True
         elif cluster == "stellar" and \

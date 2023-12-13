@@ -175,7 +175,8 @@ class ActiveCPUMemory(Alert):
                     '<p align="left"><font face="Courier New, Courier, monospace">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$ jobstats 1234567</font></p>' + \
                     '<p align="left">Learn more about <a href="https://researchcomputing.princeton.edu/support/knowledge-base/memory">allocating CPU memory with Slurm</a>.</p>' + \
                     '<p align="left">Consider attending an in-person <a href="https://researchcomputing.princeton.edu/support/help-sessions">Research Computing help session</a> for assistance. ' + \
-                    'Replying to this automated email will open a support ticket with <a href="https://researchcomputing.princeton.edu">Research Computing</a>. Let us know if we can be of help.</p>'
+                    'Replying to this automated email will open a support ticket with <a href="https://researchcomputing.princeton.edu">Research Computing</a>. Let us know if we can be of help.</p>' + \
+                    '<table border="0"><tr><td style="font-family: \'Sarabun\', \'Roboto\', \'Arial\', serif; font-size: 16px; font-weight: 400;" align="left">What does this produce?</td></tr></table>'
                 send_email_html(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email_html(s, "halverson.jonathan@gmail.com", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)

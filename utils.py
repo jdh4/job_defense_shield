@@ -174,7 +174,7 @@ def send_email_html(s, addressee, subject="Slurm job alerts", sender="halverson@
   msg['Subject'] = subject
   msg['From'] = sender
   msg['To'] = addressee
-  html = f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title></head><body><table width="700" border="0"><tr><td align="center">{s}</td></tr></table></body></html>'
+  html = f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title></head><body><table width="600px" border="0"><tr><td align="center">{s}</td></tr></table></body></html>'
   msg.set_content(html, subtype="html")
   # add alternative
   with smtplib.SMTP('localhost') as s:

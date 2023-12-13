@@ -12,7 +12,8 @@ from utils import add_dividers
 class LowEfficiency(Alert):
 
     """Low CPU or GPU utilization. The first part computes the proportion
-       of CPU/GPU hours for each user."""
+       of CPU/GPU hours for each user. How to turn the filters on or off
+       for admin reports."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
@@ -100,7 +101,7 @@ class LowEfficiency(Alert):
                 "interactive",
                 "cores",
                 "coverage"]
-        self.admin = self.ce[cols].copy()
+        self.admin = self.ce[cols][filters].copy()
         self.ce = self.ce[cols][filters]
 
     def send_emails_to_users(self):

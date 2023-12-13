@@ -203,6 +203,11 @@ if __name__ == "__main__":
                                       "excess_cpu_memory",
                                       "EXCESS CPU MEMORY",
                                       args.days)
+      if args.hard_warning_cpu_memory:
+          show_history_of_emails_sent(args.files,
+                                      "hard_warning_cpu_memory",
+                                      "HARD WARNING CPU MEMORY",
+                                      args.days)
       if args.cpu_fragmentation:
           show_history_of_emails_sent(args.files,
                                       "cpu_fragmentation",
@@ -231,6 +236,7 @@ if __name__ == "__main__":
   pd.set_option("display.max_rows", None)
   pd.set_option("display.max_columns", None)
   pd.set_option("display.width", 1000)
+  pd.set_option("mode.use_inf_as_na", True)
 
   # convert slurm timestamps to seconds
   os.environ["SLURM_TIME_FORMAT"] = "%s"
@@ -286,10 +292,19 @@ if __name__ == "__main__":
 
   # df excludes pending jobs
   df = raw.copy()
-  df = df[pd.notnull(df.alloctres) & (df.alloctres != "")]
+  print(f"Number of rows (before): {df.shape[0]}")
+  df.start = df.apply(lambda row: row["eligible"]
+                                  if row["start"] == "Unknown"
+                                  else row["start"],
+                                  axis="columns")
+  df = df[pd.notnull(df.alloctres) &
+          (df.alloctres != "") &
+          pd.notnull(df.start) &
+          (~df.start.isin(["", "None"]))]
+  print(f"Number of rows  (after): {df.shape[0]}")
   df.start = df.start.astype("int64")
 
-  correction = True
+  correction = False
   if correction:
       df["secs-from-start"] = df["start"] - start_date.timestamp()
       df["secs-from-start"] = df["secs-from-start"].apply(lambda x: x if x < 0 else 0)

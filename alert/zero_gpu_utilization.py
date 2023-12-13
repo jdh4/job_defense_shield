@@ -156,14 +156,10 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
             s += "\n"
 
         s += textwrap.dedent("""
-        For general information about GPU computing at Princeton:
+        See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing">GPU Computing</a> webpage for three common reasons for encountering zero GPU
+        utilization.
 
-             https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-        Consider attending an in-person Research Computing help session for assistance:
-
-             https://researchcomputing.princeton.edu/support/help-sessions
-        
+        Consider attending an in-person Research Computing <a href="https://researchcomputing.princeton.edu/support/help-sessions">help session</a> for assistance.
         Replying to this automated email will open a support ticket with Research
         Computing. Let us know if we can be of help.
         """)

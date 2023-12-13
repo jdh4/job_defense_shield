@@ -11,7 +11,10 @@ class ExcessCPUMemory(Alert):
 
     """Cumulative memory use per user. Note that df is referenced in the
        send email method. If using this alert for multiple clusters then
-       will need to prune df for each cluster. Similarly for proportion."""
+       will need to prune df for each cluster. Similarly for proportion.
+
+       Filter out jobs where used is greater than allocated?
+       Should jobs that use the default CPU memory be ignored?"""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
@@ -41,6 +44,10 @@ class ExcessCPUMemory(Alert):
             self.df["mem-used"]   = self.df["memory-tuple"].apply(lambda x: x[0])
             self.df["mem-alloc"]  = self.df["memory-tuple"].apply(lambda x: x[1])
             self.df["mem-unused"] = self.df["mem-alloc"] - self.df["mem-used"]
+            # filter out jobs using approximately default memory
+            self.df["GB-per-core"] = self.df["mem-alloc"] / self.df["cores"]
+            self.df = self.df[self.df["GB-per-core"] > 5]
+            # ignore jobs using default memory or less?
             GB_per_TB = 1000
             self.df["mem-hrs-used"]   = self.df["mem-used"] * self.df["elapsed-hours"] / GB_per_TB
             self.df["mem-hrs-alloc"]  = self.df["mem-alloc"] * self.df["elapsed-hours"] / GB_per_TB
@@ -152,8 +159,8 @@ class ExcessCPUMemory(Alert):
                 the allocation of 1 terabyte of memory for 1 hour.
 
                 Please request less memory by modifying the --mem-per-cpu or --mem Slurm
-                directive. This will lower your queue times and make the resources available
-                to other users. For instance, if your job requires 8 GB per node then use:
+                directive. This will lower your queue times and increase the overall throughput
+                of your jobs. For instance, if your job requires 8 GB per node then use:
 
                     #SBATCH --mem=10G
 
