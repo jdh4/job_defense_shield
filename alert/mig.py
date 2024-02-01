@@ -81,7 +81,7 @@ class MultiInstanceGPU(Alert):
 
                   $ salloc --nodes=1 --ntasks=1 --time=1:00:00 --gres=gpu:1 --partition=mig
 
-                If you are using Jupyter OnDemand then set the "Custom partition" to "mig" when
+                If you are using Jupyter OnDemand then set the "Node type" to "mig" when
                 creating the session.
 
                 By running future jobs on the MIG GPUs you will experience shorter queue

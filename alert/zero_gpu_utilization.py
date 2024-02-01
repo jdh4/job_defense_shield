@@ -56,6 +56,13 @@ def active_gpu_jobs_with_zero_utilization(df, email, vpath):
         single_job = bool(usr.shape[0] == 1)
         multi_gpu_jobs = bool(usr[usr["GPUs-Allocated"] > 1].shape[0])
 
+        text = (
+        'AS PER THE RESEARCH COMPUTING ADVISORY GROUP (RCAG), BEGINNING IN THE NEXT FEW WEEKS, '
+        'GPU JOBS WITH ZERO UTILIZATION FOR MORE THAN 2 HOURS WILL BE AUTOMATICALLY CANCELLED.'
+        )
+        s += "\n".join(textwrap.wrap(text, width=80))
+        s += "\n\n"
+
         if single_job and (not multi_gpu_jobs):
           version = "the GPU"
           usr["GPU-Util"] = "0%"

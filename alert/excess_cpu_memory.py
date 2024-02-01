@@ -158,6 +158,11 @@ class ExcessCPUMemory(Alert):
                 {num_wasted_nodes} nodes unavailable to all users (including yourself) for one week! A TB-hour is
                 the allocation of 1 terabyte of memory for 1 hour.
 
+                AS PER THE RESEARCH COMPUTING ADVISORY GROUP, IN THE COMING WEEKS, EXCESSIVE
+                CPU MEMORY ALLOCATION WILL RESULT IN YOUR ADVISOR BEING CONTACTED. AFTER THAT
+                IF THE MATTER IS NOT RESOLVED WITHIN 7 DAYS THEN YOUR ACCOUNT WILL BE
+                SUSPENDED.
+
                 Please request less memory by modifying the --mem-per-cpu or --mem Slurm
                 directive. This will lower your queue times and increase the overall throughput
                 of your jobs. For instance, if your job requires 8 GB per node then use:
