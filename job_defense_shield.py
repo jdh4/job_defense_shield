@@ -366,6 +366,7 @@ if __name__ == "__main__":
       #       ("della", "Della (cli)", ("cli",), "gpu"),
       cls = (("della", "Della (CPU)", ("cpu",), "cpu"),
              ("della", "Della (GPU)", ("gpu",), "gpu"),
+             ("della", "Della (pli)", ("pli",), "gpu"),
              ("della", "Della (physics)", ("physics",), "cpu"),
              ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"),
              ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
