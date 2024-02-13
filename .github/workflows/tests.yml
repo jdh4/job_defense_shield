@@ -3,20 +3,20 @@ on: [push, pull_request]
 jobs:
   tests:
     name: Check Python 3.7 on Ubuntu
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.7"
 
       - name: Install package
-        run: pip install pandas pytest
+        run: pip install pandas pytest pytest-cov
 
       - name: Test package
-        run: python -m pytest
+        run: pytest --cov=./ --cov-report=xml
         
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
