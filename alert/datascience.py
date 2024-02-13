@@ -45,7 +45,7 @@ def datascience_node_violators(df, email, vpath):
       jobs_within_safety = usr[usr["within-safety"]].shape[0]
       is_physics = "physics" in usr.account.unique().tolist()
       small_physics = usr[usr["memory-alloc"] < 380].shape[0]
-      if (bad_jobs > 0) and (random.random() < (bad_jobs / total_jobs)**1.5):
+      if (bad_jobs > 0) and (random.random() < (bad_jobs / total_jobs)**2):
         vfile = f"{vpath}/datascience/{netid}.email.csv"
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
@@ -160,6 +160,7 @@ def datascience_node_violators(df, email, vpath):
           if email and not us_holiday and not pu_holiday:
             send_email(s,   f"{netid}@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             send_email(s,  "halverson@princeton.edu", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
+            send_email(s,  "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject="Jobs on the Della large-memory nodes", sender="cses@princeton.edu")
             usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
             if os.path.exists(vfile):
               curr = pd.read_csv(vfile)

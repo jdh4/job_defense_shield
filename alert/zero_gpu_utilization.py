@@ -1,193 +1,206 @@
 import os
+import subprocess
 import textwrap
-from datetime import datetime
+import pickle
 from time import sleep
-import pandas as pd
-from utils import JOBSTATES
+from base import Alert
+from utils import SECONDS_PER_MINUTE
 from utils import SECONDS_PER_HOUR
 from utils import MINUTES_PER_HOUR
 from utils import get_first_name
 from utils import send_email
 from efficiency import num_gpus_with_zero_util
-from pandas.tseries.holiday import USFederalHolidayCalendar
 
-def get_stats_for_running_job(jobid, cluster):
-  """Get the job statistics for running jobs by calling jobstats"""
-  import importlib.machinery
-  import importlib.util
-  cluster = cluster.replace("tiger", "tiger2")
-  loader = importlib.machinery.SourceFileLoader('jobstats', '/usr/local/bin/jobstats')
-  spec = importlib.util.spec_from_loader('jobstats', loader)
-  mymodule = importlib.util.module_from_spec(spec)
-  loader.exec_module(mymodule)
-  stats = mymodule.JobStats(jobid=jobid, cluster=cluster, prom_server="http://vigilant2:8480")
-  sleep(1)
-  return eval(stats.report_job_json(False))
 
-def active_gpu_jobs_with_zero_utilization(df, email, vpath):
-  fltr = ((df.cluster == "della")    & (df.partition == "gpu")) | \
-         ((df.cluster == "traverse") & (df.partition == "all"))
-  em = df[fltr & \
-          (df.elapsedraw >= 1 * SECONDS_PER_HOUR) & \
-          (df.elapsedraw <  4 * SECONDS_PER_HOUR) & \
-          (df.state == "RUNNING") & \
-          (df.gpus > 0)].copy()
-  em["jobstats"] = em.apply(lambda row: get_stats_for_running_job(row["jobid"], row["cluster"]), axis='columns')
-  em["GPUs-Unused"] = em.jobstats.apply(num_gpus_with_zero_util)
-  em["interactive"] = em["jobname"].apply(lambda x: True if x.startswith("sys/dashboard") or x.startswith("interactive") else False)
-  em["salloc"] = em["jobname"].apply(lambda x: True if x.startswith("interactive") else False)
-  msk = (em["interactive"]) & (em.gpus == 1) & (em["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
-  em = em[~msk]
-  em = em[em["GPUs-Unused"] > 0][["jobid", "netid", "cluster", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
-  renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "netid":"NetID", "cluster":"Cluster"}
-  em.rename(columns=renamings, inplace=True)
+class ZeroGpuUtilization(Alert):
 
-  if email:
-    for netid in em.NetID.unique():
-      vfile = f"{vpath}/zero_gpu_utilization/{netid}.email.csv"
-      last_write_date = datetime(1970, 1, 1).date()
-      if os.path.exists(vfile):
-        last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile)).date()
-      if (last_write_date != datetime.now().date()):
-        s = f"{get_first_name(netid)},\n\n"
-        usr = em[em.NetID == netid].copy()
+    """Send warnings and cancel jobs with zero GPU utilization. Interactive jobs
+       with only 1 GPU and a run time limit of less than 8 hours are ignored."""
 
-        is_salloc = bool(usr["salloc"].sum())
-        single_job = bool(usr.shape[0] == 1)
-        multi_gpu_jobs = bool(usr[usr["GPUs-Allocated"] > 1].shape[0])
+    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
 
-        text = (
-        'AS PER THE RESEARCH COMPUTING ADVISORY GROUP (RCAG), BEGINNING IN THE NEXT FEW WEEKS, '
-        'GPU JOBS WITH ZERO UTILIZATION FOR MORE THAN 2 HOURS WILL BE AUTOMATICALLY CANCELLED.'
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
+    @staticmethod
+    def get_stats_for_running_job(jobid, cluster):
+        """Get the job statistics for running jobs by calling jobstats"""
+        import importlib.machinery
+        import importlib.util
+        cluster = cluster.replace("tiger", "tiger2")
+        loader = importlib.machinery.SourceFileLoader('jobstats', '/usr/local/bin/jobstats')
+        spec = importlib.util.spec_from_loader('jobstats', loader)
+        mymodule = importlib.util.module_from_spec(spec)
+        loader.exec_module(mymodule)
+        stats = mymodule.JobStats(jobid=jobid, cluster=cluster, prom_server="http://vigilant2:8480")
+        sleep(0.5)
+        return eval(stats.report_job_json(False))
 
-        if single_job and (not multi_gpu_jobs):
-          version = "the GPU"
-          usr["GPU-Util"] = "0%"
-          zero = (
-          'The utilization of each allocated GPU is measured every 30 seconds. '
-          'All measurements for the job above have been reported as 0%. '
-          'You can see this by running the "jobstats" command, for example:'
-          )
-        elif single_job and multi_gpu_jobs and bool(usr[usr["GPUs-Allocated"] == usr["GPUs-Unused"]].shape[0]):
-          version = "the GPUs"
-          usr["GPU-Util"] = "0%"
-          zero = (
-          'The utilization of each allocated GPU is measured every 30 seconds. '
-          'All measurements for the job above have been reported as 0%. '
-          'You can see this by running the "jobstats" command, for example:'
-          )
-        elif single_job and multi_gpu_jobs and (not bool(usr[usr["GPUs-Allocated"] != usr["GPUs-Unused"]].shape[0])):
-          version = "all of the GPUs"
-          usr["GPU-Unused-Util"] = "0%"
-          zero = (
-          'The utilization of each allocated GPU is measured every 30 seconds. '
-          'All measurements for at least one of the GPUs used in the job above have been reported as 0%. '
-          'You can see this by running the "jobstats" command, for example:'
-          )
-        elif (not single_job) and (not multi_gpu_jobs):
-          version = "the GPUs"
-          usr["GPU-Util"] = "0%"
-          zero = (
-          'The utilization of each allocated GPU is measured every 30 seconds. '
-          'All measurements for the GPUs used in the jobs above have been reported as 0%. '
-          'You can see this by running the "jobstats" command, for example:'
-          )
-        else:
-          version = "the GPU(s)"
-          usr["GPU-Unused-Util"] = "0%"
-          zero = (
-          'The utilization of each allocated GPU is measured every 30 seconds. '
-          'All measurements for at least one of the GPUs used in each job above have been reported as 0%. '
-          'You can see this by running the "jobstats" command, for example:'
-          )
+    def _filter_and_add_new_fields(self):
+        lower = self.first_warning_minutes * SECONDS_PER_MINUTE
+        upper = (self.cancel_minutes + self.sampling_period_minutes) * SECONDS_PER_MINUTE
+        self.jb = self.df[(self.df.state == "RUNNING") &
+                          (self.df.gpus > 0) &
+                          self.df.cluster.isin(self.clusters) &
+                          self.df.partition.isin(self.partition) &
+                          (self.df.elapsedraw >= lower) &
+                          (self.df.elapsedraw <  upper) &
+                          (~self.df.netid.isin(self.excluded_users))].copy()
+        jobids_file = "/scratch/jobid.gpus"
+        if os.path.isfile(jobids_file):
+            with open(jobids_file, "rb") as fp:
+                jobs_using_gpus = pickle.load(fp)
+            #print(jobs_using_gpus, type(jobs_using_gpus))
+            self.jb = self.jb[~self.jb.jobid.isin(jobs_using_gpus)]
+        self.jb.rename(columns={"netid":"NetID"}, inplace=True)
+        if not self.jb.empty:
+            self.jb["jobstats"] = self.jb.apply(lambda row:
+                                                ZeroGpuUtilization.get_stats_for_running_job(row["jobid"],
+                                                                                             row["cluster"]),
+                                                                                             axis='columns')
+            self.jb["GPUs-Unused"] = self.jb.jobstats.apply(num_gpus_with_zero_util)
+            # save cache of jobs that are using the gpus
+            jobs_using_gpus = self.jb[self.jb["GPUs-Unused"] == 0].jobid.tolist()
+            if jobs_using_gpus:
+                with open(jobids_file, "wb") as fp:
+                    pickle.dump(jobs_using_gpus, fp)
+            self.jb = self.jb[self.jb["GPUs-Unused"] > 0]
+            self.jb["interactive"] = self.jb["jobname"].apply(lambda x: True
+                                                                        if x.startswith("sys/dashboard") or
+                                                                           x.startswith("interactive")
+                                                                        else False)
+            self.jb["salloc"] = self.jb["jobname"].apply(lambda x: True if x.startswith("interactive") else False)
+            msk = self.jb["interactive"] & (self.jb.gpus == 1) & (self.jb["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
+            self.jb = self.jb[~msk]
+            self.jb = self.jb[["jobid", "NetID", "cluster", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
+            renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster"}
+            self.jb.rename(columns=renamings, inplace=True)
 
-        usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-        usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
+    def send_emails_to_users(self):
+        for user in self.jb.NetID.unique():
+            emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization", days=10000)
+            #################
+            # first warning #
+            #################
+            lower = self.first_warning_minutes * SECONDS_PER_MINUTE
+            upper = (self.first_warning_minutes + self.sampling_period_minutes) * SECONDS_PER_MINUTE
+            usr = self.jb[(self.jb.elapsedraw >= lower) &
+                          (self.jb.elapsedraw <  upper) &
+                          (self.jb.NetID == user)].copy()
+            if not usr.empty:
+                s = f"{get_first_name(user)},\n\n"
+                text = (
+                'You have GPU job(s) that have been running for more than 1 hour but appear to not be using the GPU(s):'
+                )
+                s += "\n".join(textwrap.wrap(text, width=80))
+                s += "\n\n"
 
-        if single_job:
-          text = (
-           "You have a GPU job that has been running for more than 1 hour but\n"
-          f"it appears to not be using {version}:\n\n"
-          )
-          s += "\n".join(textwrap.wrap(text, width=80))
-        else:
-          text = (
-           "You have GPU jobs that have been running for more than 1 hour but\n"
-          f"they appear to not be using {version}:\n\n"
-          )
-          s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        usr_str = usr.to_string(index=False, justify="center")
-        s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
-        s += "\n\n"
+                usr["GPU-Util"] = "0%"
+                usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
+                usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
 
-        version = "job" if single_job else "jobs"
-        text = (
-        f'Please consider canceling the {version} listed above by using the "scancel" command. For example:'
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        s += f"     $ scancel {usr.JobID.values[0]}"
-        s += "\n\n"
+                usr_str = usr.to_string(index=False, justify="center")
+                s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
+                s += "\n\n"
 
-        s += "\n".join(textwrap.wrap(zero, width=80))
-        s += "\n\n"
-        s += f"     $ jobstats {usr.JobID.values[0]}"
-        s += "\n\n"
+                text = (
+                f'Please consider cancelling the job(s) listed above by using the "scancel" command. For example:'
+                )
+                s += "\n".join(textwrap.wrap(text, width=80))
+                s += "\n\n"
+                s += f"     $ scancel {usr.JobID.values[0]}"
+                s += "\n"
 
-        version = "GPU is" if single_job and (not multi_gpu_jobs) else "GPU(s) are"
-        text = (
-        f'If the {version} not being used then you need to take action now to resolve this issue. '
-         'Wasting resources prevents other users from getting their work done and it causes your subsequent jobs to have a lower priority. '
-         'Users that continually underutilize the GPUs risk having their accounts suspended.'
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n\n"
-        text = (
-        'Toward resolving this issue, please consult the documentation for the code that you are running. Is it GPU-enabled? '
-        )
-        s += "\n".join(textwrap.wrap(text, width=80))
-        s += "\n"
+                if (emails_sent >= self.min_previous_warnings):
+                    s += textwrap.dedent("""
+                Your jobs will be automatically cancelled if they are found to not be using the
+                GPUs for 2 hours. For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
+                """)
 
-        if is_salloc:
-            s += "\n"
-            text = (
-            f'For "salloc" sessions, use --mail-type=begin to receive an email when the session starts:'
-            )
-            s += "\n".join(textwrap.wrap(text, width=80))
-            s += "\n\n"
-            s += f"     $ salloc --nodes=1 --ntasks=1 --time=2:00:00 --gres=gpu:1 --mail-type=begin"
-            s += "\n"
+                s += "\n"
+                s += textwrap.dedent("""
+                See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU
+                utilization.
 
-        s += textwrap.dedent("""
-        See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing">GPU Computing</a> webpage for three common reasons for encountering zero GPU
-        utilization.
+                Consider attending an in-person Research Computing <a href="https://researchcomputing.princeton.edu/support/help-sessions">help session</a> for assistance.
+                Replying to this automated email will open a support ticket with Research
+                Computing. Let us know if we can be of help.
+                """)
 
-        Consider attending an in-person Research Computing <a href="https://researchcomputing.princeton.edu/support/help-sessions">help session</a> for assistance.
-        Replying to this automated email will open a support ticket with Research
-        Computing. Let us know if we can be of help.
-        """)
+                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                print(s)
 
-        # send email and append violation file
-        date_today = datetime.now().strftime("%Y-%m-%d")
-        cal = USFederalHolidayCalendar()
-        us_holiday = date_today in cal.holidays()
-        pu_holidays = ["2022-07-05", "2022-11-25", "2022-12-23", "2022-12-26", "2022-12-30", "2023-01-02",
-                       "2023-06-16", "2023-11-24", "2023-12-26", "2023-01-02", "2023-06-19"]
-        pu_holiday = date_today in pu_holidays
-        if not us_holiday and not pu_holiday:
-          send_email(s,  f"{netid}@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
-          send_email(s, "halverson@princeton.edu", subject="Jobs with zero GPU utilization", sender="cses@princeton.edu")
-          usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-          if "GPU-Util"        in usr.columns: usr.drop(columns=["GPU-Util"],        inplace=True)
-          if "GPU-Unused-Util" in usr.columns: usr.drop(columns=["GPU-Unused-Util"], inplace=True)
-          if os.path.exists(vfile):
-            curr = pd.read_csv(vfile)
-            curr = pd.concat([curr, usr]).drop_duplicates()
-            curr.to_csv(vfile, index=False, header=True)
-          else:
-            usr.to_csv(vfile, index=False, header=True)
-  return em
+                # append the new violations to the log file
+                vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+                usr.drop(columns=["GPU-Util"], inplace=True)
+                Alert.update_violation_log(usr, vfile)
+
+            ##################
+            # second warning #
+            ##################
+            lower = self.second_warning_minutes * SECONDS_PER_MINUTE
+            upper = (self.second_warning_minutes + self.sampling_period_minutes) * SECONDS_PER_MINUTE
+            usr = self.jb[(self.jb.elapsedraw >= lower) &
+                          (self.jb.elapsedraw <  upper) &
+                          (self.jb.NetID == user)].copy()
+            if not usr.empty and (emails_sent >= self.min_previous_warnings):
+                s = f"{get_first_name(user)},\n\n"
+                text = (
+                'This is your second warning. All of the jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
+                )
+                s += "\n".join(textwrap.wrap(text, width=80))
+                s += "\n\n"
+
+                usr["GPU-Util"] = "0%"
+                usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
+                usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
+
+                usr_str = usr.to_string(index=False, justify="center")
+                s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
+                s += "\n\n"
+                s += "Replying to this automated email will open a support ticket with Research\n"
+                s += "Computing. Let us know if we can be of help."
+
+                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                print(s)
+
+            ###############
+            # cancel jobs #
+            ###############
+            lower = self.cancel_minutes * SECONDS_PER_MINUTE
+            usr = self.jb[(self.jb.elapsedraw >= lower) & (self.jb.NetID == user)].copy()
+            if not usr.empty and (emails_sent >= self.min_previous_warnings):
+                s = f"{get_first_name(user)},\n\n"
+                text = (
+                'The jobs below have been cancelled because they ran for at least 2 hours at 0% GPU utilization:'
+                )
+                s += "\n".join(textwrap.wrap(text, width=80))
+                s += "\n\n"
+ 
+                usr["GPU-Util"] = "0%"
+                usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
+                usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
+
+                usr_str = usr.to_string(index=False, justify="center")
+                s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
+                s += "\n\n"
+                s += textwrap.dedent("""
+                See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU
+                utilization.
+
+                For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
+
+                Consider attending an in-person Research Computing <a href="https://researchcomputing.princeton.edu/support/help-sessions">help session</a> for assistance.
+                Replying to this automated email will open a support ticket with Research
+                Computing. Let us know if we can be of help.
+                """)
+
+                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                print(s)
+                for jobid in usr.JobID.tolist():
+                    cmd = f"scancel {jobid}"
+                    _ = subprocess.run(cmd,
+                                       stdout=subprocess.PIPE,
+                                       shell=True,
+                                       timeout=10,
+                                       text=True,
+                                       check=True)

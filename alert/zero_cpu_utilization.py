@@ -113,6 +113,7 @@ class ZeroCPU(Alert):
                 """)
                 send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
                 # append the new violations to the log file

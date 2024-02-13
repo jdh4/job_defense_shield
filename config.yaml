@@ -1,5 +1,33 @@
 %YAML 1.1
 ---
+zero-gpu-utilization-della-gpu:
+  first_warning_minutes: 60
+  second_warning_minutes: 105
+  cancel_minutes: 120
+  sampling_period_minutes: 15
+  min_previous_warnings: 1
+  clusters:
+    - della
+  partition:
+    - gpu
+  excluded_users:
+    - aturing
+    - einstein
+
+############################
+## LOW CPU/GPU EFFICIENCY ##
+############################
+low-xpu-efficiency-della-cpu:
+  cluster: della
+  cluster_name: "Della (cpu)"
+  partitions:
+  - cpu
+  xpu: cpu
+
+
+#######################
+## EXCESS CPU MEMORY ##
+#######################
 excess-cpu-memory-della-cpu:
   tb_hours_per_day: 10
   ratio_threshold: 0.35
@@ -16,7 +44,6 @@ excess-cpu-memory-della-cpu:
     - aturing
     - einstein
     - vonholdt
-
 
 excess-cpu-memory-della-datascience:
   tb_hours_per_day: 10000

@@ -76,8 +76,7 @@ class Alert:
             d = pd.read_csv(user_violations, parse_dates=["email_sent"])
             start_date = datetime.now() - timedelta(days=days)
             return d[d["email_sent"] >= start_date]["email_sent"].unique().size
-        else:
-            return 0
+        return 0
 
     @staticmethod
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
