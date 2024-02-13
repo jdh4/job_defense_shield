@@ -373,27 +373,16 @@ if __name__ == "__main__":
   ############################
   if args.low_xpu_efficiency:
       alerts = [alert for alert in cfg.keys() if "low-xpu-efficiency" in alert]
-      print(alerts)
-      cls = (("della", "Della (CPU)", ("cpu",), "cpu"),
-             ("della", "Della (GPU)", ("gpu",), "gpu"),
-             ("della", "Della (pli)", ("pli",), "gpu"),
-             ("della", "Della (physics)", ("physics",), "cpu"),
-             ("stellar", "Stellar (Intel)", ("all", "pppl", "pu", "serial"), "cpu"),
-             ("tiger", "TigerCPU", ("cpu", "ext", "serial"), "cpu"))
-      for cluster, cluster_name, partitions, xpu in cls:
+      for alert in alerts:
           low_eff = LowEfficiency(df,
                                   days_between_emails=args.days,
                                   violation="low_xpu_efficiency",
                                   vpath=args.files,
-                                  subject=f"Jobs with Low Efficiency on {cluster_name}",
-                                  cluster=cluster,
-                                  cluster_name=cluster_name,
-                                  partitions=partitions,
-                                  xpu=xpu,
-                                  num_top_users=args.num_top_users)
+                                  subject="Jobs with Low Efficiency",
+                                  **cfg[alert])
           if args.email and is_today_a_work_day():
               low_eff.send_emails_to_users()
-          title = f"{cluster_name} efficiencies of top 15 users (30+ minute jobs, ignoring running)"
+          title = f"{low_eff.cluster_name} efficiencies of top {low_eff.num_top_users} users (30+ minute jobs, ignoring running)"
           s += low_eff.generate_report_for_admins(title, keep_index=True)
 
   #################

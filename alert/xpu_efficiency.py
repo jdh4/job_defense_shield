@@ -34,6 +34,7 @@ class LowEfficiency(Alert):
         # second dataframe (self.ce) based on admincomment
         self.ce = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
+                          (~self.df.netid.isin(self.excluded_users)) &
                           (self.df["elapsedraw"] >= 0.5 * SECONDS_PER_HOUR) &
                           (self.df.admincomment != {})].copy()
         # next line prevents (unlikely) failure when creating "{self.xpu}-tuples"
@@ -69,10 +70,7 @@ class LowEfficiency(Alert):
         self.ce = self.ce.groupby("netid").agg(d).rename(columns={"netid":"jobs"})
         self.ce = self.ce.sort_values(by=f"{self.xpu}-seconds-total", ascending=False)
         self.ce = self.ce.reset_index(drop=False)
-        if self.cluster_name == "Della (physics)":
-            self.ce = self.ce.head(5)
-        else:
-            self.ce = self.ce.head(self.num_top_users)
+        self.ce = self.ce.head(self.num_top_users)
         self.ce["eff(%)"] = 100.0 * self.ce[f"{self.xpu}-seconds-used"] / self.ce[f"{self.xpu}-seconds-total"]
         # next line prevents (unlikely) failure when creating "{self.xpu}-hours"
         if self.ce.empty: return pd.DataFrame()
@@ -88,8 +86,7 @@ class LowEfficiency(Alert):
         self.ce["eff(%)"]   =   self.ce["eff(%)"].apply(lambda x: round(x))
         self.ce["cores"]    =    self.ce["cores"].apply(lambda x: round(x, 1))
         self.ce.index += 1
-        eff_thres = 60 if self.xpu == "cpu" else 15
-        filters = (self.ce["eff(%)"] <= eff_thres) & (self.ce["proportion(%)"] >= 2)
+        filters = (self.ce["eff(%)"] <= self.eff_thres_pct) & (self.ce["proportion(%)"] >= self.proportion_thres_pct)
         self.ce["cluster"] = self.cluster
         cols = ["netid",
                 "cluster",
@@ -215,9 +212,10 @@ class LowEfficiency(Alert):
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}", sender="cses@princeton.edu")
+                subject = f"Jobs with Low Efficiency on {self.cluster_name}"
+                send_email(s,   f"{user}@princeton.edu", subject=subject, sender="cses@princeton.edu")
+                send_email(s, "halverson@princeton.edu", subject=subject, sender="cses@princeton.edu")
+                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=subject, sender="cses@princeton.edu")
                 print(s)
 
                 # append the new violations to the log file

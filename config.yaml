@@ -14,6 +14,7 @@ zero-gpu-utilization-della-gpu:
     - aturing
     - einstein
 
+
 ############################
 ## LOW CPU/GPU EFFICIENCY ##
 ############################
@@ -21,8 +22,84 @@ low-xpu-efficiency-della-cpu:
   cluster: della
   cluster_name: "Della (cpu)"
   partitions:
-  - cpu
+    - cpu
   xpu: cpu
+  eff_thres_pct: 60
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-della-gpu:
+  cluster: della
+  cluster_name: "Della (gpu)"
+  partitions:
+    - gpu
+  xpu: gpu
+  eff_thres_pct: 15
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-della-pli:
+  cluster: della
+  cluster_name: "Della (pli)"
+  partitions:
+    - pli
+  xpu: gpu
+  eff_thres_pct: 15
+  proportion_thres_pct: 2
+  num_top_users: 5
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-della-physics:
+  cluster: della
+  cluster_name: "Della (physics)"
+  partitions:
+    - physics
+  xpu: cpu
+  eff_thres_pct: 60
+  proportion_thres_pct: 2
+  num_top_users: 5
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-stellar-intel:
+  cluster: stellar
+  cluster_name: "Stellar (Intel)"
+  partitions:
+    - all
+    - pppl
+    - pu
+    - serial
+  xpu: cpu
+  eff_thres_pct: 60
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-tiger:
+  cluster: tiger
+  cluster_name: "Tiger"
+  partitions:
+    - cpu
+    - ext
+    - serial
+  xpu: cpu
+  eff_thres_pct: 60
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
 
 
 #######################
@@ -61,7 +138,6 @@ excess-cpu-memory-della-datascience:
     - aturing
     - einstein
 
-
 excess-cpu-memory-stellar:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
@@ -80,7 +156,6 @@ excess-cpu-memory-stellar:
   excluded_users:
     - aturing
     - einstein
-
 
 excess-cpu-memory-tiger:
   tb_hours_per_day: 10000
