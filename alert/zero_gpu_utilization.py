@@ -44,11 +44,13 @@ class ZeroGpuUtilization(Alert):
                           (self.df.elapsedraw >= lower) &
                           (self.df.elapsedraw <  upper) &
                           (~self.df.netid.isin(self.excluded_users))].copy()
-        jobids_file = "/scratch/jobid.gpus"
+        # read cache of jobs that are known to be using the gpus
+        pre_approved = []
+        jobids_file = "/scratch/jobids.txt"
         if os.path.isfile(jobids_file):
             with open(jobids_file, "rb") as fp:
                 jobs_using_gpus = pickle.load(fp)
-            #print(jobs_using_gpus, type(jobs_using_gpus))
+            pre_approved = self.jb[self.jb.jobid.isin(jobs_using_gpus)].jobid.tolist()
             self.jb = self.jb[~self.jb.jobid.isin(jobs_using_gpus)]
         self.jb.rename(columns={"netid":"NetID"}, inplace=True)
         if not self.jb.empty:
@@ -57,11 +59,11 @@ class ZeroGpuUtilization(Alert):
                                                                                              row["cluster"]),
                                                                                              axis='columns')
             self.jb["GPUs-Unused"] = self.jb.jobstats.apply(num_gpus_with_zero_util)
-            # save cache of jobs that are using the gpus
+            # save cache of jobs that are known to be using the gpus
             jobs_using_gpus = self.jb[self.jb["GPUs-Unused"] == 0].jobid.tolist()
             if jobs_using_gpus:
                 with open(jobids_file, "wb") as fp:
-                    pickle.dump(jobs_using_gpus, fp)
+                    pickle.dump(jobs_using_gpus + pre_approved, fp)
             self.jb = self.jb[self.jb["GPUs-Unused"] > 0]
             self.jb["interactive"] = self.jb["jobname"].apply(lambda x: True
                                                                         if x.startswith("sys/dashboard") or
@@ -115,7 +117,6 @@ class ZeroGpuUtilization(Alert):
                 GPUs for 2 hours. For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
                 """)
 
-                s += "\n"
                 s += textwrap.dedent("""
                 See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU
                 utilization.
@@ -182,7 +183,7 @@ class ZeroGpuUtilization(Alert):
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
-                s += "\n\n"
+                s += "\n"
                 s += textwrap.dedent("""
                 See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU
                 utilization.

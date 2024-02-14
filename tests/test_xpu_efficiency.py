@@ -72,6 +72,7 @@ def test_low_efficiency():
                             cluster_name="Della (cpu)",
                             partitions=("cpu",),
                             xpu="cpu",
+                            excluded_users=["aturing"],
                             num_top_users=15)
     actual = low_eff.ce[["netid", "partition", "cpu-hours", "proportion(%)", "eff(%)", "jobs"]]
     expected = pd.DataFrame({"netid":["user1"],
