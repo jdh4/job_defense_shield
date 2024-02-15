@@ -103,6 +103,12 @@ class ZeroGpuUtilization(Alert):
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
                 s += "\n\n"
 
+                if (emails_sent >= self.min_previous_warnings):
+                    s += textwrap.dedent("""
+                Your jobs will be AUTOMATICALLY CANCELLED if they are found to not be using the
+                GPUs for 2 hours. For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
+                """)
+
                 text = (
                 f'Please consider cancelling the job(s) listed above by using the "scancel" command. For example:'
                 )
@@ -111,11 +117,11 @@ class ZeroGpuUtilization(Alert):
                 s += f"     $ scancel {usr.JobID.values[0]}"
                 s += "\n"
 
-                if (emails_sent >= self.min_previous_warnings):
-                    s += textwrap.dedent("""
-                Your jobs will be automatically cancelled if they are found to not be using the
-                GPUs for 2 hours. For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
-                """)
+                
+                s += "\n".join(textwrap.wrap(zero, width=80))
+                s += "\n\n"
+                s += f"     $ jobstats {usr.JobID.values[0]}"
+                s += "\n\n"
 
                 s += textwrap.dedent("""
                 See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU

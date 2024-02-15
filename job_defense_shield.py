@@ -1,5 +1,3 @@
-#!/home/jdh4/bin/jds-env/bin/python -uB
-
 import os
 import sys
 import argparse
@@ -160,7 +158,7 @@ if __name__ == "__main__":
   with open(absolute_path_to_config_file, "r", encoding="utf-8") as fp:
       cfg = yaml.safe_load(fp)
 
-  if args.email and (os.environ["USER"] != "jdh4"):
+  if args.email and (os.environ["USER"] in ["jdh4", "slurm"]):
       print("The --email flag can currently only used by jdh4 to send emails. Exiting ...")
       sys.exit()
 
