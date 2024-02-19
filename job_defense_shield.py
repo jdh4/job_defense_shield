@@ -158,8 +158,8 @@ if __name__ == "__main__":
   with open(absolute_path_to_config_file, "r", encoding="utf-8") as fp:
       cfg = yaml.safe_load(fp)
 
-  if args.email and (os.environ["USER"] in ["jdh4", "slurm"]):
-      print("The --email flag can currently only used by jdh4 to send emails. Exiting ...")
+  if args.email and (os.environ["USER"] not in ["jdh4", "slurm"]):
+      print("The --email flag can currently only used by jdh4 and slurm to send emails. Exiting ...")
       sys.exit()
 
   #######################
@@ -234,7 +234,6 @@ if __name__ == "__main__":
   pd.set_option("display.max_rows", None)
   pd.set_option("display.max_columns", None)
   pd.set_option("display.width", 1000)
-  pd.set_option("mode.use_inf_as_na", True)
 
   # convert slurm timestamps to seconds
   os.environ["SLURM_TIME_FORMAT"] = "%s"
@@ -493,16 +492,17 @@ if __name__ == "__main__":
   ## JOBS THAT SHOULD HAVE USED MIG ##
   ####################################
   if args.mig:
-      mig = MultiInstanceGPU(df,
-                             days_between_emails=args.days,
-                             violation="should_be_using_mig",
-                             vpath=args.files,
-                             subject="Consider Using the MIG GPUs on Della",
-                             cluster="della",
-                             partition="gpu")
-      if args.email and is_today_a_work_day():
-          mig.send_emails_to_users()
-      s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
+      alerts = [alert for alert in cfg.keys() if "should-be-using-mig" in alert]
+      for alert in alerts:
+          mig = MultiInstanceGPU(df,
+                                 days_between_emails=args.days,
+                                 violation="should_be_using_mig",
+                                 vpath=args.files,
+                                 subject="Consider Using the MIG GPUs on Della",
+                                 **cfg[alert])
+          if args.email and is_today_a_work_day():
+              mig.send_emails_to_users()
+          s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
 
 
   ##########################

@@ -140,31 +140,11 @@ class LowEfficiency(Alert):
                 s += "\n"
                 if self.xpu == "cpu":
                     s += textwrap.dedent(f"""
-                    A good target value for CPU-Util is 90% and above. Please investigate the reason(s)
-                    for the low efficiency. Common reasons for low {self.xpu.upper()} efficiency include:
+                    A good target value for CPU-Util is 90% and above. Please investigate the reason
+                    for the low efficiency. Five common reasons for low CPU efficiency are discussed
+                    here:
 
-                      1. Running a serial code using multiple CPU-cores. Make sure that your code is
-                         written to run in parallel before using multiple CPU-cores. Learn more:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
-
-                      2. Using too many CPU-cores for parallel jobs. You can find the optimal number
-                         of CPU-cores by performing a scaling analysis:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
-
-                      3. Writing job output to the /tigress or /projects storage systems. Actively
-                         running jobs should be writing output files to /scratch/gpfs/{user} which is
-                         a much faster filesystem. For more information:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
-
-                      4. Using the MPICH library instead of an MPI library that was built for our
-                         clusters. Some software installed using \"conda\" is built against an MPI
-                         library that is not optimized for our systems. Run \"conda list\" after
-                         activating the environment and look for \"mpich\" to see if you are using
-                         this library.
-
-                      5. Using \"mpirun\" instead of \"srun\" for parallel codes. Please use \"srun\".
-                         For more information on Slurm:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/slurm
+                         https://researchcomputing.princeton.edu/get-started/cpu-utilization
                     """)
                 elif self.xpu == "gpu":
                     s += textwrap.dedent(f"""

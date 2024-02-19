@@ -101,7 +101,7 @@ class ZeroGpuUtilization(Alert):
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
-                s += "\n\n"
+                s += "\n"
 
                 if (emails_sent >= self.min_previous_warnings):
                     s += textwrap.dedent("""
@@ -109,19 +109,20 @@ class ZeroGpuUtilization(Alert):
                 GPUs for 2 hours. For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
                 """)
 
+                s += "\n"
                 text = (
-                f'Please consider cancelling the job(s) listed above by using the "scancel" command. For example:'
+                f'Please consider cancelling the job(s) listed above by using the "scancel" command:'
                 )
                 s += "\n".join(textwrap.wrap(text, width=80))
                 s += "\n\n"
                 s += f"     $ scancel {usr.JobID.values[0]}"
-                s += "\n"
+                s += "\n\n"
 
-                
+                zero = 'Run the "jobstats" command to see the GPU utilization:'
                 s += "\n".join(textwrap.wrap(zero, width=80))
                 s += "\n\n"
                 s += f"     $ jobstats {usr.JobID.values[0]}"
-                s += "\n\n"
+                s += "\n"
 
                 s += textwrap.dedent("""
                 See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU
@@ -165,7 +166,7 @@ class ZeroGpuUtilization(Alert):
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
                 s += "\n\n"
                 s += "Replying to this automated email will open a support ticket with Research\n"
-                s += "Computing. Let us know if we can be of help."
+                s += "Computing."
 
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
@@ -184,8 +185,9 @@ class ZeroGpuUtilization(Alert):
                 s += "\n\n"
  
                 usr["GPU-Util"] = "0%"
+                usr["State"] = "CANCELLED"
                 usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-                usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
+                usr = usr[["JobID", "Cluster", "GPU-Util", "State", "Hours"]]
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
