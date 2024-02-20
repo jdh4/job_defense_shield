@@ -148,32 +148,11 @@ class LowEfficiency(Alert):
                     """)
                 elif self.xpu == "gpu":
                     s += textwrap.dedent(f"""
-                    A good target value for GPU-Util is 50% and above. Please investigate the reason(s)
-                    for the low efficiency. Common reasons for low {self.xpu.upper()} efficiency include:
+                    A good target value for GPU-Util is 50% and above. Please investigate the reason
+                    for the low efficiency. Five common reasons for low GPU efficiency are discussed
+                    here:
 
-                      1. Misconfigured application scripts. Be sure to read the documentation of the
-                         software to make sure that you are using it properly. This includes creating
-                         the appropriate software environment. For a general overview of GPU computing:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-                      2. Using an A100 GPU when a MIG GPU would be sufficient. Some codes do not have
-                         enough work to keep an A100 GPU busy. If you encounter this on the Della
-                         cluster then consider using a MIG GPU:
-                         https://researchcomputing.princeton.edu/systems/della#gpus
-
-                      3. Training deep learning models using only a single CPU-core. Codes such as
-                         PyTorch and TensorFlow show performance benefits when multiple CPU-cores are
-                         used for data loading. For PyTorch see:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/pytorch#multi
-
-                      4. Using too many GPUs for a job. You can find the optimal number of GPUs and
-                         CPU-cores by performing a scaling analysis:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
-
-                      5. Writing job output to the /tigress or /projects storage systems. Actively
-                         running jobs should be writing output files to /scratch/gpfs/{user} which is
-                         a much faster filesystem. For more information:
-                         https://researchcomputing.princeton.edu/support/knowledge-base/data-storage
+                         https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#low-util
                     """)
                 s += textwrap.dedent(f"""
                 Consult the documentation or write to the mailing list of the software that you

@@ -25,6 +25,8 @@ The script does not identify:
 ## How to run
 
 ```
+$ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --days=7 --email --excessive-time -M della -r cpu
+
 $ ./job_defense_shield.py --email \
                           --days=3 \
                           --zero-gpu-utilization \
@@ -38,19 +40,10 @@ $ ./job_defense_shield.py --email \
                           --gpu-fragmentation                          
 ```
 
-The data science nodes are checked once per day:
-
-```
-$ ./job_defense_shield.py --email \
-                          --datascience \
-                          --days=7 \
-                          --files /tigress/jdh4/utilities/job_defense_shield/violations                          
-```
-
 ## Which users are ignoring the automated emails?
 
 ```
-$ ./job_defense_shield.py --check --zero-gpu-utilization --days=30
+$ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check --zero-gpu-utilization --days=30
 ```
 
 ### Notes for developers
@@ -111,8 +104,8 @@ envs_dirs:
 ```
 
 ```
-$ module load anaconda3/2022.10
-$ conda create --name jds-env numpy pandas blessed requests pyyaml -c conda-forge -y
+$ module load anaconda3/2023.9
+$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
 ```
 
 The above leads to the shebang line as:

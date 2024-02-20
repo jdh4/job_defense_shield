@@ -15,7 +15,6 @@ from utils import show_history_of_emails_sent
 from utils import add_dividers
 
 from efficiency import get_stats_dict
-
 from alert.datascience import datascience_node_violators
 
 from alert.zero_gpu_utilization import ZeroGpuUtilization
@@ -39,26 +38,27 @@ from alert.active_cpu_memory import ActiveCPUMemory
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
-  fname = f"cache_sacct_{start_date.strftime('%Y%m%d')}.csv"
-  if use_cache and os.path.exists(fname):
-    print("\nUsing cache file.\n", flush=True)
-    rw = pd.read_csv(fname, low_memory=False)
-  else:
-    ymd = start_date.strftime('%Y-%m-%d')
-    hms = start_date.strftime('%H:%M:%S')
-    cmd = f"sacct {flags} -S {ymd}T{hms} -E now -o {fields}"
-    if use_cache: print("\nCalling sacct (which may require several seconds) ... ", end="", flush=True)
-    output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=120, text=True, check=True)
-    if use_cache: print("done.", flush=True)
-    lines = output.stdout.split('\n')
-    if lines != [] and lines[-1] == "": lines = lines[:-1]
-    cols = fields.split(",")
-    rw = pd.DataFrame([line.split("|")[:len(cols)] for line in lines])
-    rw.columns = cols
-    rw.rename(columns=renamings, inplace=True)
-    rw[numeric_fields] = rw[numeric_fields].apply(pd.to_numeric)
-    if use_cache: rw.to_csv(fname, index=False)
-  return rw
+    fname = f"cache_sacct_{start_date.strftime('%Y%m%d')}.csv"
+    if use_cache and os.path.exists(fname):
+        print("\nUsing cache file.\n", flush=True)
+        rw = pd.read_csv(fname, low_memory=False)
+    else:
+        ymd = start_date.strftime('%Y-%m-%d')
+        hms = start_date.strftime('%H:%M:%S')
+        cmd = f"sacct {flags} -S {ymd}T{hms} -E now -o {fields}"
+        if use_cache: print("\nCalling sacct (which may require several seconds) ... ", end="", flush=True)
+        output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=120, text=True, check=True)
+        if use_cache: print("done.", flush=True)
+        lines = output.stdout.split('\n')
+        if lines != [] and lines[-1] == "": lines = lines[:-1]
+        cols = fields.split(",")
+        rw = pd.DataFrame([line.split("|")[:len(cols)] for line in lines])
+        rw.columns = cols
+        rw.rename(columns=renamings, inplace=True)
+        rw[numeric_fields] = rw[numeric_fields].apply(pd.to_numeric)
+        if use_cache: rw.to_csv(fname, index=False)
+    return rw
+
 
 def gpus_per_job(tres: str) -> int:
     """Return the number of GPUs used."""
@@ -74,24 +74,25 @@ def gpus_per_job(tres: str) -> int:
     else:
         return 0
 
+
 def add_new_and_derived_fields(df):
-  df["cpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["cores"], axis='columns')
-  df["gpus"] = df.alloctres.apply(gpus_per_job)
-  df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
-  def is_gpu_job(tres):
-    return 1 if "gres/gpu=" in tres and "gres/gpu=0" not in tres else 0
-  df["gpu-job"] = df.alloctres.apply(is_gpu_job)
-  df["cpu-only-seconds"] = df.apply(lambda row: 0 if row["gpus"] else row["cpu-seconds"], axis="columns")
-  df["elapsed-hours"] = df.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR))
-  df["start-date"] = df.start.apply(lambda x: x if x == "Unknown" else datetime.fromtimestamp(int(x)).strftime("%a %-m/%d"))
-  df["cpu-waste-hours"] = df.apply(lambda row: round((row["limit-minutes"] * SECONDS_PER_MINUTE - row["elapsedraw"]) * row["cores"] / SECONDS_PER_HOUR), axis="columns")
-  df["gpu-waste-hours"] = df.apply(lambda row: round((row["limit-minutes"] * SECONDS_PER_MINUTE - row["elapsedraw"]) * row["gpus"]  / SECONDS_PER_HOUR), axis="columns")
-  df["cpu-alloc-hours"] = df.apply(lambda row: round(row["limit-minutes"] * SECONDS_PER_MINUTE * row["cores"] / SECONDS_PER_HOUR), axis="columns")
-  df["gpu-alloc-hours"] = df.apply(lambda row: round(row["limit-minutes"] * SECONDS_PER_MINUTE * row["gpus"]  / SECONDS_PER_HOUR), axis="columns")
-  df["cpu-hours"] = df["cpu-seconds"] / SECONDS_PER_HOUR
-  df["gpu-hours"] = df["gpu-seconds"] / SECONDS_PER_HOUR
-  df["admincomment"] = df["admincomment"].apply(get_stats_dict)
-  return df
+    df["cpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["cores"], axis='columns')
+    df["gpus"] = df.alloctres.apply(gpus_per_job)
+    df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
+    def is_gpu_job(tres):
+      return 1 if "gres/gpu=" in tres and "gres/gpu=0" not in tres else 0
+    df["gpu-job"] = df.alloctres.apply(is_gpu_job)
+    df["cpu-only-seconds"] = df.apply(lambda row: 0 if row["gpus"] else row["cpu-seconds"], axis="columns")
+    df["elapsed-hours"] = df.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR))
+    df["start-date"] = df.start.apply(lambda x: x if x == "Unknown" else datetime.fromtimestamp(int(x)).strftime("%a %-m/%d"))
+    df["cpu-waste-hours"] = df.apply(lambda row: round((row["limit-minutes"] * SECONDS_PER_MINUTE - row["elapsedraw"]) * row["cores"] / SECONDS_PER_HOUR), axis="columns")
+    df["gpu-waste-hours"] = df.apply(lambda row: round((row["limit-minutes"] * SECONDS_PER_MINUTE - row["elapsedraw"]) * row["gpus"]  / SECONDS_PER_HOUR), axis="columns")
+    df["cpu-alloc-hours"] = df.apply(lambda row: round(row["limit-minutes"] * SECONDS_PER_MINUTE * row["cores"] / SECONDS_PER_HOUR), axis="columns")
+    df["gpu-alloc-hours"] = df.apply(lambda row: round(row["limit-minutes"] * SECONDS_PER_MINUTE * row["gpus"]  / SECONDS_PER_HOUR), axis="columns")
+    df["cpu-hours"] = df["cpu-seconds"] / SECONDS_PER_HOUR
+    df["gpu-hours"] = df["gpu-seconds"] / SECONDS_PER_HOUR
+    df["admincomment"] = df["admincomment"].apply(get_stats_dict)
+    return df
 
 
 if __name__ == "__main__":
@@ -143,8 +144,10 @@ if __name__ == "__main__":
                       help='Specify partition(s) (e.g., --partition=gpu,mig)')
   parser.add_argument('--num-top-users', type=int, default=15,
                       help='Specify the number of users to consider')
-  parser.add_argument('--files', default="/tigress/jdh4/utilities/job_defense_shield/violations",
+  parser.add_argument('--files', type=str, default="/tigress/jdh4/utilities/job_defense_shield/violations",
                       help='Path to the underutilization log files')
+  parser.add_argument('--config-file', type=str, default=None,
+                      help='Absolute path to the configuration file')
   parser.add_argument('--email', action='store_true', default=False,
                       help='Send email alerts to users')
   parser.add_argument('--report', action='store_true', default=False,
@@ -153,10 +156,27 @@ if __name__ == "__main__":
                       help='Show the history of emails sent to users')
   args = parser.parse_args()
 
-  absolute_path_to_config_file = os.path.join("/tigress/jdh4/utilities/job_defense_shield",
-                                              "config.yaml")
-  with open(absolute_path_to_config_file, "r", encoding="utf-8") as fp:
-      cfg = yaml.safe_load(fp)
+  # read configuration file
+  jds_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+  cwd_path = os.path.join(os.getcwd(), "config.yaml")
+  if args.config_file and os.path.isfile(args.config_file):
+      print(f"Configuration file: {args.config_file}")
+      with open(args.config_file, "r", encoding="utf-8") as fp:
+          cfg = yaml.safe_load(fp)
+  elif args.config_file and not os.path.isfile(args.config_file):
+      print(f"Configuration file does not exist: {args.config_file}. Exiting ...")
+      sys.exit()
+  elif not args.config_file and os.path.isfile(jds_path):
+      print(f"Configuration file: {jds_path}")
+      with open(jds_path, "r", encoding="utf-8") as fp:
+          cfg = yaml.safe_load(fp)
+  elif not args.config_file and os.path.isfile(cwd_path):
+      print(f"Configuration file: {cwd_path}")
+      with open(cwd_path, "r", encoding="utf-8") as fp:
+          cfg = yaml.safe_load(fp)
+  else:
+      print("Configuration file not found. Exiting ...")
+      sys.exit()
 
   if args.email and (os.environ["USER"] not in ["jdh4", "slurm"]):
       print("The --email flag can currently only used by jdh4 and slurm to send emails. Exiting ...")

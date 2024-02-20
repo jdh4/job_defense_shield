@@ -59,7 +59,7 @@ class Alert:
         """Return boolean specifying whether sufficient time has passed."""
         last_sent_email_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
-            violation_history = pd.read_csv(vfile, parse_dates=["email_sent"])
+            violation_history = pd.read_csv(vfile, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
             last_sent_email_date = violation_history["email_sent"].max()
         seconds_since_last_email = datetime.now().timestamp() - last_sent_email_date.timestamp()
         seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR
@@ -73,7 +73,7 @@ class Alert:
             print(f"Warning: {root_violations} not found in get_emails_sent_count()")
         user_violations = f"{root_violations}/{user}.email.csv"
         if os.path.exists(user_violations):
-            d = pd.read_csv(user_violations, parse_dates=["email_sent"])
+            d = pd.read_csv(user_violations, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
             start_date = datetime.now() - timedelta(days=days)
             return d[d["email_sent"] >= start_date]["email_sent"].unique().size
         return 0
