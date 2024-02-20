@@ -46,9 +46,8 @@ class ZeroGpuUtilization(Alert):
                           (~self.df.netid.isin(self.excluded_users))].copy()
         # read cache of jobs that are known to be using the gpus
         pre_approved = []
-        jobids_file = "/scratch/jobids.txt"
-        if os.path.isfile(jobids_file):
-            with open(jobids_file, "rb") as fp:
+        if os.path.isfile(self.jobids_file):
+            with open(self.jobids_file, "rb") as fp:
                 jobs_using_gpus = pickle.load(fp)
             pre_approved = self.jb[self.jb.jobid.isin(jobs_using_gpus)].jobid.tolist()
             self.jb = self.jb[~self.jb.jobid.isin(jobs_using_gpus)]
@@ -62,7 +61,7 @@ class ZeroGpuUtilization(Alert):
             # save cache of jobs that are known to be using the gpus
             jobs_using_gpus = self.jb[self.jb["GPUs-Unused"] == 0].jobid.tolist()
             if jobs_using_gpus:
-                with open(jobids_file, "wb") as fp:
+                with open(self.jobids_file, "wb") as fp:
                     pickle.dump(jobs_using_gpus + pre_approved, fp)
             self.jb = self.jb[self.jb["GPUs-Unused"] > 0]
             self.jb["interactive"] = self.jb["jobname"].apply(lambda x: True
@@ -70,7 +69,7 @@ class ZeroGpuUtilization(Alert):
                                                                            x.startswith("interactive")
                                                                         else False)
             self.jb["salloc"] = self.jb["jobname"].apply(lambda x: True if x.startswith("interactive") else False)
-            msk = self.jb["interactive"] & (self.jb.gpus == 1) & (self.jb["limit-minutes"] <= 8 * MINUTES_PER_HOUR)
+            msk = self.jb["interactive"] & (self.jb.gpus == 1) & (self.jb["limit-minutes"] <= self.max_interactive_hours * MINUTES_PER_HOUR)
             self.jb = self.jb[~msk]
             self.jb = self.jb[["jobid", "NetID", "cluster", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
             renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster"}
@@ -82,10 +81,8 @@ class ZeroGpuUtilization(Alert):
             #################
             # first warning #
             #################
-            lower = self.first_warning_minutes * SECONDS_PER_MINUTE
             upper = (self.first_warning_minutes + self.sampling_period_minutes) * SECONDS_PER_MINUTE
-            usr = self.jb[(self.jb.elapsedraw >= lower) &
-                          (self.jb.elapsedraw <  upper) &
+            usr = self.jb[(self.jb.elapsedraw < upper) &
                           (self.jb.NetID == user)].copy()
             if not usr.empty:
                 s = f"{get_first_name(user)},\n\n"
@@ -133,8 +130,9 @@ class ZeroGpuUtilization(Alert):
                 Computing. Let us know if we can be of help.
                 """)
 
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
                 # append the new violations to the log file
@@ -150,10 +148,11 @@ class ZeroGpuUtilization(Alert):
             usr = self.jb[(self.jb.elapsedraw >= lower) &
                           (self.jb.elapsedraw <  upper) &
                           (self.jb.NetID == user)].copy()
+            print(usr)
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
                 s = f"{get_first_name(user)},\n\n"
                 text = (
-                'This is your second warning. All of the jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
+                'This is a second warning. All of the jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
                 )
                 s += "\n".join(textwrap.wrap(text, width=80))
                 s += "\n\n"
@@ -165,10 +164,12 @@ class ZeroGpuUtilization(Alert):
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
                 s += "\n\n"
-                s += "Replying to this automated email will open a support ticket with Research\n"
-                s += "Computing."
+                s += 'See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU\n'
+                s += "utilization."
 
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
             ###############
@@ -176,6 +177,7 @@ class ZeroGpuUtilization(Alert):
             ###############
             lower = self.cancel_minutes * SECONDS_PER_MINUTE
             usr = self.jb[(self.jb.elapsedraw >= lower) & (self.jb.NetID == user)].copy()
+            print(usr)
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
                 s = f"{get_first_name(user)},\n\n"
                 text = (
@@ -187,24 +189,27 @@ class ZeroGpuUtilization(Alert):
                 usr["GPU-Util"] = "0%"
                 usr["State"] = "CANCELLED"
                 usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-                usr = usr[["JobID", "Cluster", "GPU-Util", "State", "Hours"]]
+                usr = usr[["JobID", "Cluster", "State", "GPUs-Allocated", "GPU-Util", "Hours"]]
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
                 s += textwrap.dedent("""
+                For more information about job cancellations see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
+
                 See our <a href="https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#zero-util">GPU Computing</a> webpage for three common reasons for encountering zero GPU
                 utilization.
-
-                For more information see the <a href="https://researchcomputing.princeton.edu/get-started/utilization-policies">Utilization Policies</a>.
 
                 Consider attending an in-person Research Computing <a href="https://researchcomputing.princeton.edu/support/help-sessions">help session</a> for assistance.
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
 
+                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
+
                 for jobid in usr.JobID.tolist():
                     cmd = f"scancel {jobid}"
                     _ = subprocess.run(cmd,

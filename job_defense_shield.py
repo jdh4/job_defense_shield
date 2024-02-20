@@ -12,7 +12,6 @@ from utils import SECONDS_PER_HOUR
 from utils import is_today_a_work_day
 from utils import send_email
 from utils import show_history_of_emails_sent
-from utils import add_dividers
 
 from efficiency import get_stats_dict
 from alert.datascience import datascience_node_violators
@@ -80,7 +79,7 @@ def add_new_and_derived_fields(df):
     df["gpus"] = df.alloctres.apply(gpus_per_job)
     df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
     def is_gpu_job(tres):
-      return 1 if "gres/gpu=" in tres and "gres/gpu=0" not in tres else 0
+        return 1 if "gres/gpu=" in tres and "gres/gpu=0" not in tres else 0
     df["gpu-job"] = df.alloctres.apply(is_gpu_job)
     df["cpu-only-seconds"] = df.apply(lambda row: 0 if row["gpus"] else row["cpu-seconds"], axis="columns")
     df["elapsed-hours"] = df.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR))
@@ -166,11 +165,11 @@ if __name__ == "__main__":
   elif args.config_file and not os.path.isfile(args.config_file):
       print(f"Configuration file does not exist: {args.config_file}. Exiting ...")
       sys.exit()
-  elif not args.config_file and os.path.isfile(jds_path):
+  elif args.config_file is None and os.path.isfile(jds_path):
       print(f"Configuration file: {jds_path}")
       with open(jds_path, "r", encoding="utf-8") as fp:
           cfg = yaml.safe_load(fp)
-  elif not args.config_file and os.path.isfile(cwd_path):
+  elif args.config_file is None and os.path.isfile(cwd_path):
       print(f"Configuration file: {cwd_path}")
       with open(cwd_path, "r", encoding="utf-8") as fp:
           cfg = yaml.safe_load(fp)
@@ -350,7 +349,7 @@ if __name__ == "__main__":
                                         days_between_emails=args.days,
                                         violation="zero_gpu_utilization",
                                         vpath=args.files,
-                                        subject="Zero GPU Utilization",
+                                        subject="Jobs with Zero GPU Utilization",
                                         **cfg[alert])
       if args.email:
           zero_gpu.send_emails_to_users()
