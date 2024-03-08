@@ -56,6 +56,7 @@ To run the unit tests:
 ```
 $ module load anaconda3/2023.3
 $ pytest  --cov=. --capture=tee-sys tests
+$ pytest -s tests  # Hasling says -s to run print statements
 ```
 
 ### How to use
