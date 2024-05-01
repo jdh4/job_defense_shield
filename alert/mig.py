@@ -22,6 +22,7 @@ class MultiInstanceGPU(Alert):
                           (self.df.cores == 1) &
                           (self.df.gpus == 1) &
                           (self.df.admincomment != {}) &
+                          (~self.df.netid.isin(self.excluded_users)) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= 1)].copy()
         # add new fields
@@ -84,23 +85,21 @@ class MultiInstanceGPU(Alert):
                 If you are using Jupyter OnDemand then set the "Node type" to "mig" when
                 creating the session.
 
-                By running future jobs on the MIG GPUs you will experience shorter queue
-                times and you will help keep A100 GPUs free for jobs that need them. Since
-                your jobs satisfy the above constraints, please use the MIG GPUs. For more:
+                By running jobs on the MIG GPUs you will experience shorter queue times and
+                you will help keep A100 GPUs free for jobs that need them. For more info:
 
                   https://researchcomputing.princeton.edu/systems/della#gpus
 
                 As an alternative to MIG, you may consider trying to improve the GPU
                 utilization of your code. A good target value is greater than 50%. Consider
-                writing to the mailing list of the software you are using for guidance.
+                writing to the mailing list of the software that you are using or attend
+                an in-person Research Computing help session:
+
+                  https://researchcomputing.princeton.edu/support/help-sessions
 
                 For general information about GPU computing at Princeton:
 
                   https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-                Consider attending an in-person Research Computing help session for assistance:
-
-                  https://researchcomputing.princeton.edu/support/help-sessions
 
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.

@@ -218,3 +218,5 @@ class ZeroGpuUtilization(Alert):
                                        timeout=10,
                                        text=True,
                                        check=True)
+                    with open("/var/spool/slurm/job_defense_shield/cancelled.txt", "a") as fp:
+                        fp.write(f"{jobid},{user}\n")

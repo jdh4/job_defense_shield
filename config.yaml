@@ -6,7 +6,10 @@
 should-be-using-mig-della-gpu:
   cluster: della
   partition: gpu
-
+  excluded_users:
+    - aturing
+    - jzp
+    - einstein
 
 ############################
 ## LOW CPU/GPU EFFICIENCY ##
@@ -39,9 +42,9 @@ low-xpu-efficiency-della-gpu:
 
 low-xpu-efficiency-della-pli:
   cluster: della
-  cluster_name: "Della (pli)"
+  cluster_name: "Della (pli-c)"
   partitions:
-    - pli
+    - pli-c
   xpu: gpu
   eff_thres_pct: 15
   proportion_thres_pct: 2

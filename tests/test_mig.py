@@ -82,7 +82,14 @@ def test_mig():
                        "state":["COMPLETED"] * n_jobs,
                        "partition":["gpu"] * n_jobs,
                        "elapsed-hours":[10] * n_jobs})
-    mig = MultiInstanceGPU(df, 0, "", "", "Subject", cluster="della", partition="gpu")
+    mig = MultiInstanceGPU(df,
+                           0,
+                           "",
+                           "",
+                           "Subject",
+                           cluster="della",
+                           partition="gpu",
+                           excluded_users=["aturing"])
     actual = mig.df[["NetID", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
     expected = pd.DataFrame({"NetID":["user1", "user2", "user1"],
                              "GPU-Util":["9%", "6%", "9%"],

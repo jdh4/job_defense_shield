@@ -141,24 +141,21 @@ class LowEfficiency(Alert):
                 if self.xpu == "cpu":
                     s += textwrap.dedent(f"""
                     A good target value for CPU-Util is 90% and above. Please investigate the reason
-                    for the low efficiency. Five common reasons for low CPU efficiency are discussed
-                    here:
+                    for the low efficiency. Common reasons for low CPU efficiency are discussed here:
 
                          https://researchcomputing.princeton.edu/get-started/cpu-utilization
                     """)
                 elif self.xpu == "gpu":
                     s += textwrap.dedent(f"""
                     A good target value for GPU-Util is 50% and above. Please investigate the reason
-                    for the low efficiency. Five common reasons for low GPU efficiency are discussed
-                    here:
+                    for the low efficiency. Common reasons for low GPU efficiency are discussed here:
 
                          https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#low-util
                     """)
                 s += textwrap.dedent(f"""
                 Consult the documentation or write to the mailing list of the software that you
-                are using for additional reasons for low {self.xpu.upper()} efficiency and for potential
-                solutions. You may also consider attending an in-person Research Computing help
-                session:
+                are using for additional reasons for low {self.xpu.upper()} efficiency. You may also consider
+                attending an in-person Research Computing help session:
 
                      https://researchcomputing.princeton.edu/support/help-sessions
                 """)
