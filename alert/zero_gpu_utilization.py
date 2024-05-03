@@ -71,8 +71,8 @@ class ZeroGpuUtilization(Alert):
             self.jb["salloc"] = self.jb["jobname"].apply(lambda x: True if x.startswith("interactive") else False)
             msk = self.jb["interactive"] & (self.jb.gpus == 1) & (self.jb["limit-minutes"] <= self.max_interactive_hours * MINUTES_PER_HOUR)
             self.jb = self.jb[~msk]
-            self.jb = self.jb[["jobid", "NetID", "cluster", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
-            renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster"}
+            self.jb = self.jb[["jobid", "NetID", "cluster", "partition", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
+            renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster", "partition":"Partition"}
             self.jb.rename(columns=renamings, inplace=True)
 
     def send_emails_to_users(self):
@@ -152,7 +152,7 @@ class ZeroGpuUtilization(Alert):
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
                 s = f"{get_first_name(user)},\n\n"
                 text = (
-                'This is a second warning. All of the jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
+                'This is a second warning. The jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
                 )
                 s += "\n".join(textwrap.wrap(text, width=80))
                 s += "\n\n"
@@ -189,7 +189,7 @@ class ZeroGpuUtilization(Alert):
                 usr["GPU-Util"] = "0%"
                 usr["State"] = "CANCELLED"
                 usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-                usr = usr[["JobID", "Cluster", "State", "GPUs-Allocated", "GPU-Util", "Hours"]]
+                usr = usr[["JobID", "Cluster", "Partition", "State", "GPUs-Allocated", "GPU-Util", "Hours"]]
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
@@ -204,10 +204,10 @@ class ZeroGpuUtilization(Alert):
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-
-                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}", sender="cses@princeton.edu")
+                
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                for email in self.emails: 
+                    send_email(s, f"{email}", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
                 for jobid in usr.JobID.tolist():
