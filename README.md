@@ -30,7 +30,15 @@ The requirements are:
 - Pandas  
 - jobstats (if looking to send emails about actively running jobs)  
 
+### Conda
+
 A Conda environment can be created in this way:
+
+```
+$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
+```
+
+One can store the environment in a specific location by creating this file before running the command above:
 
 ```
 $ cat /home/jdh4/.condarc
@@ -38,12 +46,21 @@ envs_dirs:
 - /home/jdh4/bin
 ```
 
+The Python executable will then be available here:
+
 ```
-$ module load anaconda3/2024.2
-$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
+/home/jdh4/bin/jds-env/bin/python
 ```
 
-You can then remove or modify the `.condarc` file so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests`.
+After the environment is made, one can remove or modify the `.condarc` file so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
+
+### Package Manager
+
+One can also do something like:
+
+```
+$ apt-get install python3-pandas python3-requests python3-yaml python3-blessed
+```
 
 ## Editing the Configuration File
 
@@ -77,7 +94,7 @@ Here are some specific examples:
 
 ```
 $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --zero-gpu-utilization \
-                                                          --emails \
+                                                          --email \
                                                           --days=7 \
                                                           --files /tigress/jdh4/utilities/job_defense_shield/violations
                           
