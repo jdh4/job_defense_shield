@@ -5,22 +5,21 @@
 
 # Job Defense Shield
 
-The software in this repo creates a report of problem users and problem jobs on the large Research Computing clusters. The software identifies the following:
+The software in this repository can be used to send automated emails to users that are underutilizing the cluster resources. It can also be used for generating reports for administrators. The software identifies the following:
 
 + actively running jobs where a GPU has zero utilization  
-+ the heaviest users with low CPU or GPU utilization  
-+ jobs that use the datascience nodes but do not need them  
-+ jobs that could have been run on MIG GPUs instead of full A100 GPUs  
-+ multinode CPU jobs where one or more nodes have zero utilization  
-+ users with excessive run time limits  
-+ jobs with CPU or GPU fragmentation (e.g., 1 GPU per node over 4 nodes)  
++ the top users by usage with low CPU or GPU utilization  
++ jobs that request more than the default CPU memory but do not use it
++ serial jobs that allocate multiple CPU-cores
++ multinode CPU jobs where one or more nodes have zero utilization
++ jobs with CPU or GPU fragmentation (e.g., 1 GPU per node over 4 nodes)
++ users with excessive run time limits    
 + jobs with the most CPU-cores and jobs with the most GPUs  
-+ pending jobs with the longest queue times  
-+ jobs that request more than the default memory but do not use it  
++ pending jobs with the longest queue times
++ jobs that use special nodes but do not need them
++ jobs that could have been run on MIG GPUs instead of full GPUs (e.g. H100)  
 
-The script does not identify:
-+ abuses of file storage or I/O  
-+ problems with jobs or users on Adroit
+New alerts are easy to write. Simply start from an existing alert and modify it.
 
 ## Installation
 
@@ -28,7 +27,9 @@ The requirements are:
 
 - Python 3.7 or above  
 - Pandas  
-- jobstats (if looking to send emails about actively running jobs)  
+- jobstats (if looking to send emails about actively running jobs)
+
+The jobstats module depends on `requests` and, optionally, `blessed`.
 
 #### Conda
 
