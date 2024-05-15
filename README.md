@@ -43,7 +43,7 @@ $ module load anaconda3/2024.2
 $ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
 ```
 
-You can then remove or modify the `.condarc` files so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
+You can then remove or modify the `.condarc` file so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests`.
 
 ## Editing the Configuration File
 
@@ -62,7 +62,7 @@ should-be-using-mig-della-gpu:
     - einstein
 ```
 
-Note that the name of each alert is important (i.e., "should-be-using-mig").
+Note that the name of each alert is important (i.e., "should-be-using-mig" must be in the name of the alert).
 
 
 ## How to Use
