@@ -139,6 +139,8 @@ class SerialCodeUsingMultipleCores(Alert):
             self.gp = self.df.groupby("NetID").agg(d)
             self.gp = self.gp.rename(columns={"NetID":"Jobs"})
             self.gp = self.gp[self.gp["CPU-Hours-Wasted"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]
+            if self.gp.empty:
+                return ""
             self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
             self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x: round(x, 1))
             self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
