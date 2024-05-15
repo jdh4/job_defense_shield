@@ -109,6 +109,31 @@ $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
                                                           --gpu-fragmentation                          
 ```
 
+## cron
+
+The following is an example cron entry:
+
+```
+SHELL=/bin/bash
+MAILTO=jdh4@princeton.edu
+JDS=/tigress/jdh4/utilities/job_defense_shield
+PY="/home/jdh4/bin/jds-env/bin/python -uB"
+CFG=/tigress/jdh4/utilities/job_defense_shield/config.yaml
+
+15  15 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excess-cpu-memory -M della -r cpu --num-top-users=5 > ${JDS}/log/excess_memory.log 2>&1
+20  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --low-xpu-efficiency   > ${JDS}/log/low_efficiency.log 2>&1
+26  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=3  --email --zero-cpu-utilization > ${JDS}/log/zero_cpu.log 2>&1
+29  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=10 --email --mig -M della -r gpu  > ${JDS}/log/mig.log 2>&1
+10  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --serial-using-multiple -M della -r cpu > ${JDS}/log/serial_using_multiple.log 2>&1
+40  11 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excessive-time -M della -r cpu > ${JDS}/log/excessive_time.log 2>&1
+30  13 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --cpu-fragmentation > ${JDS}/log/cpu_fragmentation.log 2>&1
+ 0  14 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=5  --email --gpu-fragmentation > ${JDS}/log/gpu_fragmentation.log 2>&1
+ 0 */4 * * *   ${JDS}/job_defense_shield.py --days=1  --active-cpu-memory -M della -r cpu --email > ${JDS}/log/active_cpu_memory.log 2>&1
+15  15 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --excess-cpu-memory --hard-warning-cpu-memory -M della -r cpu --num-top-users=5 --email > ${JDS}/log/excess_memory.log 2>&1
+20   9 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --datascience -M della -r datascience  --email > ${JDS}/log/datascience.log 2>&1
+15   9 * * 1-5 /home/jdh4/bin/cluster_report.sh
+```
+
 ## Cancelling Jobs with 0% GPU Utilization
 
 We do this by running the software on a node that is dedicated to Slurm for a given cluster. The code must be ran as a priviledged user in order to cancel jobs.
@@ -150,35 +175,12 @@ MAILTO=jdh4@princeton.edu
 ```
 
 
-## Which users are ignoring the automated emails?
+## Which users have received email alerts?
 
 ```
 $ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check --zero-gpu-utilization --days=30
 ```
 
-
-## cron
-
-```
-SHELL=/bin/bash
-MAILTO=halverson@princeton.edu
-JDS=/tigress/jdh4/utilities/job_defense_shield
-PY="/home/jdh4/bin/jds-env/bin/python -uB"
-CFG=/tigress/jdh4/utilities/job_defense_shield/config.yaml
-
-15  15 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excess-cpu-memory -M della -r cpu --num-top-users=5 > ${JDS}/log/excess_memory.log 2>&1
-20  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --low-xpu-efficiency   > ${JDS}/log/low_efficiency.log 2>&1
-26  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=3  --email --zero-cpu-utilization > ${JDS}/log/zero_cpu.log 2>&1
-29  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=10 --email --mig -M della -r gpu  > ${JDS}/log/mig.log 2>&1
-10  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --serial-using-multiple -M della -r cpu > ${JDS}/log/serial_using_multiple.log 2>&1
-40  11 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excessive-time -M della -r cpu > ${JDS}/log/excessive_time.log 2>&1
-30  13 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --cpu-fragmentation > ${JDS}/log/cpu_fragmentation.log 2>&1
- 0  14 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=5  --email --gpu-fragmentation > ${JDS}/log/gpu_fragmentation.log 2>&1
- 0 */4 * * *   ${JDS}/job_defense_shield.py --days=1  --active-cpu-memory -M della -r cpu --email > ${JDS}/log/active_cpu_memory.log 2>&1
-15  15 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --excess-cpu-memory --hard-warning-cpu-memory -M della -r cpu --num-top-users=5 --email > ${JDS}/log/excess_memory.log 2>&1
-20   9 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --datascience -M della -r datascience  --email > ${JDS}/log/datascience.log 2>&1
-15   9 * * 1-5 /home/jdh4/bin/cluster_report.sh
-```
 
 ## Notes for developers
 
