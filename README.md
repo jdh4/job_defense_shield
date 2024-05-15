@@ -87,6 +87,8 @@ Note that the name of each alert is important (i.e., "should-be-using-mig" must 
 To get started, look at the help menu:
 
 ```
+$ git clone https://github.com/jdh4/job_defense_shield.git
+$ cd job_defense_shield
 $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --help
 ```
 
@@ -99,11 +101,11 @@ $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --zero-gpu-utilization
                                                           --files /tigress/jdh4/utilities/job_defense_shield/violations
                           
 $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
-                          --watch \
-                          --zero-gpu-utilization \
-                          --low-xpu-efficiencies \ 
-                          --datascience \
-                          --gpu-fragmentation                          
+                                                          --watch \
+                                                          --zero-gpu-utilization \
+                                                          --low-xpu-efficiencies \ 
+                                                          --datascience \
+                                                          --gpu-fragmentation                          
 ```
 
 ## Cancelling Jobs with 0% GPU Utilization
