@@ -5,7 +5,7 @@
 
 # Job Defense Shield
 
-The software in this repository can be used to send automated emails to users that are underutilizing the cluster resources. It can also be used for generating reports for administrators. The software identifies the following:
+The software in this repository can be used to send automated email alerts to users that are underutilizing the cluster resources. It can also be used for generating reports for administrators. The software identifies the following:
 
 + actively running jobs where a GPU has zero utilization  
 + the top users by usage with low CPU or GPU utilization  
@@ -17,7 +17,7 @@ The software in this repository can be used to send automated emails to users th
 + jobs with the most CPU-cores and jobs with the most GPUs  
 + pending jobs with the longest queue times
 + jobs that use special nodes but do not need them
-+ jobs that could have been run on MIG GPUs instead of full GPUs (e.g. H100)  
++ jobs that could have been run on MIG GPUs instead of full GPUs (e.g., H100)  
 
 New alerts are easy to write. Simply start from an existing alert and modify it.
 
