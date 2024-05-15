@@ -67,6 +67,14 @@ Note that the name of each alert is important (i.e., "should-be-using-mig" must 
 
 ## How to Use
 
+To get started, look at the help menu:
+
+```
+$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --help
+```
+
+Here are some specific examples:
+
 ```
 $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --zero-gpu-utilization \
                                                           --emails \
@@ -80,6 +88,10 @@ $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
                           --datascience \
                           --gpu-fragmentation                          
 ```
+
+## Cancelling Jobs with 0% GPU Utilization
+
+We do this by running the software on the node that is dedicated to Slurm for a given cluster. The code must be ran as a priviledged user in order to cancel jobs.
 
 ## Which users are ignoring the automated emails?
 
