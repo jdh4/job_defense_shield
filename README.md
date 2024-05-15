@@ -30,7 +30,7 @@ The requirements are:
 - Pandas  
 - jobstats (if looking to send emails about actively running jobs)  
 
-### Conda
+#### Conda
 
 A Conda environment can be created in this way:
 
@@ -54,7 +54,7 @@ The Python executable will then be available here:
 
 After the environment is made, one can remove or modify the `.condarc` file so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
 
-### Package Manager
+#### Package Manager
 
 One can also do something like:
 
@@ -108,7 +108,44 @@ $ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
 
 ## Cancelling Jobs with 0% GPU Utilization
 
-We do this by running the software on the node that is dedicated to Slurm for a given cluster. The code must be ran as a priviledged user in order to cancel jobs.
+We do this by running the software on a node that is dedicated to Slurm for a given cluster. The code must be ran as a priviledged user in order to cancel jobs.
+
+Here is an example configuration file:
+
+```
+%YAML 1.1
+---
+zero-gpu-utilization-della-gpu:
+  first_warning_minutes: 60
+  second_warning_minutes: 105
+  cancel_minutes: 120
+  sampling_period_minutes: 15
+  min_previous_warnings: 1
+  max_interactive_hours: 8
+  jobids_file: "/var/spool/slurm/job_defense_shield/jobids.txt"
+  clusters:
+    - della
+  partition:
+    - gpu
+  excluded_users:
+    - aturing
+    - einstein
+  emails:
+    - jdh4@princeton.edu
+```
+
+Here is an example cron entry:
+
+```
+PY=/var/spool/slurm/cancel_zero_gpu_jobs/envs/jds-env/bin
+JDS=/var/spool/slurm/job_defense_shield
+MYLOG=/var/spool/slurm/cancel_zero_gpu_jobs/log
+VIOLATION=/var/spool/slurm/job_defense_shield/violations
+MAILTO=jdh4@princeton.edu
+
+*/15 * * * * ${PY}/python -uB ${JDS}/job_defense_shield.py --zero-gpu-utilization --days=1 --email --files=${VIOLATION} -M della -r gpu > ${MYLOG}/zero_gpu_utilization.log 2>&1
+```
+
 
 ## Which users are ignoring the automated emails?
 
