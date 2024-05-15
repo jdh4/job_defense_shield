@@ -22,17 +22,58 @@ The script does not identify:
 + abuses of file storage or I/O  
 + problems with jobs or users on Adroit
 
-## How to run
+## Installation
+
+The requirements are:
+
+- Python 3.7 or above  
+- Pandas  
+- jobstats (if looking to send emails about actively running jobs)  
+
+A Conda environment can be created in this way:
 
 ```
-$ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --days=7 --email --excessive-time -M della -r cpu
+$ cat /home/jdh4/.condarc
+envs_dirs:
+- /home/jdh4/bin
+```
 
-$ ./job_defense_shield.py --email \
-                          --days=3 \
-                          --zero-gpu-utilization \
-                          --files /tigress/jdh4/utilities/job_defense_shield/violations
+```
+$ module load anaconda3/2024.2
+$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
+```
+
+You can then remove or modify the `.condarc` files so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
+
+## Editing the Configuration File
+
+```
+$ cat config.yaml
+%YAML 1.1
+---
+#########################
+## SHOULD BE USING MIG ##
+#########################
+should-be-using-mig-della-gpu:
+  cluster: della
+  partition: gpu
+  excluded_users:
+    - aturing
+    - einstein
+```
+
+Note that the name of each alert is important (i.e., "should-be-using-mig").
+
+
+## How to Use
+
+```
+$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --zero-gpu-utilization \
+                                                          --emails \
+                                                          --days=7 \
+                                                          --files /tigress/jdh4/utilities/job_defense_shield/violations
                           
-$ ./job_defense_shield.py --email \
+$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
                           --watch \
                           --zero-gpu-utilization \
                           --low-xpu-efficiencies \ 
@@ -46,7 +87,31 @@ $ ./job_defense_shield.py --email \
 $ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check --zero-gpu-utilization --days=30
 ```
 
-### Notes for developers
+
+## cron
+
+```
+SHELL=/bin/bash
+MAILTO=halverson@princeton.edu
+JDS=/tigress/jdh4/utilities/job_defense_shield
+PY="/home/jdh4/bin/jds-env/bin/python -uB"
+CFG=/tigress/jdh4/utilities/job_defense_shield/config.yaml
+
+15  15 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excess-cpu-memory -M della -r cpu --num-top-users=5 > ${JDS}/log/excess_memory.log 2>&1
+20  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --low-xpu-efficiency   > ${JDS}/log/low_efficiency.log 2>&1
+26  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=3  --email --zero-cpu-utilization > ${JDS}/log/zero_cpu.log 2>&1
+29  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=10 --email --mig -M della -r gpu  > ${JDS}/log/mig.log 2>&1
+10  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --serial-using-multiple -M della -r cpu > ${JDS}/log/serial_using_multiple.log 2>&1
+40  11 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excessive-time -M della -r cpu > ${JDS}/log/excessive_time.log 2>&1
+30  13 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --cpu-fragmentation > ${JDS}/log/cpu_fragmentation.log 2>&1
+ 0  14 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=5  --email --gpu-fragmentation > ${JDS}/log/gpu_fragmentation.log 2>&1
+ 0 */4 * * *   ${JDS}/job_defense_shield.py --days=1  --active-cpu-memory -M della -r cpu --email > ${JDS}/log/active_cpu_memory.log 2>&1
+15  15 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --excess-cpu-memory --hard-warning-cpu-memory -M della -r cpu --num-top-users=5 --email > ${JDS}/log/excess_memory.log 2>&1
+20   9 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --datascience -M della -r datascience  --email > ${JDS}/log/datascience.log 2>&1
+15   9 * * 1-5 /home/jdh4/bin/cluster_report.sh
+```
+
+## Notes for developers
 
 - As Slurm partitions are added and removed the script should be updated  
 - For jdh4, the git repo is /tigress/jdh4/utilities/job_defense_shield
@@ -59,18 +124,7 @@ $ pytest  --cov=. --capture=tee-sys tests
 $ pytest -s tests  # Hasling says -s to run print statements
 ```
 
-### How to use
-
-Run the commands below on a login node (e.g., tigergpu) to execute the script:
-
-```bash
-$ git clone https://github.com/jdh4/job_defense_shield.git
-$ module load anaconda3/2022.10
-$ cd job_defense_shield
-$ ./job_defense_shield.py -h
-```
-
-###  Gotchas
+Be aware of the following:
 
 1. Some Traverse jobs are CPU only
 2. Pandas:
@@ -86,60 +140,4 @@ True
 
 df["C"] = df.A.apply(round)  # this is okay
 >>>
-```
-
-## Installation
-
-The requirements are:
-
-- Python 3.7 or above  
-- Pandas  
-- jobstats (if looking to send emails about actively running jobs)  
-
-You can run the script on `tigergpu` using the `jds-bin` in `/home/jdh4/bin`. The Conda environment was create in this way:
-
-```
-[jdh4@tigergpu ~]$ cat .condarc
-envs_dirs:
-- /home/jdh4/bin
-```
-
-```
-$ module load anaconda3/2023.9
-$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
-```
-
-The above leads to the shebang line as:
-
-```
-#!/home/jdh4/bin/jds-bin/python -u -B
-```
-
-If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
-
-## cron
-
-```
-[jdh4@tigergpu ~]$ crontab -l
-30 8 * * 1,4 /home/jdh4/bin/jds-env/bin/python -u -B /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --email > /dev/null 2>&1
-```
-
-## convert CSV to JSON
-
-```
-import glob
-import shutil
-
-files = glob.glob("*.csv")
-
-for f in files:
-  user = f.split(".")[0]
-  print(user, f)
-  shutil.copy(f, f"{user}.email.csv")
-
-if 0:
-  for f in files:
-    with open(f) as j:
-      data = j.readlines()
-    print(data[0])
 ```
