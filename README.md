@@ -69,6 +69,54 @@ $ apt-get install python3-pandas python3-requests python3-yaml python3-blessed
 $ cat config.yaml
 %YAML 1.1
 ---
+############################
+## LOW CPU/GPU EFFICIENCY ##
+############################
+low-xpu-efficiency-della-cpu:
+  cluster: della
+  cluster_name: "Della (cpu)"
+  partitions:
+    - cpu
+  xpu: cpu
+  eff_thres_pct: 60
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-della-gpu:
+  cluster: della
+  cluster_name: "Della (gpu)"
+  partitions:
+    - gpu
+  xpu: gpu
+  eff_thres_pct: 15
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+#######################
+## EXCESS CPU MEMORY ##
+#######################
+excess-cpu-memory-della-cpu:
+  tb_hours_per_day: 10
+  ratio_threshold: 0.35
+  mean_ratio_threshold: 0.35
+  median_ratio_threshold: 0.35
+  num_top_users: 10
+  clusters:
+    - della
+  partition:
+    - cpu
+  combine_partitions: False
+  cores_per_node: 28
+  excluded_users:
+    - aturing
+    - einstein
+
 #########################
 ## SHOULD BE USING MIG ##
 #########################
