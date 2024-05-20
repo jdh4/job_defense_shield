@@ -43,6 +43,7 @@ class ZeroGpuUtilization(Alert):
                           self.df.partition.isin(self.partition) &
                           (self.df.elapsedraw >= lower) &
                           (self.df.elapsedraw <  upper) &
+                          (self.df["limit-minutes"] > self.cancel_minutes) &
                           (~self.df.netid.isin(self.excluded_users))].copy()
         # read cache of jobs that are known to be using the gpus
         pre_approved = []
