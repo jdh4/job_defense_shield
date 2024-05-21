@@ -45,33 +45,36 @@ class UtilizationOverview(Alert):
         # add max usage for specific partitions (this code to be removed)
         period_hours = 24 * self.days_between_emails
         self.special = self.by_partition.copy()
-        self.special["Usage(%)"] = -1
-        self.special = self.special.set_index(["cluster", "partition"])
-        # gpu usage on della gpu
-        gpu = self.special.at[("della", "gpu"), "gpu-hours"]
-        gpu = int(gpu.split("(")[0].strip())
-        gpu = round(100 * gpu / 316 / period_hours)
-        self.special.at[("della", "gpu"), "Usage(%)"] = gpu
-        # gpu usage on della mig
-        mig = self.special.at[("della", "mig"), "gpu-hours"]
-        mig = int(mig.split("(")[0].strip())
-        mig = round(100 * mig / 56 / period_hours)
-        self.special.at[("della", "mig"), "Usage(%)"] = mig
-        # gpu usage on della cli
-        cli = self.special.at[("della", "cli"), "gpu-hours"]
-        cli = int(cli.split("(")[0].strip())
-        cli = round(100 * cli / 32 / period_hours)
-        self.special.at[("della", "cli"), "Usage(%)"] = cli
-        # gpu usage on stellar gpu
-        gpu = self.special.at[("stellar", "gpu"), "gpu-hours"]
-        gpu = int(gpu.split("(")[0].strip())
-        gpu = round(100 * gpu / 12 / period_hours)
-        self.special.at[("stellar", "gpu"), "Usage(%)"] = gpu
-        # gpu usage on traverse
-        tra = self.special.at[("traverse", "all"), "gpu-hours"]
-        tra = int(tra.split("(")[0].strip())
-        tra = round(100 * tra / 184 / period_hours)
-        self.special.at[("traverse", "all"), "Usage(%)"] = tra
+        if 0:
+            self.special["Usage(%)"] = -1
+            self.special = self.special.set_index(["cluster", "partition"])
+            # gpu usage on della gpu
+            gpu = self.special.at[("della", "gpu"), "gpu-hours"]
+            gpu = int(gpu.split("(")[0].strip())
+            gpu = round(100 * gpu / 364 / period_hours)
+            self.special.at[("della", "gpu"), "Usage(%)"] = gpu
+            # gpu usage on della mig
+            mig = self.special.at[("della", "mig"), "gpu-hours"]
+            mig = int(mig.split("(")[0].strip())
+            mig = round(100 * mig / 56 / period_hours)
+            self.special.at[("della", "mig"), "Usage(%)"] = mig
+            # gpu usage on della cli
+            pli = self.special.at[("della", "pli"), "gpu-hours"] 
+            plic = self.special.at[("della", "pli-c"), "gpu-hours"]
+            cli = int(pli.split("(")[0].strip()) + int(plic.split("(")[0].strip())
+            cli = round(100 * cli / 296 / period_hours)
+            self.special.at[("della", "pli"), "Usage(%)"] = cli
+            self.special.at[("della", "pli-c"), "Usage(%)"] = cli
+            # gpu usage on stellar gpu
+            gpu = self.special.at[("stellar", "gpu"), "gpu-hours"]
+            gpu = int(gpu.split("(")[0].strip())
+            gpu = round(100 * gpu / 12 / period_hours)
+            self.special.at[("stellar", "gpu"), "Usage(%)"] = gpu
+            # gpu usage on traverse
+            tra = self.special.at[("traverse", "all"), "gpu-hours"]
+            tra = int(tra.split("(")[0].strip())
+            tra = round(100 * tra / 184 / period_hours)
+            self.special.at[("traverse", "all"), "Usage(%)"] = tra
 
     def send_emails_to_users(self):
         """There are no emails for this alert."""
@@ -79,5 +82,5 @@ class UtilizationOverview(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         clus = self.by_cluster.to_string(index=keep_index, justify="center")
-        part = self.special.to_string(index=True, justify="center")
+        part = self.special.to_string(index=False, justify="center")
         return add_dividers(clus, title) + add_dividers(part, f"{title} by Partition")

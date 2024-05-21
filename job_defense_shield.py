@@ -152,7 +152,7 @@ if __name__ == "__main__":
                       help='Send an email report to administrators')
   parser.add_argument('--check', action='store_true', default=False,
                       help='Show the history of emails sent to users')
-  parser.add_argument('--strict-start', action='store_true', default=False,
+  parser.add_argument('-s', '--strict-start', action='store_true', default=False,
                       help='Only include usage during time window and not before')
   args = parser.parse_args()
 
