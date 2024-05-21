@@ -153,6 +153,8 @@ if __name__ == "__main__":
                       help='Send an email report to administrators')
   parser.add_argument('--check', action='store_true', default=False,
                       help='Show the history of emails sent to users')
+  parser.add_argument('--strict-start', action='store_true', default=False,
+                      help='Only include usage during time window and not before')
   args = parser.parse_args()
 
   # read configuration file
@@ -320,8 +322,8 @@ if __name__ == "__main__":
   print(f"Number of rows  (after): {df.shape[0]}")
   df.start = df.start.astype("int64")
 
-  correction = False
-  if correction:
+  if args.strict_start:
+      # remove usage before the start of the time window
       df["secs-from-start"] = df["start"] - start_date.timestamp()
       df["secs-from-start"] = df["secs-from-start"].apply(lambda x: x if x < 0 else 0)
       df["elapsedraw"] = df["elapsedraw"] + df["secs-from-start"]
