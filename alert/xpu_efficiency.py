@@ -16,7 +16,7 @@ class LowEfficiency(Alert):
        for admin reports."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # compute proportion (self.pr) using as much data as possible

@@ -9,7 +9,7 @@ class JobsOverview(Alert):
        zero elapsed seconds are considered."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         self.df = self.df[self.df["elapsedraw"] > 0].copy()
