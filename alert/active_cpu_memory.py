@@ -21,7 +21,7 @@ class ActiveCPUMemory(Alert):
        or equal to the alloctres value."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     @staticmethod
     def rounded_memory_with_safety(mem_used: float) -> int:

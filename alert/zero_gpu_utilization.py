@@ -18,7 +18,7 @@ class ZeroGpuUtilization(Alert):
        with only 1 GPU and a run time limit of less than 8 hours are ignored."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     @staticmethod
     def get_stats_for_running_job(jobid, cluster):
