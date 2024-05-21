@@ -19,7 +19,7 @@ class MultinodeCPUFragmentation(Alert):
     """
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     @staticmethod
     def is_fragmented(cluster, partition, cores_per_node, mem_per_node_used):
