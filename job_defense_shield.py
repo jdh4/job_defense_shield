@@ -4,6 +4,7 @@ import argparse
 import subprocess
 from datetime import datetime
 from datetime import timedelta
+import numpy as np
 import pandas as pd
 import yaml
 
@@ -75,19 +76,17 @@ def gpus_per_job(tres: str) -> int:
 
 
 def add_new_and_derived_fields(df):
-    df["cpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["cores"], axis='columns')
+    df["cpu-seconds"] = df["elapsedraw"] * df["cores"]
     df["gpus"] = df.alloctres.apply(gpus_per_job)
-    df["gpu-seconds"] = df.apply(lambda row: row["elapsedraw"] * row["gpus"], axis='columns')
-    def is_gpu_job(tres):
-        return 1 if "gres/gpu=" in tres and "gres/gpu=0" not in tres else 0
-    df["gpu-job"] = df.alloctres.apply(is_gpu_job)
-    df["cpu-only-seconds"] = df.apply(lambda row: 0 if row["gpus"] else row["cpu-seconds"], axis="columns")
-    df["elapsed-hours"] = df.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR))
-    df["start-date"] = df.start.apply(lambda x: x if x == "Unknown" else datetime.fromtimestamp(int(x)).strftime("%a %-m/%d"))
-    df["cpu-waste-hours"] = df.apply(lambda row: round((row["limit-minutes"] * SECONDS_PER_MINUTE - row["elapsedraw"]) * row["cores"] / SECONDS_PER_HOUR), axis="columns")
-    df["gpu-waste-hours"] = df.apply(lambda row: round((row["limit-minutes"] * SECONDS_PER_MINUTE - row["elapsedraw"]) * row["gpus"]  / SECONDS_PER_HOUR), axis="columns")
-    df["cpu-alloc-hours"] = df.apply(lambda row: round(row["limit-minutes"] * SECONDS_PER_MINUTE * row["cores"] / SECONDS_PER_HOUR), axis="columns")
-    df["gpu-alloc-hours"] = df.apply(lambda row: round(row["limit-minutes"] * SECONDS_PER_MINUTE * row["gpus"]  / SECONDS_PER_HOUR), axis="columns")
+    df["gpu-seconds"] = df["elapsedraw"] * df["gpus"]
+    df["gpu-job"] = np.where((df["alloctres"].str.contains("gres/gpu=")) & (~df["alloctres"].str.contains("gres/gpu=0")), 1, 0)
+    df["cpu-only-seconds"] = np.where(df["gpus"] == 0, df["cpu-seconds"], 0)
+    df["elapsed-hours"] = np.round(df["elapsedraw"] / SECONDS_PER_HOUR)
+    df.loc[df["start"] != "Unknown", "start-date"] = pd.to_datetime(df["start"].astype(int), unit='s').dt.strftime("%a %-m/%d")
+    df["cpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["cores"] / SECONDS_PER_HOUR)
+    df["gpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["gpus"] / SECONDS_PER_HOUR)
+    df["cpu-alloc-hours"] = np.round(df["limit-minutes"] * SECONDS_PER_MINUTE * df["cores"] / SECONDS_PER_HOUR)
+    df["gpu-alloc-hours"] = np.round(df["limit-minutes"] * SECONDS_PER_MINUTE * df["gpus"] / SECONDS_PER_HOUR)
     df["cpu-hours"] = df["cpu-seconds"] / SECONDS_PER_HOUR
     df["gpu-hours"] = df["gpu-seconds"] / SECONDS_PER_HOUR
     df["admincomment"] = df["admincomment"].apply(get_stats_dict)
