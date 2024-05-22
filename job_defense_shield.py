@@ -352,8 +352,8 @@ if __name__ == "__main__":
                                         vpath=args.files,
                                         subject="Jobs with Zero GPU Utilization",
                                         **cfg[alert])
-      if args.email:
-          zero_gpu.send_emails_to_users()
+          if args.email:
+              zero_gpu.send_emails_to_users()
 
   ######################### 
   ## ZERO UTIL GPU-HOURS ##
