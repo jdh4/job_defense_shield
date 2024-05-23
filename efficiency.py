@@ -58,11 +58,11 @@ def gpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
                 print(msg, jobid, cluster, flush=True)
             error_code = 1
             return (-1, error_code) if single else (-1, -1, error_code)
-    else:
-        for gpu in gpus:
-            util = ss['nodes'][node]['gpu_utilization'][gpu]
-            total      += elapsedraw
-            total_used += elapsedraw * (float(util) / 100)
+        else:
+            for gpu in gpus:
+                util = ss['nodes'][node]['gpu_utilization'][gpu]
+                total      += elapsedraw
+                total_used += elapsedraw * (float(util) / 100)
     if total_used > total:
         error_code = 2
         if verbose:
