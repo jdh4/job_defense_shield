@@ -17,6 +17,7 @@ def cpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
        The error code is needed since the summary statistics (ss) may be malformed."""
     total = 0
     total_used = 0
+    error_code = 0
     for node in ss['nodes']:
         try:
             used  = ss['nodes'][node]['total_time']
@@ -26,35 +27,51 @@ def cpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
                 msg = "Warning: JSON probably missing keys in cpu_efficiency:"
                 print(msg, jobid, cluster, flush=True)
             error_code = 1
-            return (-1, -1, error_code)
+            return (-1, error_code) if single else (-1, -1, error_code)
         else:
             alloc = elapsedraw * cores  # equal to cputimeraw
             total += alloc
             total_used += used
-    if verbose and total_used > total:
-        msg = "Warning: total_used > total in cpu_efficiency:"
-        print(msg, jobid, cluster, total_used, total, flush=True)
-    error_code = 0
+    if total_used > total:
+        error_code = 2
+        if verbose:
+            msg = "Warning: total_used > total in cpu_efficiency:"
+            print(msg, jobid, cluster, total_used, total, flush=True)
     if single:
         return (round(100 * total_used / total, precision), error_code)
     return (total_used, total, error_code)
 
-def gpu_efficiency(d, elapsedraw, jobid, cluster, single=False, precision=1):
-  total = 0
-  total_used = 0
-  for node in d['nodes']:
-    try:
-      gpus = list(d['nodes'][node]['gpu_utilization'].keys())
-    except:
-      print(f"gpu_utilization not found for {jobid} on {cluster}")
-      return 0 if single else (0, 1)  # dummy values that avoid division by zero later
+
+def gpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, verbose=True):
+    """Return a (GPU time used, GPU time allocated, error code)-tuple for a given job.
+       If single=True then return a (GPU time used / GPU time allocated, error code)-tuple.
+       The error code is needed since the summary statistics (ss) may be malformed."""
+    total = 0
+    total_used = 0
+    error_code = 0
+    for node in ss['nodes']:
+        try:
+            gpus = list(ss['nodes'][node]['gpu_utilization'].keys())
+        except:
+            if verbose:
+                msg = "Warning: probably missing keys in gpu_efficiency:"
+                print(msg, jobid, cluster, flush=True)
+            error_code = 1
+            return (-1, error_code) if single else (-1, -1, error_code)
     else:
-      for gpu in gpus:
-        util = d['nodes'][node]['gpu_utilization'][gpu]
-        total      += elapsedraw
-        total_used += elapsedraw * (float(util) / 100)
-  if total_used > total: print("GPU efficiency:", jobid, cluster, total_used, total, flush=True)
-  return round(100 * total_used / total, precision) if single else (total_used, total)
+        for gpu in gpus:
+            util = ss['nodes'][node]['gpu_utilization'][gpu]
+            total      += elapsedraw
+            total_used += elapsedraw * (float(util) / 100)
+    if total_used > total:
+        error_code = 2
+        if verbose:
+            msg = "Warning: total_used > total in gpu_efficiency:"
+            print(msg, jobid, cluster, total_used, total, flush=True)
+    if single:
+        return (round(100 * total_used / total, precision), error_code)
+    return (total_used, total, error_code)
+
 
 def gpu_memory_usage_eff_tuples(d, jobid, cluster, precision=1):
   all_gpus = []
