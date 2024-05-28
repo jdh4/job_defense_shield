@@ -207,7 +207,7 @@ class ZeroGpuUtilization(Alert):
                 """)
                 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                for email in self.emails: 
+                for email in admin_self.emails: 
                     send_email(s, f"{email}", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 
