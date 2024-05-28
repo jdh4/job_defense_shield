@@ -38,7 +38,8 @@ class LowEfficiency(Alert):
                           (self.df["elapsedraw"] >= 0.5 * SECONDS_PER_HOUR) &
                           (self.df.admincomment != {})].copy()
         # next line prevents (unlikely) failure when creating "{self.xpu}-tuples"
-        if self.ce.empty: return pd.DataFrame()
+        if self.ce.empty:
+            return pd.DataFrame()
         self.ce = self.ce.merge(self.pr, how="left", on="netid")
         if self.xpu == "cpu":
             self.ce[f"{self.xpu}-tuples"] = self.ce.apply(lambda row:
@@ -140,14 +141,14 @@ class LowEfficiency(Alert):
                 s += "\n"
                 if self.xpu == "cpu":
                     s += textwrap.dedent(f"""
-                    A good target value for CPU-Util is 90% and above. Please investigate the reason
+                    A good target value for "Efficiency" is 90% and above. Please investigate the reason
                     for the low efficiency. Common reasons for low CPU efficiency are discussed here:
 
                          https://researchcomputing.princeton.edu/get-started/cpu-utilization
                     """)
                 elif self.xpu == "gpu":
                     s += textwrap.dedent(f"""
-                    A good target value for GPU-Util is 50% and above. Please investigate the reason
+                    A good target value for "Efficiency" is 50% and above. Please investigate the reason
                     for the low efficiency. Common reasons for low GPU efficiency are discussed here:
 
                          https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#low-util
