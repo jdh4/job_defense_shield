@@ -16,7 +16,7 @@ class LowEfficiency(Alert):
        for admin reports."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # compute proportion (self.pr) using as much data as possible
@@ -57,6 +57,9 @@ class LowEfficiency(Alert):
                                                                          axis="columns")
         self.ce[f"{self.xpu}-seconds-used"]  = self.ce[f"{self.xpu}-tuples"].apply(lambda x: x[0])
         self.ce[f"{self.xpu}-seconds-total"] = self.ce[f"{self.xpu}-tuples"].apply(lambda x: x[1])
+        self.ce[f"{self.xpu}-error-code"]    = self.ce[f"{self.xpu}-tuples"].apply(lambda x: x[2])
+        # remove jobs with non-zero error code
+        self.ce = self.ce[self.ce[f"{self.xpu}-error-code"] == 0]
         self.ce["interactive"] = self.ce["jobname"].apply(lambda x:
                                                           1 if x.startswith("sys/dashboard") or
                                                                x.startswith("interactive") else 0)

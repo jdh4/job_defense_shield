@@ -18,7 +18,7 @@ class ZeroGpuUtilization(Alert):
        with only 1 GPU and a run time limit of less than 8 hours are ignored."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     @staticmethod
     def get_stats_for_running_job(jobid, cluster):
@@ -43,6 +43,7 @@ class ZeroGpuUtilization(Alert):
                           self.df.partition.isin(self.partition) &
                           (self.df.elapsedraw >= lower) &
                           (self.df.elapsedraw <  upper) &
+                          (self.df["limit-minutes"] > self.cancel_minutes) &
                           (~self.df.netid.isin(self.excluded_users))].copy()
         # read cache of jobs that are known to be using the gpus
         pre_approved = []

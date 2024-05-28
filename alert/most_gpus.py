@@ -9,7 +9,7 @@ class MostGPUs(Alert):
      one job per user is shown."""
 
   def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-      super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+      super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
   def _filter_and_add_new_fields(self):
       # filter the dataframe
@@ -21,12 +21,13 @@ class MostGPUs(Alert):
       self.gp = self.gp.sort_values("gpus", ascending=False)[:10]
       self.gp = self.gp.rename(columns={"elapsed-hours":"hours"})
       self.gp.state = self.gp.state.apply(lambda x: JOBSTATES[x])
-      self.gp["GPU-eff"] = self.gp.apply(lambda row:
-                                         gpu_efficiency(row["admincomment"],
-                                                        row["elapsedraw"],
-                                                        row["jobid"],
-                                                        row["cluster"], single=True)
-                                         if row["admincomment"] != {} else "--", axis="columns")
+      self.gp["GPU-eff-tpl"] = self.gp.apply(lambda row:
+                                             gpu_efficiency(row["admincomment"],
+                                                            row["elapsedraw"],
+                                                            row["jobid"],
+                                                            row["cluster"], single=True)
+                                             if row["admincomment"] != {} else ("--", 0), axis="columns")
+      self.gp["GPU-eff"] = self.gp["GPU-eff-tpl"].apply(lambda tpl: tpl[0])
       self.gp["GPU-eff"] = self.gp["GPU-eff"].apply(lambda x: x if x == "--" else f"{round(x)}%")
       cols = ["jobid", "netid", "cluster", "gpus", "nodes", "cores", "state",
               "partition", "hours", "GPU-eff"]

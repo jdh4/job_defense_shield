@@ -12,7 +12,7 @@ class MultinodeGPUFragmentation(Alert):
     """Find multinode GPU jobs that use 1 GPU per node."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -26,12 +26,18 @@ class MultinodeGPUFragmentation(Alert):
         self.df.rename(columns={"netid":"NetID"}, inplace=True)
         # add new fields
         if not self.df.empty:
-            self.df["GPU-eff"] = self.df.apply(lambda row:
-                                               gpu_efficiency(row["admincomment"],
-                                                              row["elapsedraw"],
-                                                              row["jobid"],
-                                                              row["cluster"], single=True)
-                                               if row["admincomment"] != {} else 999, axis="columns")
+            self.df["GPU-eff-tpl"] = self.df.apply(lambda row:
+                                                   gpu_efficiency(row["admincomment"],
+                                                                  row["elapsedraw"],
+                                                                  row["jobid"],
+                                                                  row["cluster"], single=True)
+                                                   if row["admincomment"] != {} else (999, 0), axis="columns")
+            self.df["error-code"] = self.df["GPU-eff-tpl"].apply(lambda tpl: tpl[1])
+            # drop jobs with non-zero error code
+            self.df = self.df[self.df["error-code"] == 0]
+            self.df["GPU-eff"] = self.df["GPU-eff-tpl"].apply(lambda tpl: tpl[0])
+            self.df = self.df.drop(columns=["GPU-eff-tpl", "error-code"])
+
             self.gpu_util_thres = 50
             self.df["GPUs-per-Node"] = 1
             cols = ["jobid",

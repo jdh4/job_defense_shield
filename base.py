@@ -16,7 +16,7 @@ class Alert:
                  violation: str,
                  vpath: str,
                  subject: str,
-                 props: dict) -> None:
+                 **props: dict) -> None:
         self.df = df
         self.days_between_emails = days_between_emails
         self.violation = violation

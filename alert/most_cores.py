@@ -9,7 +9,7 @@ class MostCores(Alert):
      one job per user is shown."""
 
   def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-      super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+      super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
   def _filter_and_add_new_fields(self):
       # filter the dataframe
@@ -21,12 +21,13 @@ class MostCores(Alert):
       self.gp = self.gp.sort_values("cores", ascending=False)[:10]
       self.gp = self.gp.rename(columns={"elapsed-hours":"hours"})
       self.gp.state = self.gp.state.apply(lambda x: JOBSTATES[x])
-      self.gp["CPU-eff"] = self.gp.apply(lambda row:
-                                         cpu_efficiency(row["admincomment"],
-                                                        row["elapsedraw"],
-                                                        row["jobid"],
-                                                        row["cluster"], single=True)
-                                         if row["admincomment"] != {} else "--", axis="columns")
+      self.gp["CPU-eff-tpl"] = self.gp.apply(lambda row:
+                                             cpu_efficiency(row["admincomment"],
+                                                            row["elapsedraw"],
+                                                            row["jobid"],
+                                                            row["cluster"], single=True)
+                                         if row["admincomment"] != {} else ("--", 0), axis="columns")
+      self.gp["CPU-eff"] = self.gp["CPU-eff-tpl"].apply(lambda tpl: tpl[0])
       self.gp["CPU-eff"] = self.gp["CPU-eff"].apply(lambda x: x if x == "--" else f"{round(x)}%")
       cols = ["jobid", "netid", "cluster", "cores", "nodes", "gpus",
               "state", "partition", "hours", "CPU-eff"]

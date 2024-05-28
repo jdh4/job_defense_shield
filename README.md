@@ -5,48 +5,232 @@
 
 # Job Defense Shield
 
-The software in this repo creates a report of problem users and problem jobs on the large Research Computing clusters. The software identifies the following:
+The software in this repository can be used to send automated email alerts to users that are underutilizing the cluster resources. It can also be used for generating reports for administrators. The software identifies the following:
 
 + actively running jobs where a GPU has zero utilization  
-+ the heaviest users with low CPU or GPU utilization  
-+ jobs that use the datascience nodes but do not need them  
-+ jobs that could have been run on MIG GPUs instead of full A100 GPUs  
-+ multinode CPU jobs where one or more nodes have zero utilization  
-+ users with excessive run time limits  
-+ jobs with CPU or GPU fragmentation (e.g., 1 GPU per node over 4 nodes)  
++ the top users by usage with low CPU or GPU utilization  
++ jobs that request more than the default CPU memory but do not use it
++ serial jobs that allocate multiple CPU-cores
++ multinode CPU jobs where one or more nodes have zero utilization
++ jobs with CPU or GPU fragmentation (e.g., 1 GPU per node over 4 nodes)
++ users with excessive run time limits    
 + jobs with the most CPU-cores and jobs with the most GPUs  
-+ pending jobs with the longest queue times  
-+ jobs that request more than the default memory but do not use it  
++ pending jobs with the longest queue times
++ jobs that use special nodes but do not need them
++ jobs that could have been run on MIG GPUs instead of full GPUs (e.g., H100)  
 
-The script does not identify:
-+ abuses of file storage or I/O  
-+ problems with jobs or users on Adroit
+New alerts are easy to write. Simply start from an existing alert and modify it.
 
-## How to run
+## Installation
+
+The requirements are:
+
+- Python 3.7 or above  
+- Pandas  
+- jobstats (if looking to send emails about actively running jobs)
+
+The jobstats module depends on `requests` and, optionally, `blessed`.
+
+#### Conda
+
+A Conda environment can be created in this way:
 
 ```
-$ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --days=7 --email --excessive-time -M della -r cpu
+$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
+```
 
-$ ./job_defense_shield.py --email \
-                          --days=3 \
-                          --zero-gpu-utilization \
-                          --files /tigress/jdh4/utilities/job_defense_shield/violations
+One can store the environment in a specific location by creating this file before running the command above:
+
+```
+$ cat /home/jdh4/.condarc
+envs_dirs:
+- /home/jdh4/bin
+```
+
+The Python executable will then be available here:
+
+```
+/home/jdh4/bin/jds-env/bin/python
+```
+
+After the environment is made, one can remove or modify the `.condarc` file so that future installs go elsewhere. If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
+
+#### Package Manager
+
+One can also do something like:
+
+```
+$ apt-get install python3-pandas python3-requests python3-yaml python3-blessed
+```
+
+## Editing the Configuration File
+
+```
+$ cat config.yaml
+%YAML 1.1
+---
+############################
+## LOW CPU/GPU EFFICIENCY ##
+############################
+low-xpu-efficiency-della-cpu:
+  cluster: della
+  cluster_name: "Della (cpu)"
+  partitions:
+    - cpu
+  xpu: cpu
+  eff_thres_pct: 60
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+low-xpu-efficiency-della-gpu:
+  cluster: della
+  cluster_name: "Della (gpu)"
+  partitions:
+    - gpu
+  xpu: gpu
+  eff_thres_pct: 15
+  proportion_thres_pct: 2
+  num_top_users: 15
+  excluded_users:
+    - aturing
+    - einstein
+
+#######################
+## EXCESS CPU MEMORY ##
+#######################
+excess-cpu-memory-della-cpu:
+  tb_hours_per_day: 10
+  ratio_threshold: 0.35
+  mean_ratio_threshold: 0.35
+  median_ratio_threshold: 0.35
+  num_top_users: 10
+  clusters:
+    - della
+  partition:
+    - cpu
+  combine_partitions: False
+  cores_per_node: 28
+  excluded_users:
+    - aturing
+    - einstein
+
+#########################
+## SHOULD BE USING MIG ##
+#########################
+should-be-using-mig-della-gpu:
+  cluster: della
+  partition: gpu
+  excluded_users:
+    - aturing
+    - einstein
+```
+
+Note that the name of each alert is important (i.e., "should-be-using-mig" must be in the name of the alert).
+
+
+## How to Use
+
+To get started, look at the help menu:
+
+```
+$ git clone https://github.com/jdh4/job_defense_shield.git
+$ cd job_defense_shield
+$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --help
+```
+
+Here are some specific examples:
+
+```
+$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --zero-gpu-utilization \
+                                                          --email \
+                                                          --days=7 \
+                                                          --files /tigress/jdh4/utilities/job_defense_shield/violations
                           
-$ ./job_defense_shield.py --email \
-                          --watch \
-                          --zero-gpu-utilization \
-                          --low-xpu-efficiencies \ 
-                          --datascience \
-                          --gpu-fragmentation                          
+$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
+                                                          --watch \
+                                                          --zero-gpu-utilization \
+                                                          --low-xpu-efficiencies \ 
+                                                          --datascience \
+                                                          --gpu-fragmentation                          
 ```
 
-## Which users are ignoring the automated emails?
+## cron
+
+The following is an example cron entry:
+
+```
+SHELL=/bin/bash
+MAILTO=jdh4@princeton.edu
+JDS=/tigress/jdh4/utilities/job_defense_shield
+PY="/home/jdh4/bin/jds-env/bin/python -uB"
+CFG=/tigress/jdh4/utilities/job_defense_shield/config.yaml
+
+15  15 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excess-cpu-memory -M della -r cpu --num-top-users=5 > ${JDS}/log/excess_memory.log 2>&1
+20  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --low-xpu-efficiency   > ${JDS}/log/low_efficiency.log 2>&1
+26  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=3  --email --zero-cpu-utilization > ${JDS}/log/zero_cpu.log 2>&1
+29  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=10 --email --mig -M della -r gpu  > ${JDS}/log/mig.log 2>&1
+10  10 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --serial-using-multiple -M della -r cpu > ${JDS}/log/serial_using_multiple.log 2>&1
+40  11 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --excessive-time -M della -r cpu > ${JDS}/log/excessive_time.log 2>&1
+30  13 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=7  --email --cpu-fragmentation > ${JDS}/log/cpu_fragmentation.log 2>&1
+ 0  14 * * 1-5 ${PY} ${JDS}/job_defense_shield.py --config-file=${CFG} --days=5  --email --gpu-fragmentation > ${JDS}/log/gpu_fragmentation.log 2>&1
+ 0 */4 * * *   ${JDS}/job_defense_shield.py --days=1  --active-cpu-memory -M della -r cpu --email > ${JDS}/log/active_cpu_memory.log 2>&1
+15  15 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --excess-cpu-memory --hard-warning-cpu-memory -M della -r cpu --num-top-users=5 --email > ${JDS}/log/excess_memory.log 2>&1
+20   9 * * 1-5 ${JDS}/job_defense_shield.py --days=7  --datascience -M della -r datascience  --email > ${JDS}/log/datascience.log 2>&1
+15   9 * * 1-5 /home/jdh4/bin/cluster_report.sh
+```
+
+## Cancelling Jobs with 0% GPU Utilization
+
+We do this by running the software on a node that is dedicated to Slurm for a given cluster. The code must be ran as a priviledged user in order to cancel jobs.
+
+Here is an example configuration file:
+
+```
+%YAML 1.1
+---
+zero-gpu-utilization-della-gpu:
+  first_warning_minutes: 60
+  second_warning_minutes: 105
+  cancel_minutes: 120
+  sampling_period_minutes: 15
+  min_previous_warnings: 1
+  max_interactive_hours: 8
+  jobids_file: "/var/spool/slurm/job_defense_shield/jobids.txt"
+  clusters:
+    - della
+  partition:
+    - gpu
+  excluded_users:
+    - aturing
+    - einstein
+  emails:
+    - jdh4@princeton.edu
+```
+
+Here is an example cron entry:
+
+```
+PY=/var/spool/slurm/cancel_zero_gpu_jobs/envs/jds-env/bin
+JDS=/var/spool/slurm/job_defense_shield
+MYLOG=/var/spool/slurm/cancel_zero_gpu_jobs/log
+VIOLATION=/var/spool/slurm/job_defense_shield/violations
+MAILTO=jdh4@princeton.edu
+
+*/15 * * * * ${PY}/python -uB ${JDS}/job_defense_shield.py --zero-gpu-utilization --days=1 --email --files=${VIOLATION} -M della -r gpu > ${MYLOG}/zero_gpu_utilization.log 2>&1
+```
+
+
+## Which users have received email alerts?
 
 ```
 $ /home/jdh4/bin/jds-env/bin/python -uB /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --check --zero-gpu-utilization --days=30
 ```
 
-### Notes for developers
+
+## Notes for developers
 
 - As Slurm partitions are added and removed the script should be updated  
 - For jdh4, the git repo is /tigress/jdh4/utilities/job_defense_shield
@@ -59,18 +243,7 @@ $ pytest  --cov=. --capture=tee-sys tests
 $ pytest -s tests  # Hasling says -s to run print statements
 ```
 
-### How to use
-
-Run the commands below on a login node (e.g., tigergpu) to execute the script:
-
-```bash
-$ git clone https://github.com/jdh4/job_defense_shield.git
-$ module load anaconda3/2022.10
-$ cd job_defense_shield
-$ ./job_defense_shield.py -h
-```
-
-###  Gotchas
+Be aware of the following:
 
 1. Some Traverse jobs are CPU only
 2. Pandas:
@@ -86,60 +259,4 @@ True
 
 df["C"] = df.A.apply(round)  # this is okay
 >>>
-```
-
-## Installation
-
-The requirements are:
-
-- Python 3.7 or above  
-- Pandas  
-- jobstats (if looking to send emails about actively running jobs)  
-
-You can run the script on `tigergpu` using the `jds-bin` in `/home/jdh4/bin`. The Conda environment was create in this way:
-
-```
-[jdh4@tigergpu ~]$ cat .condarc
-envs_dirs:
-- /home/jdh4/bin
-```
-
-```
-$ module load anaconda3/2023.9
-$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
-```
-
-The above leads to the shebang line as:
-
-```
-#!/home/jdh4/bin/jds-bin/python -u -B
-```
-
-If you do not need to inspect actively running jobs then you do not need `requests` or `blessed`.
-
-## cron
-
-```
-[jdh4@tigergpu ~]$ crontab -l
-30 8 * * 1,4 /home/jdh4/bin/jds-env/bin/python -u -B /tigress/jdh4/utilities/job_defense_shield/job_defense_shield.py --email > /dev/null 2>&1
-```
-
-## convert CSV to JSON
-
-```
-import glob
-import shutil
-
-files = glob.glob("*.csv")
-
-for f in files:
-  user = f.split(".")[0]
-  print(user, f)
-  shutil.copy(f, f"{user}.email.csv")
-
-if 0:
-  for f in files:
-    with open(f) as j:
-      data = j.readlines()
-    print(data[0])
 ```

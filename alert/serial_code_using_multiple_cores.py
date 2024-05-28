@@ -13,7 +13,7 @@ class SerialCodeUsingMultipleCores(Alert):
     cpu_hours_threshold = 100
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -25,14 +25,18 @@ class SerialCodeUsingMultipleCores(Alert):
                           (self.df.admincomment != {}) &
                           (self.df["elapsed-hours"] >= 1)].copy()
         # add new fields
-        self.df["cpu-eff"] = self.df.apply(lambda row:
-                                           cpu_efficiency(row["admincomment"],
-                                                          row["elapsedraw"],
-                                                          row["jobid"],
-                                                          row["cluster"],
-                                                          single=True,
-                                                          precision=1),
-                                                          axis="columns")
+        self.df["cpu-eff-tpl"] = self.df.apply(lambda row:
+                                               cpu_efficiency(row["admincomment"],
+                                                              row["elapsedraw"],
+                                                              row["jobid"],
+                                                              row["cluster"],
+                                                              single=True,
+                                                              precision=1),
+                                                              axis="columns")
+        self.df["error-code"] = self.df["cpu-eff-tpl"].apply(lambda tpl: tpl[1]) 
+        # drop jobs with non-zero error codes
+        self.df = self.df[self.df["error-code"] == 0]
+        self.df["cpu-eff"] = self.df["cpu-eff-tpl"].apply(lambda tpl: tpl[0])
         # ignore jobs at 0% CPU-eff (also avoids division by zero later)
         self.df = self.df[self.df["cpu-eff"] >= 1]
         # max efficiency if serial is 100% / cores
