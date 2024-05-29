@@ -36,7 +36,7 @@ The jobstats module depends on `requests` and, optionally, `blessed`.
 A Conda environment can be created in this way:
 
 ```
-$ conda create --name jds-env pandas blessed requests pyyaml -c conda-forge -y
+$ conda create --name jds-env pandas pyarrow blessed requests pyyaml -c conda-forge -y
 ```
 
 One can store the environment in a specific location by creating this file before running the command above:
