@@ -142,16 +142,17 @@ class LowEfficiency(Alert):
                 usr_str = usr.drop(columns=["Cluster"]).to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
+                target = self.eff_target_pct
                 if self.xpu == "cpu":
                     s += textwrap.dedent(f"""
-                    A good target value for "Efficiency" is 90% and above. Please investigate the reason
+                    A good target value for "Efficiency" is {target}% and above. Please investigate the reason
                     for the low efficiency. Common reasons for low CPU efficiency are discussed here:
 
                          https://researchcomputing.princeton.edu/get-started/cpu-utilization
                     """)
                 elif self.xpu == "gpu":
                     s += textwrap.dedent(f"""
-                    A good target value for "Efficiency" is 50% and above. Please investigate the reason
+                    A good target value for "Efficiency" is {target}% and above. Please investigate the reason
                     for the low efficiency. Common reasons for low GPU efficiency are discussed here:
 
                          https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#low-util
@@ -173,7 +174,7 @@ class LowEfficiency(Alert):
                 Computing. Let us know if we can be of help.
                 """)
                 subject = f"Jobs with Low Efficiency on {self.cluster_name}"
-                send_email(s,   f"{user}@princeton.edu", subject=subject, sender="cses@princeton.edu")
+                send_email(s, f"{user}@princeton.edu", subject=subject, sender="cses@princeton.edu")
                 for email in self.admin_emails:
                     send_email(s, f"{email}", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)

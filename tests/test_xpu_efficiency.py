@@ -73,6 +73,7 @@ def test_low_efficiency():
                             partitions=["cpu"],
                             xpu="cpu",
                             eff_thres_pct=60,
+                            eff_target_pct=90,
                             proportion_thres_pct=2,
                             num_top_users=15,
                             excluded_users=["aturing"])

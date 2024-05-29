@@ -21,6 +21,7 @@ low-xpu-efficiency-della-cpu:
     - cpu
   xpu: cpu
   eff_thres_pct: 60
+  eff_target_pct: 90 
   proportion_thres_pct: 2
   num_top_users: 15
   excluded_users:
@@ -29,7 +30,7 @@ low-xpu-efficiency-della-cpu:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
-    - msc5@princeton.edu
+    - msbc@princeton.edu
 
 low-xpu-efficiency-della-gpu:
   cluster: della
@@ -38,6 +39,7 @@ low-xpu-efficiency-della-gpu:
     - gpu
   xpu: gpu
   eff_thres_pct: 15
+  eff_target_pct: 50 
   proportion_thres_pct: 2
   num_top_users: 15
   excluded_users:
@@ -46,15 +48,16 @@ low-xpu-efficiency-della-gpu:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
-    - msc5@princeton.edu
+    - msbc@princeton.edu
 
-low-xpu-efficiency-della-pli:
+low-xpu-efficiency-della-pli-c:
   cluster: della
   cluster_name: "Della (pli-c)"
   partitions:
     - pli-c
   xpu: gpu
-  eff_thres_pct: 15
+  eff_thres_pct: 40
+  eff_target_pct: 75
   proportion_thres_pct: 2
   num_top_users: 5
   excluded_users:
@@ -63,7 +66,27 @@ low-xpu-efficiency-della-pli:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
-    - msc5@princeton.edu
+    - kl5675@princeton.edu
+    - msbc@princeton.edu
+
+low-xpu-efficiency-della-pli:
+  cluster: della
+  cluster_name: "Della (pli)"
+  partitions:
+    - pli
+  xpu: gpu
+  eff_thres_pct: 40
+  eff_target_pct: 75
+  proportion_thres_pct: 2
+  num_top_users: 5
+  excluded_users:
+    - aturing
+    - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+    - kl5675@princeton.edu
+    - msbc@princeton.edu
 
 low-xpu-efficiency-della-physics:
   cluster: della
@@ -72,6 +95,7 @@ low-xpu-efficiency-della-physics:
     - physics
   xpu: cpu
   eff_thres_pct: 60
+  eff_target_pct: 90
   proportion_thres_pct: 2
   num_top_users: 5
   excluded_users:
@@ -80,7 +104,7 @@ low-xpu-efficiency-della-physics:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
-    - msc5@princeton.edu
+    - msbc@princeton.edu
 
 low-xpu-efficiency-stellar-intel:
   cluster: stellar
@@ -92,6 +116,7 @@ low-xpu-efficiency-stellar-intel:
     - serial
   xpu: cpu
   eff_thres_pct: 60
+  eff_target_pct: 90
   proportion_thres_pct: 2
   num_top_users: 15
   excluded_users:
@@ -100,7 +125,7 @@ low-xpu-efficiency-stellar-intel:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
-    - msc5@princeton.edu
+    - msbc@princeton.edu
 
 low-xpu-efficiency-tiger:
   cluster: tiger
@@ -111,6 +136,7 @@ low-xpu-efficiency-tiger:
     - serial
   xpu: cpu
   eff_thres_pct: 60
+  eff_target_pct: 90
   proportion_thres_pct: 2
   num_top_users: 15
   excluded_users:
@@ -119,7 +145,7 @@ low-xpu-efficiency-tiger:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
-    - msc5@princeton.edu
+    - msbc@princeton.edu
 
 
 #######################

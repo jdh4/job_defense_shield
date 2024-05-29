@@ -40,7 +40,7 @@ from alert.active_cpu_memory import ActiveCPUMemory
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
     fname = f"cache_sacct_{start_date.strftime('%Y%m%d')}.csv"
     if use_cache and os.path.exists(fname):
-        print("\nUsing cache file.\n", flush=True)
+        print(f"\n### USING CACHE FILE: {fname} ###\n", flush=True)
         rw = pd.read_csv(fname, low_memory=False)
     else:
         ymd = start_date.strftime('%Y-%m-%d')
