@@ -206,7 +206,7 @@ zero-gpu-utilization-della-gpu:
   excluded_users:
     - aturing
     - einstein
-  emails:
+  admin_emails:
     - jdh4@princeton.edu
 ```
 
