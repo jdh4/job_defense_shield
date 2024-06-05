@@ -12,6 +12,25 @@ should-be-using-mig-della-gpu:
     - einstein
 
 ############################
+## TOO MANY CORES PER GPU ##
+############################
+too-many-cores-per-gpu:
+  cluster: della
+  cluster_name: "Della (pli/pli-c)"
+  partitions:
+    - pli
+    - pli-c
+    - pli-p
+  excluded_users:
+    - aturing
+    - einstein
+  cores_per_gpu_target: 12
+  cores_per_gpu_thres: 24
+  admin_emails:
+    - halverson@princeton.edu
+
+
+############################
 ## LOW CPU/GPU EFFICIENCY ##
 ############################
 low-xpu-efficiency-della-cpu:

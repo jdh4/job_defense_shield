@@ -138,18 +138,18 @@ To get started, look at the help menu:
 ```
 $ git clone https://github.com/jdh4/job_defense_shield.git
 $ cd job_defense_shield
-$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --help
+$ /home/jdh4/bin/jds-env/bin/python job_defense_shield.py --help
 ```
 
 Here are some specific examples:
 
 ```
-$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --zero-gpu-utilization \
+$ /home/jdh4/bin/jds-env/bin/python job_defense_shield.py --zero-gpu-utilization \
                                                           --email \
                                                           --days=7 \
                                                           --files /tigress/jdh4/utilities/job_defense_shield/violations
                           
-$ /home/jdh4/bin/jds-env/bin/python/job_defense_shield.py --email \
+$ /home/jdh4/bin/jds-env/bin/python job_defense_shield.py --email \
                                                           --watch \
                                                           --zero-gpu-utilization \
                                                           --low-xpu-efficiencies \ 

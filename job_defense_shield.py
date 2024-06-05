@@ -35,6 +35,7 @@ from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
 from alert.xpu_efficiency import LowEfficiency
 from alert.active_cpu_memory import ActiveCPUMemory
+from alert.too_many_cores_per_gpu import TooManyCoresPerGpu
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -122,6 +123,8 @@ if __name__ == "__main__":
                       help='Identify users with excessive run time limits')
   parser.add_argument('--serial-using-multiple', action='store_true', default=False,
                       help='Indentify serial codes using multiple CPU-cores')
+  parser.add_argument('--too-many-cores-per-gpu', action='store_true', default=False,
+                      help='Indentify jobs using too many CPU-cores per GPU')
   parser.add_argument('--utilization-overview', action='store_true', default=False,
                       help='Generate a utilization report by cluster and partition')
   parser.add_argument('--utilization-by-slurm-account', action='store_true', default=False,
@@ -240,6 +243,11 @@ if __name__ == "__main__":
           show_history_of_emails_sent(args.files,
                                       "serial_using_multiple",
                                       "SERIAL CODE USING MULTIPLE CPU-CORES",
+                                      args.days)
+      if args.too_many_cores_per_gpu:
+          show_history_of_emails_sent(args.files,
+                                      "too_many_cores_per_gpu",
+                                      "TOO MANY CPU-CORES PER GPU",
                                       args.days)
       if args.excessive_time:
           show_history_of_emails_sent(args.files,
@@ -507,6 +515,23 @@ if __name__ == "__main__":
           cpu_frag.send_emails_to_users()
       title = "CPU fragmentation (1+ hours)"
       s += cpu_frag.generate_report_for_admins(title, keep_index=False)
+
+
+  ####################################
+  ## JOBS THAT SHOULD HAVE USED MIG ##
+  ####################################
+  if args.too_many_cores_per_gpu:
+      alerts = [alert for alert in cfg.keys() if "too-many-cores-per-gpu" in alert]
+      for alert in alerts:
+          cpg = TooManyCoresPerGpu(df,
+                                   days_between_emails=args.days,
+                                   violation="too_many_cores_per_gpu",
+                                   vpath=args.files,
+                                   subject="Consider Using Fewer CPU-Cores per GPU",
+                                   **cfg[alert])
+          if args.email and is_today_a_work_day():
+              cpg.send_emails_to_users()
+          s += cpg.generate_report_for_admins("Too Many Cores Per GPU")
 
   ####################################
   ## JOBS THAT SHOULD HAVE USED MIG ##
