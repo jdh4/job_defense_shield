@@ -25,7 +25,7 @@ too-many-cores-per-gpu:
     - aturing
     - einstein
   cores_per_gpu_target: 12
-  cores_per_gpu_thres: 24
+  cores_per_gpu_limit: 16
   admin_emails:
     - halverson@princeton.edu
 

@@ -18,7 +18,7 @@ class TooManyCoresPerGpu(Alert):
         self.df = self.df[(self.df.cluster == self.cluster) &
                           self.df.partition.isin(self.partitions) &
                           (self.df.gpus > 0) &
-                          (self.df.cores > self.cores_per_gpu_thres * self.df.gpus) &
+                          (self.df.cores > self.cores_per_gpu_limit * self.df.gpus) &
                           (self.df["elapsed-hours"] >= 1)].copy()
         self.df.rename(columns={"netid":"NetID"}, inplace=True)
         # add new fields
@@ -81,5 +81,4 @@ class TooManyCoresPerGpu(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
             return ""
-        else:
-            return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
