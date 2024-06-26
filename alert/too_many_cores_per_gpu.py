@@ -1,6 +1,5 @@
 import textwrap
 from base import Alert
-from efficiency import gpu_efficiency
 from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
@@ -46,31 +45,30 @@ class TooManyCoresPerGpu(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
-                edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
-                s += f"Below are jobs that ran on Della in the past {edays} days that might be using\n"
-                s +=  "more CPU-cores per GPU than necessary:\n\n"
-                s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
+                s = f"{get_first_name(user)},\n\n"
+                s += f"Your {self.cluster_name} jobs may be using more CPU-cores per GPU than necessary:\n\n"
+                usr_str = usr.to_string(index=False, justify="center").split("\n")
+                s += "\n".join([3 * " " + row for row in usr_str])
                 s += "\n"
-                s += textwrap.dedent(f"""
+                s += textwrap.dedent("""
                 Each PLI node on Della has 96 CPU-cores and 8 GPUs. If possible please try
                 to use only up to 12 CPU-cores per GPU. This will prevent the situation
-                where there are free GPUs but not enough CPU-cores to accept new jobs on a
-                given node. For instance, three jobs that each allocate 32 CPU-cores and 1
-                GPU will cause the remaining 5 GPUs on the node to be unavailable.
+                where there are free GPUs on a node but not enough CPU-cores accept new jobs.
+                For instance, three jobs that each allocate 32 CPU-cores and 1 GPU will
+                cause the remaining 5 GPUs on the node to be unavailable.
 
                 For more information about the PLI nodes on Della:
 
-                    https://researchcomputing.princeton.edu/systems/della#pli
+                   https://researchcomputing.princeton.edu/systems/della#pli
 
                 Consider attending an in-person Research Computing help session for assistance:
 
-                    https://researchcomputing.princeton.edu/support/help-sessions
+                   https://researchcomputing.princeton.edu/support/help-sessions
 
                 Replying to this automated email will open a support ticket with Research
                 Computing. Let us know if we can be of help.
                 """)
-                #send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 for email in self.admin_emails:
                     send_email(s, f"{email}", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)

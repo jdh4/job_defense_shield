@@ -11,12 +11,13 @@ should-be-using-mig-della-gpu:
     - jzp
     - einstein
 
+
 ############################
 ## TOO MANY CORES PER GPU ##
 ############################
 too-many-cores-per-gpu:
   cluster: della
-  cluster_name: "Della (pli/pli-c)"
+  cluster_name: "Della (PLI)"
   partitions:
     - pli
     - pli-c
@@ -25,9 +26,11 @@ too-many-cores-per-gpu:
     - aturing
     - einstein
   cores_per_gpu_target: 12
-  cores_per_gpu_limit: 16
+  cores_per_gpu_limit: 24
   admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
+    - kl5675@princeton.edu
 
 
 ############################
@@ -186,6 +189,9 @@ excess-cpu-memory-della-cpu:
     - aturing
     - einstein
     - vonholdt
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
 
 excess-cpu-memory-della-datascience:
   tb_hours_per_day: 10000
@@ -202,6 +208,8 @@ excess-cpu-memory-della-datascience:
   excluded_users:
     - aturing
     - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
 excess-cpu-memory-stellar:
   tb_hours_per_day: 10000
@@ -221,6 +229,8 @@ excess-cpu-memory-stellar:
   excluded_users:
     - aturing
     - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
 excess-cpu-memory-tiger:
   tb_hours_per_day: 10000
@@ -239,3 +249,5 @@ excess-cpu-memory-tiger:
   excluded_users:
     - aturing
     - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
