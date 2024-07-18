@@ -5,7 +5,7 @@
 
 # Job Defense Shield
 
-The software in this repository can be used to send automated email alerts to users that are underutilizing the cluster resources. It can also be used for generating reports for administrators. The software identifies the following:
+The software in this repository, which runs on top of the [Jobstats](https://github.com/PrincetonUniversity/jobstats) platform, can be used to send automated email alerts to users that are underutilizing the cluster resources. It can also be used for generating reports for administrators. The software identifies the following:
 
 + actively running jobs where a GPU has zero utilization  
 + the top users by usage with low CPU or GPU utilization  
