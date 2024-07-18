@@ -23,7 +23,7 @@ New alerts are easy to write. Simply start from an existing alert and modify it.
 
 ## Contact
 
-As this package is being developed, feel free to write to [halverson@princeton.edu](mailto:halverson@princeton.edu) with any comments/requests.
+As this package is being developed, feel free to write to Jonathan Halverson ([halverson@princeton.edu](mailto:halverson@princeton.edu)) with any comments/requests.
 
 ## Installation
 
