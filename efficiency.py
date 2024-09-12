@@ -15,6 +15,12 @@ def cpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
     """Return a (CPU time used, CPU time allocated, error code)-tuple for a given job.
        If single=True then return a (CPU time used / CPU time allocated, error code)-tuple.
        The error code is needed since the summary statistics (ss) may be malformed."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for cpu_efficiency:"
+            print(msg, jobid, cluster, flush=True)
+        error_code = 3
+        return (-1, error_code) if single else (-1, -1, error_code)
     total = 0
     total_used = 0
     error_code = 0
