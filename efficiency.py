@@ -176,8 +176,8 @@ def max_cpu_memory_used_per_node(ss, jobid, cluster, precision=0, verbose=True):
             error_code = 1
             return (-1, error_code)
         else:
-	    mem_per_node.append(used)
-	    if used > alloc:
+            mem_per_node.append(used)
+            if used > alloc:
                 if verbose:
                     msg = "Warning: CPU memory used > 100% in max_cpu_memory_used_per_node."
                     print(msg, jobid, cluster, total_used, total, flush=True)
