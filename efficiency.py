@@ -94,6 +94,7 @@ def cpu_memory_usage(ss, jobid, cluster, precision=0, verbose=True):
         return (-1, -1, error_code) 
     total = 0
     total_used = 0
+    error_code = 0
     for node in ss['nodes']:
         try:
             used  = ss['nodes'][node]['used_memory']
@@ -108,8 +109,9 @@ def cpu_memory_usage(ss, jobid, cluster, precision=0, verbose=True):
             total += alloc
             total_used += used
     if total_used > total:
-        print("CPU memory usage > 100%:", jobid, cluster, total_used, total, flush=True)
-    error_code = 0
+        if verbose:
+            print("CPU memory usage > 100%:", jobid, cluster, total_used, total, flush=True)
+        error_code = 3
     fac = 1024**3
     return (round(total_used / fac, precision), round(total / fac, precision), error_code)
     
