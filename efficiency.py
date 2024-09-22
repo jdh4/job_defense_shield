@@ -189,7 +189,7 @@ def max_cpu_memory_used_per_node(ss, jobid, cluster, precision=0, verbose=True):
     return (round(max(mem_per_node) / 1024**3, precision), error_code)
 
 
-def num_gpus_with_zero_util(ss):
+def num_gpus_with_zero_util(ss, jobid, cluster, verbose=True):
     """Return the number of GPUs with zero utilization. The error code is needed
        since the summary statistics (ss) may be malformed."""
     if 'nodes' not in ss:
