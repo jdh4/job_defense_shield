@@ -127,6 +127,7 @@ def gpu_memory_usage_eff_tuples(ss, jobid, cluster, precision=1, verbose=True):
         error_code = 2
         return ([], error_code)
     all_gpus = []
+    error_code = 0
     for node in ss['nodes']:
         try:
             used  = ss['nodes'][node]['gpu_used_memory']
@@ -147,10 +148,11 @@ def gpu_memory_usage_eff_tuples(ss, jobid, cluster, precision=1, verbose=True):
                 if used[g] > alloc[g]:
                     if verbose:
                         print("GPU memory > 100%:", jobid, cluster, used[g], alloc[g], flush=True)
+                    error_code = 3
                 if util[g] > 100 or util[g] < 0:
                     if verbose:
                         print("GPU util erroneous:", jobid, cluster, util[g], flush=True)
-    error_code = 0
+                    error_code = 3
     return (all_gpus, error_code)
 
 
