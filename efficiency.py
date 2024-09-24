@@ -217,7 +217,7 @@ def num_gpus_with_zero_util(ss, jobid, cluster, verbose=True):
     return (ct, error_code)
 
 
-def cpu_nodes_with_zero_util(ss, verbose=True):
+def cpu_nodes_with_zero_util(ss, jobid, cluster, verbose=True):
     """Return the number of nodes with zero CPU utilization. The error code is needed
        since the summary statistics (ss) may be malformed."""
     if 'nodes' not in ss:
@@ -226,17 +226,17 @@ def cpu_nodes_with_zero_util(ss, verbose=True):
             print(msg, jobid, cluster, flush=True)
         error_code = 2
         return (-1, error_code)
-    ct = 0
+    counter = 0
     for node in ss['nodes']:
-        try:
+        if 'total_time' in ss['nodes'][node]:
             cpu_time = ss['nodes'][node]['total_time']
-        except:
+            if float(cpu_time) == 0:
+                counter += 1
+        else:
             if verbose:
                 msg = f"total_time not found for node {node} in cpu_nodes_with_zero_util."
                 print(msg)
+            error_code = 1
             return (-1, error_code)
-        else:
-            if float(cpu_time) == 0:
-                ct += 1
     error_code = 0
-    return (ct, error_code)
+    return (counter, error_code)
