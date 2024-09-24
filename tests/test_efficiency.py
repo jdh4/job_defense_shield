@@ -180,3 +180,29 @@ def test_num_gpus_with_zero_util():
     actual = num_gpus_with_zero_util(ss, 12345, "c1")
     expected = (2, 0)
     assert actual == expected
+
+
+def test_malformed_num_cpu_nodes_with_zero_util():
+    # empty summary statistics
+    ss = {}
+    assert cpu_nodes_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 2)
+    # missing total_time key
+    ss = {"nodes":{"node1":{"cpus": 8}}}
+    assert cpu_nodes_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 1)
+
+
+def test_num_cpu_nodes_with_zero_util():
+    # one node
+    ss = {"nodes":{"node1":{"total_time": 100}}}
+    assert cpu_nodes_with_zero_util(ss, 12345, "c1") == (0, 0)
+    # one node
+    ss = {"nodes":{"node1":{"total_time": 0, "cpus": 8}}}
+    assert cpu_nodes_with_zero_util(ss, 12345, "c1") == (1, 0)
+    # two nodes
+    ss = {"nodes":{"node1":{"total_time": 100},
+                   "node2":{"total_time": 0},
+                   "node3":{"total_time": 0},
+                   "node4":{"total_time": 100}}}
+    actual = cpu_nodes_with_zero_util(ss, 12345, "c1")
+    expected = (2, 0)
+    assert actual == expected
