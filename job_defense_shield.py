@@ -56,6 +56,8 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
         rw = pd.DataFrame([line.split("|")[:len(cols)] for line in lines])
         rw.columns = cols
         rw.rename(columns=renamings, inplace=True)
+        rw = rw[pd.notna(rw.elapsedraw)]
+        rw = rw[rw.elapsedraw.str.isnumeric()]
         rw[numeric_fields] = rw[numeric_fields].apply(pd.to_numeric)
         if use_cache: rw.to_csv(fname, index=False)
     return rw

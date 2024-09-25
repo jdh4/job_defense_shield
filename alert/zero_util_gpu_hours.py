@@ -1,5 +1,7 @@
 import textwrap
 import pandas as pd
+
+import utils
 from base import Alert
 from utils import SECONDS_PER_HOUR
 from utils import get_first_name
@@ -23,9 +25,14 @@ class ZeroUtilGPUHours(Alert):
                           (self.df.admincomment != {}) &
                           (self.df["elapsedraw"] >= SECONDS_PER_HOUR)].copy()
         self.gp = pd.DataFrame({"NetID":[]})
+        self.admin = pd.DataFrame()
+        x = utils.HOURS_PER_DAY
         # add new fields
         if not self.df.empty:
-            self.df["GPUs-Unused"] = self.df.admincomment.apply(num_gpus_with_zero_util)
+            self.df["GPUs-Unused-tuple"] = self.df.admincomment.apply(num_gpus_with_zero_util)
+            self.df["GPUs-Unused"]     = self.df["GPUs-Unused-tuple"].apply(lambda tpl: tpl[0])
+            self.df["GPUs-Unused-err"] = self.df["GPUs-Unused-tuple"].apply(lambda tpl: tpl[1])
+            self.df = self.df[self.df["GPUs-Unused-err"] == 0]
             self.df = self.df[self.df["GPUs-Unused"] > 0]
             self.df["Zero-Util-GPU-Hours"] = self.df["GPUs-Unused"] * self.df["elapsedraw"] / SECONDS_PER_HOUR
             self.df["GPU-Unused-Util"] = "0%"

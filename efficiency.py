@@ -15,6 +15,12 @@ def cpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
     """Return a (CPU time used, CPU time allocated, error code)-tuple for a given job.
        If single=True then return a (CPU time used / CPU time allocated, error code)-tuple.
        The error code is needed since the summary statistics (ss) may be malformed."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for cpu_efficiency."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 3
+        return (-1, error_code) if single else (-1, -1, error_code)
     total = 0
     total_used = 0
     error_code = 0
@@ -24,7 +30,7 @@ def cpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
             cores = ss['nodes'][node]['cpus']
         except:
             if verbose:
-                msg = "Warning: JSON probably missing keys in cpu_efficiency:"
+                msg = "Warning: JSON probably missing keys in cpu_efficiency."
                 print(msg, jobid, cluster, flush=True)
             error_code = 1
             return (-1, error_code) if single else (-1, -1, error_code)
@@ -46,6 +52,12 @@ def gpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
     """Return a (GPU time used, GPU time allocated, error code)-tuple for a given job.
        If single=True then return a (GPU time used / GPU time allocated, error code)-tuple.
        The error code is needed since the summary statistics (ss) may be malformed."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for gpu_efficiency."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 3
+        return (-1, error_code) if single else (-1, -1, error_code)
     total = 0
     total_used = 0
     error_code = 0
@@ -54,7 +66,7 @@ def gpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
             gpus = list(ss['nodes'][node]['gpu_utilization'].keys())
         except:
             if verbose:
-                msg = "Warning: probably missing keys in gpu_efficiency:"
+                msg = "Warning: probably missing keys in gpu_efficiency."
                 print(msg, jobid, cluster, flush=True)
             error_code = 1
             return (-1, error_code) if single else (-1, -1, error_code)
@@ -66,85 +78,165 @@ def gpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
     if total_used > total:
         error_code = 2
         if verbose:
-            msg = "Warning: total_used > total in gpu_efficiency:"
+            msg = "Warning: total_used > total in gpu_efficiency."
             print(msg, jobid, cluster, total_used, total, flush=True)
     if single:
         return (round(100 * total_used / total, precision), error_code)
     return (total_used, total, error_code)
 
 
-def gpu_memory_usage_eff_tuples(d, jobid, cluster, precision=1):
-  all_gpus = []
-  for node in d['nodes']:
-    try:
-      used  = d['nodes'][node]['gpu_used_memory']
-      alloc = d['nodes'][node]['gpu_total_memory']
-      util  = d['nodes'][node]['gpu_utilization']
-    except:
-      print("GPU memory trouble:", jobid, cluster, flush=True)
-      return [(0, 0, 0)]
-    else:
-      assert sorted(list(used.keys())) == sorted(list(alloc.keys())), "keys do not match"
-      for g in used.keys():
-        all_gpus.append((round(used[g] / 1024**3, precision), round(alloc[g] / 1024**3, precision), float(util[g])))
-        if used[g] > alloc[g]: print("GPU memory:", jobid, cluster, used[g], alloc[g], flush=True)
-        if util[g] > 100 or util[g] < 0: print("GPU util:", jobid, cluster, util[g], flush=True)
-  return all_gpus
+def cpu_memory_usage(ss, jobid, cluster, precision=0, verbose=True):
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for cpu_memory_usage."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 2
+        return (-1, -1, error_code) 
+    total = 0
+    total_used = 0
+    error_code = 0
+    for node in ss['nodes']:
+        try:
+            used  = ss['nodes'][node]['used_memory']
+            alloc = ss['nodes'][node]['total_memory']
+        except:
+            if verbose:
+                msg = "Warning: used_memory or total_memory not in ss for cpu_memory_usage."
+                print(msg, jobid, cluster, flush=True)
+            error_code = 1
+            return (-1, -1, error_code)
+        else:
+            total += alloc
+            total_used += used
+    if total_used > total:
+        if verbose:
+            print("CPU memory usage > 100%:", jobid, cluster, total_used, total, flush=True)
+        error_code = 3
+    fac = 1024**3
+    return (round(total_used / fac, precision), round(total / fac, precision), error_code)
+    
 
-def cpu_memory_usage(d, jobid, cluster, precision=0):
-  total = 0
-  total_used = 0
-  for node in d['nodes']:
-    try:
-      used  = d['nodes'][node]['used_memory']
-      alloc = d['nodes'][node]['total_memory']
-    except:
-      print("used_memory not found")
-      return (0, 0)
-    else:
-      total += alloc
-      total_used += used
-  if total_used > total: print("CPU memory:", jobid, cluster, total_used, total, flush=True)
-  return (round(total_used / 1024**3, precision), round(total / 1024**3, precision))
+def gpu_memory_usage_eff_tuples(ss, jobid, cluster, precision=1, verbose=True):
+    """Return a list of tuples for each GPU of the job. Each tuple contains the
+       memory used, memory allocated, and GPU utilization. An error code is
+       added at the end."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for gpu_memory_usage_eff_tuples."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 2
+        return ([], error_code)
+    all_gpus = []
+    error_code = 0
+    for node in ss['nodes']:
+        try:
+            used  = ss['nodes'][node]['gpu_used_memory']
+            alloc = ss['nodes'][node]['gpu_total_memory']
+            util  = ss['nodes'][node]['gpu_utilization']
+        except:
+            if verbose:
+                msg = "Warning: missing key in ss[nodes][node] for gpu_memory_usage_eff_tuples."
+                print(msg, jobid, cluster, flush=True)
+            error_code = 1
+            return ([], error_code)
+        else:
+            assert sorted(list(used.keys())) == sorted(list(alloc.keys())), "keys do not match"
+            for g in used.keys():
+                all_gpus.append((round(used[g] / 1024**3, precision),
+                                 round(alloc[g] / 1024**3, precision),
+                                 float(util[g])))
+                if used[g] > alloc[g]:
+                    if verbose:
+                        print("GPU memory > 100%:", jobid, cluster, used[g], alloc[g], flush=True)
+                    error_code = 3
+                if util[g] > 100 or util[g] < 0:
+                    if verbose:
+                        print("GPU util erroneous:", jobid, cluster, util[g], flush=True)
+                    error_code = 3
+    return (all_gpus, error_code)
 
-def max_cpu_memory_used_per_node(d, jobid, cluster, precision=0):
-  total = 0
-  total_used = 0
-  mem_per_node = []
-  for node in d['nodes']:
-    try:
-      used  = d['nodes'][node]['used_memory']
-      alloc = d['nodes'][node]['total_memory']
-    except:
-      print("used_memory not found")
-      return (0, 0)
-    else:
-      mem_per_node.append(used)
-    if used > alloc: print("CPU memory:", jobid, cluster, total_used, total, flush=True)
-  return round(max(mem_per_node) / 1024**3, precision)
 
-def num_gpus_with_zero_util(d):
-  ct = 0
-  for node in d['nodes']:
-    try:
-      gpus = list(d['nodes'][node]['gpu_utilization'].keys())
-    except:
-      print(f"gpu_utilization not found: node is {node}")
-      return 0
-    else:
-      for gpu in gpus:
-        util = d['nodes'][node]['gpu_utilization'][gpu]
-        if float(util) == 0: ct += 1
-  return ct
+def max_cpu_memory_used_per_node(ss, jobid, cluster, precision=0, verbose=True):
+    """Return the maximum of the used memory per node. The error code is needed
+       since the summary statistics (ss) may be malformed."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for max_cpu_memory_used_per_node."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 2
+        return (-1, error_code)
+    total = 0
+    total_used = 0
+    error_code = 0
+    mem_per_node = []
+    for node in ss['nodes']:
+        try:
+            used  = ss['nodes'][node]['used_memory']
+            alloc = ss['nodes'][node]['total_memory']
+        except:
+            if verbose:
+                msg = "Warning: used_memory or total_memory not in ss for max_cpu_memory_used_per_node."
+                print(msg, jobid, cluster, flush=True)
+            error_code = 1
+            return (-1, error_code)
+        else:
+            mem_per_node.append(used)
+            if used > alloc:
+                if verbose:
+                    msg = "Warning: CPU memory used > 100% in max_cpu_memory_used_per_node."
+                    print(msg, jobid, cluster, total_used, total, flush=True)
+                error_code = 3
+    return (round(max(mem_per_node) / 1024**3, precision), error_code)
 
-def cpu_nodes_with_zero_util(d):
+
+def num_gpus_with_zero_util(ss, jobid, cluster, verbose=True):
+    """Return the number of GPUs with zero utilization. The error code is needed
+       since the summary statistics (ss) may be malformed."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for num_gpus_with_zero_util."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 2
+        return (-1, error_code) 
     ct = 0
-    for node in d['nodes']:
-      try:
-        cpu_time = d['nodes'][node]['total_time']
-      except:
-        print("total_time not found")
-        return 0
-      else:
-        if float(cpu_time) == 0: ct += 1
-    return ct
+    for node in ss['nodes']:
+        try:
+            gpus = list(ss['nodes'][node]['gpu_utilization'].keys())
+        except:
+            if verbose:
+                msg = f"gpu_utilization not found: node is {node} for max_cpu_memory_used_per_node."
+                print(msg, jobid, cluster, flush=True)
+            error_code = 1
+            return (-1, error_code)
+        else:
+            for gpu in gpus:
+                util = ss['nodes'][node]['gpu_utilization'][gpu]
+                if float(util) == 0:
+                    ct += 1
+    error_code = 0
+    return (ct, error_code)
+
+
+def cpu_nodes_with_zero_util(ss, jobid, cluster, verbose=True):
+    """Return the number of nodes with zero CPU utilization. The error code is needed
+       since the summary statistics (ss) may be malformed."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not in ss for cpu_nodes_with_zero_util."
+            print(msg, jobid, cluster, flush=True)
+        error_code = 2
+        return (-1, error_code)
+    counter = 0
+    for node in ss['nodes']:
+        if 'total_time' in ss['nodes'][node]:
+            cpu_time = ss['nodes'][node]['total_time']
+            if float(cpu_time) == 0:
+                counter += 1
+        else:
+            if verbose:
+                msg = f"total_time not found for node {node} in cpu_nodes_with_zero_util."
+                print(msg)
+            error_code = 1
+            return (-1, error_code)
+    error_code = 0
+    return (counter, error_code)
