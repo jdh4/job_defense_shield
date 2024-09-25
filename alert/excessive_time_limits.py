@@ -83,7 +83,7 @@ class ExcessiveTimeLimits(Alert):
                 s += f"Below are {case} that ran on Della ({xpu.upper()}) in the past {edays} days:\n\n"
                 s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
                 s += "\n"
-                unused_hours = usr[f"{xpu.upper()}-Hours-Unused"].values[0]
+                unused_hours = str(round(usr[f"{xpu.upper()}-Hours-Unused"].values[0]))
                 s += textwrap.dedent(f"""
                 It appears that you are requesting too much time for your jobs since you are
                 only using on average {usr['mean(%)'].values[0]}% of the allocated time (for the {total_jobs} jobs). This has
@@ -97,7 +97,8 @@ class ExcessiveTimeLimits(Alert):
                     #SBATCH --time=10:00:00
 
                 The value above includes an extra 20% for safety. This is important because jobs
-                that exceed the run time limit are killed. A good target for Percent-Used is 80%.
+                that exceed the run time limit are automatically canceled. A good target for
+                Percent-Used is 80%.
 
                 Time-Used is the time (wallclock) that the job needed. The total time allocated
                 for the job is Time-Allocated. The format is DD-HH:MM:SS where DD is days,

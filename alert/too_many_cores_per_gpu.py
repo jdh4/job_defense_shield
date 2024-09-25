@@ -53,9 +53,9 @@ class TooManyCoresPerGpu(Alert):
                 s += textwrap.dedent("""
                 Each PLI node on Della has 96 CPU-cores and 8 GPUs. If possible please try
                 to use only up to 12 CPU-cores per GPU. This will prevent the situation
-                where there are free GPUs on a node but not enough CPU-cores accept new jobs.
-                For instance, three jobs that each allocate 32 CPU-cores and 1 GPU will
-                cause the remaining 5 GPUs on the node to be unavailable.
+                where there are free GPUs on a node but not enough CPU-cores to accept new
+                jobs. For instance, three jobs that each allocate 32 CPU-cores and 1 GPU
+                will cause the remaining 5 GPUs on the node to be unavailable.
 
                 For more information about the PLI nodes on Della:
 

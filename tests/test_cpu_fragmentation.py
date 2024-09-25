@@ -206,6 +206,7 @@ def test_zero_cpu_utilization():
                        "jobname":["myjob"] * n_jobs,
                        "nodes":[12, 5, 4, 2, 4],
                        "cores":[96, 50, 256, 60, 64],
+                       "qos":["myqos"] * n_jobs,
                        "state":["COMPLETED"] * n_jobs,
                        "gpu-job":[0] * n_jobs,
                        "partition":["cpu", "cpu", "pu", "pppl", "cpu"],

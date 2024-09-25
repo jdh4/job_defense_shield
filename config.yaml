@@ -119,7 +119,7 @@ low-xpu-efficiency-della-physics:
   eff_thres_pct: 60
   eff_target_pct: 90
   proportion_thres_pct: 2
-  num_top_users: 5
+  num_top_users: 3
   excluded_users:
     - aturing
     - einstein

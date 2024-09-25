@@ -68,12 +68,13 @@ class MultinodeCPUFragmentation(Alert):
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df["elapsed-hours"] >= 1) &
+        self.df = self.df[(self.df["elapsed-hours"] >= 1.1) &
                           (self.df["admincomment"] != {}) &
                           (self.df.nodes > 1) &
                           (self.df["gpu-job"] == 0) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df.partition.isin(["all", "cpu", "ext", "physics", "pppl", "pu"])) &
+                          (~self.df.qos.isin(["stellar-debug"])) &
                           (self.df.cluster.isin(["della", "stellar", "tiger"]))].copy()
         # add new fields
         if not self.df.empty:
