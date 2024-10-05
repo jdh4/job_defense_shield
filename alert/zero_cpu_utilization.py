@@ -1,4 +1,5 @@
 import textwrap
+import pandas as pd
 from base import Alert
 from utils import get_first_name
 from utils import send_email
@@ -22,8 +23,14 @@ class ZeroCPU(Alert):
                           (self.df["elapsed-hours"] >= 1)].copy()
         # add new fields
         if not self.df.empty:
-            self.df["nodes-unused"] = self.df.admincomment.apply(cpu_nodes_with_zero_util)
-            self.df = self.df[self.df["nodes-unused"] > 0]
+            self.df["nodes-tuple"] = self.df.apply(lambda row:
+                                     cpu_nodes_with_zero_util(row["admincomment"],
+                                                              row["jobid"],
+                                                              row["cluster"]),
+                                                              axis="columns")
+            cols = ["nodes-unused", "error_code"]
+            self.df[cols] = pd.DataFrame(self.df["nodes-tuple"].tolist(), index=self.df.index)
+            self.df = self.df[(self.df["error_code"] == 0) & (self.df["nodes-unused"] > 0)]
             def is_interactive(jobname):
                 if jobname.startswith("sys/dashboard") or jobname.startswith("interactive"):
                     return True

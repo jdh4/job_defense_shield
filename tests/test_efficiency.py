@@ -4,6 +4,7 @@ from efficiency import gpu_efficiency
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
 from efficiency import num_gpus_with_zero_util
+from efficiency import cpu_nodes_with_zero_util
 import numpy as np
 
 

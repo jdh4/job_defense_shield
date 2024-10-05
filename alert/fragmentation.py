@@ -1,5 +1,6 @@
 import math
 import textwrap
+import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
 from efficiency import cpu_nodes_with_zero_util
@@ -78,8 +79,14 @@ class MultinodeCPUFragmentation(Alert):
                           (self.df.cluster.isin(["della", "stellar", "tiger"]))].copy()
         # add new fields
         if not self.df.empty:
-            self.df["nodes-unused"] = self.df.admincomment.apply(cpu_nodes_with_zero_util)
-            self.df = self.df[self.df["nodes-unused"] == 0]
+            self.df["nodes-tuple"] = self.df.apply(lambda row:
+                                     cpu_nodes_with_zero_util(row["admincomment"],
+                                                              row["jobid"],
+                                                              row["cluster"]),
+                                                              axis="columns")
+            cols = ["nodes-unused", "error_code"]
+            self.df[cols] = pd.DataFrame(self.df["nodes-tuple"].tolist(), index=self.df.index)
+            self.df = self.df[(self.df["error_code"] == 0) & (self.df["nodes-unused"] == 0)]
             self.df["cores-per-node"] = self.df["cores"] / self.df["nodes"]
             self.df["cores-per-node"] = self.df["cores-per-node"].apply(lambda x: round(x, 1))
             self.df["memory-tuple"] = self.df.apply(lambda row:
@@ -87,8 +94,9 @@ class MultinodeCPUFragmentation(Alert):
                                                                      row["jobid"],
                                                                      row["cluster"]),
                                                                      axis="columns")
-            self.df["memory-used"]  = self.df["memory-tuple"].apply(lambda x: x[0])
-            self.df["memory-alloc"] = self.df["memory-tuple"].apply(lambda x: x[1])
+            cols = ["memory-used", "memory-alloc", "error_code"]
+            self.df[cols] = pd.DataFrame(self.df["memory-tuple"].tolist(), index=self.df.index)
+            self.df = self.df[self.df["error_code"] == 0]
             self.df["memory-per-node-used"] = self.df["memory-used"] / self.df["nodes"]
             self.df["memory-per-node-used"] = self.df["memory-per-node-used"].apply(round)
             self.df = self.df[self.df.apply(lambda row:

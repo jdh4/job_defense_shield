@@ -1,4 +1,5 @@
 import textwrap
+import pandas as pd
 from base import Alert
 from utils import add_dividers
 from utils import get_first_name
@@ -26,21 +27,25 @@ class MultiInstanceGPU(Alert):
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= 1)].copy()
         # add new fields
-        self.df["gpu-memused-memalloc-eff"] = self.df.apply(lambda row:
-                                              gpu_memory_usage_eff_tuples(row["admincomment"],
-                                                                          row["jobid"],
-                                                                          row["cluster"]),
-                                                                          axis="columns")
-        # next two lines are valid since only one GPU per job
-        self.df["GPU-Mem-Used"]  = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][0])
-        self.df["GPU-Util"]      = self.df["gpu-memused-memalloc-eff"].apply(lambda x: x[0][2])
-        # add CPU memory usage
-        self.df["cpu-memused-memalloc"] = self.df.apply(lambda row:
-                                          cpu_memory_usage(row["admincomment"],
+        self.df["gpu-tuple"] = self.df.apply(lambda row:
+                               gpu_memory_usage_eff_tuples(row["admincomment"],
                                                            row["jobid"],
                                                            row["cluster"]),
                                                            axis="columns")
-        self.df["CPU-Mem-Used"] = self.df["cpu-memused-memalloc"].apply(lambda x: x[0])
+        self.df["error_code"] = self.df["gpu-tuple"].apply(lambda x: x[1])
+        self.df = self.df[self.df["error_code"] == 0]
+        # next two lines are valid since only one GPU per job
+        self.df["GPU-Mem-Used"] = self.df["gpu-tuple"].apply(lambda tpl: tpl[0][0][0])
+        self.df["GPU-Util"]     = self.df["gpu-tuple"].apply(lambda tpl: tpl[0][0][2])
+        # add CPU memory usage
+        self.df["memory-tuple"] = self.df.apply(lambda row:
+                                  cpu_memory_usage(row["admincomment"],
+                                                   row["jobid"],
+                                                   row["cluster"]),
+                                                   axis="columns")
+        cols = ["CPU-Mem-Used", "mem-alloc", "error_code"]
+        self.df[cols] = pd.DataFrame(self.df["memory-tuple"].tolist(), index=self.df.index)
+        self.df = self.df[self.df["error_code"] == 0]
         # find jobs that could have used mig
         gpu_eff_threshold = 15 # percent
         gpu_mem_threshold = 10 # GB

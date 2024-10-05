@@ -42,23 +42,23 @@ class LowEfficiency(Alert):
             return pd.DataFrame()
         self.ce = self.ce.merge(self.pr, how="left", on="netid")
         if self.xpu == "cpu":
-            self.ce[f"{self.xpu}-tuples"] = self.ce.apply(lambda row:
-                                                          cpu_efficiency(row["admincomment"],
-                                                                         row["elapsedraw"],
-                                                                         row["jobid"],
-                                                                         row["cluster"]),
-                                                                         axis="columns")
+            self.ce[f"{self.xpu}-tuple"] = self.ce.apply(lambda row:
+                                                         cpu_efficiency(row["admincomment"],
+                                                                        row["elapsedraw"],
+                                                                        row["jobid"],
+                                                                        row["cluster"]),
+                                                                        axis="columns")
         else:
-            self.ce[f"{self.xpu}-tuples"] = self.ce.apply(lambda row:
-                                                          gpu_efficiency(row["admincomment"],
-                                                                         row["elapsedraw"],
-                                                                         row["jobid"],
-                                                                         row["cluster"]),
-                                                                         axis="columns")
-        self.ce[f"{self.xpu}-seconds-used"]  = self.ce[f"{self.xpu}-tuples"].apply(lambda x: x[0])
-        self.ce[f"{self.xpu}-seconds-total"] = self.ce[f"{self.xpu}-tuples"].apply(lambda x: x[1])
-        self.ce[f"{self.xpu}-error-code"]    = self.ce[f"{self.xpu}-tuples"].apply(lambda x: x[2])
-        # keep jobs with error code of zero
+            self.ce[f"{self.xpu}-tuple"] = self.ce.apply(lambda row:
+                                                         gpu_efficiency(row["admincomment"],
+                                                                        row["elapsedraw"],
+                                                                        row["jobid"],
+                                                                        row["cluster"]),
+                                                                        axis="columns")
+        cols = [f"{self.xpu}-seconds-used",
+                f"{self.xpu}-seconds-total",
+                f"{self.xpu}-error-code"]
+        self.ce[cols] = pd.DataFrame(self.ce[f"{self.xpu}-tuple"].tolist(), index=self.ce.index)
         self.ce = self.ce[self.ce[f"{self.xpu}-error-code"] == 0]
         self.ce["interactive"] = self.ce["jobname"].apply(lambda x:
                                                           1 if x.startswith("sys/dashboard") or

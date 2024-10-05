@@ -94,8 +94,9 @@ class ActiveCPUMemory(Alert):
                                                                      row["jobid"],
                                                                      row["cluster"]),
                                                                      axis="columns")
-            self.df["mem-used"]  = self.df["memory-tuple"].apply(lambda x: x[0])
-            self.df["mem-alloc"] = self.df["memory-tuple"].apply(lambda x: x[1])
+            cols = ["mem-used", "mem-alloc", "error_code"]
+            self.df[cols] = pd.DataFrame(self.df["memory-tuple"].tolist(), index=self.df.index)
+            self.df = self.df[self.df["error_code"] == 0]
             # next line guards against division by zero when computing self.df.ratio
             self.df = self.df[self.df["mem-alloc"] >= 50]
             self.df["GB-per-core"] = self.df["mem-alloc"] / self.df["cores"]
