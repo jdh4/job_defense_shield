@@ -3,6 +3,7 @@ from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
+from efficiency import max_cpu_memory_used_per_node
 from efficiency import num_gpus_with_zero_util
 from efficiency import cpu_nodes_with_zero_util
 import numpy as np
@@ -183,6 +184,36 @@ def test_num_gpus_with_zero_util():
     assert actual == expected
 
 
+def test_malformed_max_cpu_memory_used_per_node():
+    # empty summary statistics
+    ss = {}
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (-1, 2)
+    # missing "used_memory" key
+    ss = {"nodes":{"node1":{"cpus": 8, "total_memory": 100 * 1024**3}}}
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (-1, 1)
+    # used greater than total
+    ss = {"nodes":{"node1":{"cpus": 8,
+                            "used_memory": 100 * 1024**3,
+                            "total_memory": 42 * 1024**3}}}
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (100.0, 3)
+
+
+def test_max_cpu_memory_used_per_node():
+    # single node
+    ss = {"nodes":{"node1":{"cpus": 8,
+                            "used_memory": 42 * 1024**3,
+                            "total_memory": 100 * 1024**3}}}
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (42.0, 0)
+    # multiple nodes
+    ss = {"nodes":{"node1":{"cpus": 8,
+                            "used_memory": 42 * 1024**3,
+                            "total_memory": 100 * 1024**3},
+                   "node2":{"cpus": 8,
+                            "used_memory": 43 * 1024**3,
+                            "total_memory": 100 * 1024**3}}}
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (43.0, 0)
+
+
 def test_malformed_num_cpu_nodes_with_zero_util():
     # empty summary statistics
     ss = {}
@@ -199,7 +230,7 @@ def test_num_cpu_nodes_with_zero_util():
     # one node
     ss = {"nodes":{"node1":{"total_time": 0, "cpus": 8}}}
     assert cpu_nodes_with_zero_util(ss, 12345, "c1") == (1, 0)
-    # two nodes
+    # four nodes
     ss = {"nodes":{"node1":{"total_time": 100},
                    "node2":{"total_time": 0},
                    "node3":{"total_time": 0},
