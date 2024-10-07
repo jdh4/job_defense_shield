@@ -137,12 +137,13 @@ def get_first_name(netid: str, formal: bool=False) -> str:
                 return f"Dear {full_name.split()[0]}" if formal else f"Hi {full_name.split()[0]}"
     return "Hello"
 
-def send_email(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
+def send_email(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu"):
   """Send an email in HTML to the user."""
   msg = MIMEMultipart('alternative')
   msg['Subject'] = subject
   msg['From'] = sender
   msg['To'] = addressee
+  msg.add_header("reply-to", "cses@princeton.edu")
   text = "None"
   html = f'<html><head></head><body><font face="Courier New, Courier, monospace"><pre>{s}</pre></font></body></html>'
   part1 = MIMEText(text, 'plain'); msg.attach(part1)
@@ -152,12 +153,13 @@ def send_email(s, addressee, subject="Slurm job alerts", sender="halverson@princ
   s.quit()
   return None
 
-def send_email_cses(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
+def send_email_cses(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu"):
   """Send an email in plain text to the user."""
   msg = MIMEMultipart('alternative')
   msg['Subject'] = subject
   msg['From'] = sender
   msg['To'] = addressee
+  msg.add_header("reply-to", "cses@princeton.edu")
   text = s
   html = f'<html><head></head><body><font face="Courier New, Courier, monospace"><pre>{s}</pre></font></body></html>'
   part1 = MIMEText(text, 'plain'); msg.attach(part1)
@@ -166,7 +168,7 @@ def send_email_cses(s, addressee, subject="Slurm job alerts", sender="halverson@
   s.sendmail(sender, addressee, msg.as_string())
   s.quit()
 
-def send_email_html(s, addressee, subject="Slurm job alerts", sender="halverson@princeton.edu"):
+def send_email_html(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu"):
   """Send an email in HTML to the user. Use nested tables and styles: https://kinsta.com/blog/html-email/
      and https://www.emailvendorselection.com/create-html-email/"""
   from email.message import EmailMessage

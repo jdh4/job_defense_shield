@@ -79,8 +79,8 @@ class HardWarningCPUMemory(Alert):
                     We will be forced to prevent you from running jobs if no action is taken.
                     """)
 
-                    send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="jdh4@princeton.edu")
-                    send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                    send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}")
+                    send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}")
                     print(s)
 
                     # append the new violations to the log file
