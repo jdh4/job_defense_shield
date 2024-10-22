@@ -41,13 +41,13 @@ def test_summary_statistics():
 def test_malformed_cpu_efficiency():
     # empty summary statistics
     ss = {}
-    assert cpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (-1, -1, 3)
+    assert cpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (-1, -1, 1)
     # missing cpus key
     ss = {"nodes":{"node1":{"total_time":42}}}
-    assert cpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (-1, -1, 1)
+    assert cpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (-1, -1, 2)
     # efficiency greater than 100%
     ss = {"nodes":{"node1":{"total_time":4200, "cpus":8}}}
-    assert cpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (4200, 100 * 8, 2)
+    assert cpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (4200, 100 * 8, 3)
 
 
 def test_cpu_efficiency():
@@ -63,13 +63,13 @@ def test_cpu_efficiency():
 def test_malformed_gpu_efficiency():
     # empty summary statistics
     ss = {}
-    assert gpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (-1, -1, 3)
+    assert gpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (-1, -1, 1)
     # missing gpu_utilization key
     ss = {"nodes":{"node1":{"total_time": 42}}}
-    assert gpu_efficiency(ss, 100, 12345, "c1", single=True, verbose=False) == (-1, 1)
+    assert gpu_efficiency(ss, 100, 12345, "c1", single=True, verbose=False) == (-1, 2)
     # efficiency greather than 100%
     ss = {"nodes":{"node1":{"gpu_utilization":{0: 101}}}}
-    assert gpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (101, 100, 2)
+    assert gpu_efficiency(ss, 100, 12345, "c1", verbose=False) == (101, 100, 3)
 
 
 def test_gpu_efficiency():
@@ -86,10 +86,10 @@ def test_gpu_efficiency():
 def test_malformed_cpu_memory_usage():
     # empty summary statistics
     ss = {}
-    assert cpu_memory_usage(ss, 12345, "c1") == (-1, -1, 2)
+    assert cpu_memory_usage(ss, 12345, "c1") == (-1, -1, 1)
     # missing total_memory key
     ss = {"nodes":{"node1":{"used_memory": 42}}}
-    assert cpu_memory_usage(ss, 12345, "c1") == (-1, -1, 1)
+    assert cpu_memory_usage(ss, 12345, "c1") == (-1, -1, 2)
     # memory greater than 100%
     used = 20_000_000_000
     total = 10_000_000_000
@@ -123,11 +123,11 @@ def test_cpu_memory_usage():
 def test_malformed_gpu_memory_usage_eff_tuples():
     # empty summary statistics
     ss = {}
-    assert gpu_memory_usage_eff_tuples(ss, 12345, "c1", verbose=False) == ([], 2)
+    assert gpu_memory_usage_eff_tuples(ss, 12345, "c1", verbose=False) == ([], 1)
     # missing gpu_total_memory key
     ss = {"nodes":{"node1":{"gpu_used_memory": {1: 0},
                             "gpu_utilization": {1: 0}}}}
-    assert gpu_memory_usage_eff_tuples(ss, 12345, "c1", verbose=False) == ([], 1)
+    assert gpu_memory_usage_eff_tuples(ss, 12345, "c1", verbose=False) == ([], 2)
     # memory usage greater than 100%
     fac = 1024**3
     ss = {"nodes":{"node1":{"gpu_used_memory": {1: 81 * fac},
@@ -159,38 +159,13 @@ def test_gpu_memory_usage_eff_tuples():
     assert actual == expected
 
 
-def test_malformed_num_gpus_with_zero_util():
-    # empty summary statistics
-    ss = {}
-    assert num_gpus_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 2)
-    # missing gpu_utilization key
-    ss = {"nodes":{"node1":{"gpu_used_memory": {0: 0},
-                            "gpu_total_memory": {0: 0}}}}
-    assert num_gpus_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 1)
-
-
-def test_num_gpus_with_zero_util():
-    ss = {"nodes":{"node1":{"gpu_used_memory": {0: 0},
-                            "gpu_total_memory": {0: 0},
-                            "gpu_utilization": {0: 95}}}}
-    assert num_gpus_with_zero_util(ss, 12345, "c1") == (0, 0)
-    # three allocated gpus over two nodes
-    ss = {"nodes":{"node1":{"gpu_used_memory": {0: 0},
-                            "gpu_utilization": {0: 95}},
-                   "node2":{"gpu_used_memory": {3: 0, 4: 0},
-                            "gpu_utilization": {3: 0, 4: 0}}}}
-    actual = num_gpus_with_zero_util(ss, 12345, "c1")
-    expected = (2, 0)
-    assert actual == expected
-
-
 def test_malformed_max_cpu_memory_used_per_node():
     # empty summary statistics
     ss = {}
-    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (-1, 2)
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (-1, 1)
     # missing "used_memory" key
     ss = {"nodes":{"node1":{"cpus": 8, "total_memory": 100 * 1024**3}}}
-    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (-1, 1)
+    assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (-1, 2)
     # used greater than total
     ss = {"nodes":{"node1":{"cpus": 8,
                             "used_memory": 100 * 1024**3,
@@ -214,13 +189,38 @@ def test_max_cpu_memory_used_per_node():
     assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (43.0, 0)
 
 
+def test_malformed_num_gpus_with_zero_util():
+    # empty summary statistics
+    ss = {}
+    assert num_gpus_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 1)
+    # missing gpu_utilization key
+    ss = {"nodes":{"node1":{"gpu_used_memory": {0: 0},
+                            "gpu_total_memory": {0: 0}}}}
+    assert num_gpus_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 2)
+
+
+def test_num_gpus_with_zero_util():
+    ss = {"nodes":{"node1":{"gpu_used_memory": {0: 0},
+                            "gpu_total_memory": {0: 0},
+                            "gpu_utilization": {0: 95}}}}
+    assert num_gpus_with_zero_util(ss, 12345, "c1") == (0, 0)
+    # three allocated gpus over two nodes
+    ss = {"nodes":{"node1":{"gpu_used_memory": {0: 0},
+                            "gpu_utilization": {0: 95}},
+                   "node2":{"gpu_used_memory": {3: 0, 4: 0},
+                            "gpu_utilization": {3: 0, 4: 0}}}}
+    actual = num_gpus_with_zero_util(ss, 12345, "c1")
+    expected = (2, 0)
+    assert actual == expected
+
+
 def test_malformed_num_cpu_nodes_with_zero_util():
     # empty summary statistics
     ss = {}
-    assert cpu_nodes_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 2)
+    assert cpu_nodes_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 1)
     # missing total_time key
     ss = {"nodes":{"node1":{"cpus": 8}}}
-    assert cpu_nodes_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 1)
+    assert cpu_nodes_with_zero_util(ss, 12345, "c1", verbose=False) == (-1, 2)
 
 
 def test_num_cpu_nodes_with_zero_util():
