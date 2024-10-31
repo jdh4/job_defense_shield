@@ -90,7 +90,9 @@ class LowEfficiency(Alert):
         self.ce["eff(%)"]   =   self.ce["eff(%)"].apply(lambda x: round(x))
         self.ce["cores"]    =    self.ce["cores"].apply(lambda x: round(x, 1))
         self.ce.index += 1
-        filters = (self.ce["eff(%)"] <= self.eff_thres_pct) & (self.ce["proportion(%)"] >= self.proportion_thres_pct)
+        filters = (self.ce["eff(%)"] <= self.eff_thres_pct) & \
+                  (self.ce["proportion(%)"] >= self.proportion_thres_pct) & \
+                  (self.ce[f"{self.xpu}-hours"] >= self.absolute_thres_hours)
         self.ce["cluster"] = self.cluster
         cols = ["netid",
                 "cluster",

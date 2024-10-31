@@ -45,6 +45,7 @@ low-xpu-efficiency-della-cpu:
   eff_thres_pct: 60
   eff_target_pct: 90 
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 15
   excluded_users:
     - aturing
@@ -63,6 +64,7 @@ low-xpu-efficiency-della-gpu:
   eff_thres_pct: 15
   eff_target_pct: 50 
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 15
   excluded_users:
     - aturing
@@ -81,6 +83,7 @@ low-xpu-efficiency-della-pli-c:
   eff_thres_pct: 40
   eff_target_pct: 75
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 5
   excluded_users:
     - aturing
@@ -100,6 +103,7 @@ low-xpu-efficiency-della-pli:
   eff_thres_pct: 40
   eff_target_pct: 75
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 5
   excluded_users:
     - aturing
@@ -119,6 +123,7 @@ low-xpu-efficiency-della-physics:
   eff_thres_pct: 60
   eff_target_pct: 90
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 3
   excluded_users:
     - aturing
@@ -140,6 +145,7 @@ low-xpu-efficiency-stellar-intel:
   eff_thres_pct: 60
   eff_target_pct: 90
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 15
   excluded_users:
     - aturing
@@ -160,6 +166,7 @@ low-xpu-efficiency-tiger:
   eff_thres_pct: 60
   eff_target_pct: 90
   proportion_thres_pct: 2
+  absolute_thres_hours: 50
   num_top_users: 15
   excluded_users:
     - aturing
