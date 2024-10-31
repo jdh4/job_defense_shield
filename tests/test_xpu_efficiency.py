@@ -75,6 +75,7 @@ def test_low_efficiency():
                             eff_thres_pct=60,
                             eff_target_pct=90,
                             proportion_thres_pct=2,
+                            absolute_thres_hours=1,
                             num_top_users=15,
                             excluded_users=["aturing"])
     actual = low_eff.ce[["netid", "partition", "cpu-hours", "proportion(%)", "eff(%)", "jobs"]]
