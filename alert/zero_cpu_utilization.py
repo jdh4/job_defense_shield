@@ -18,6 +18,10 @@ class ZeroCPU(Alert):
         # filter the dataframe
         self.df = self.df[(self.df.cluster != "traverse") &
                           (self.df.partition != "gpu") &
+                          (self.df.partition != "gpu-shared") &
+                          (self.df.partition != "pli") &
+                          (self.df.partition != "pli-c") &
+                          (self.df.partition != "cryoem") &
                           (self.df.state != "RUNNING") &
                           (self.df.admincomment != {}) &
                           (self.df["elapsed-hours"] >= 1)].copy()
