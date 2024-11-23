@@ -84,7 +84,7 @@ def add_new_and_derived_fields(df):
     df["gpu-seconds"] = df["elapsedraw"] * df["gpus"]
     df["gpu-job"] = np.where((df["alloctres"].str.contains("gres/gpu=")) & (~df["alloctres"].str.contains("gres/gpu=0")), 1, 0)
     df["cpu-only-seconds"] = np.where(df["gpus"] == 0, df["cpu-seconds"], 0)
-    df["elapsed-hours"] = np.round(df["elapsedraw"] / SECONDS_PER_HOUR)
+    df["elapsed-hours"] = df["elapsedraw"] / SECONDS_PER_HOUR
     df.loc[df["start"] != "Unknown", "start-date"] = pd.to_datetime(df["start"].astype(int), unit='s').dt.strftime("%a %-m/%d")
     df["cpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["cores"] / SECONDS_PER_HOUR)
     df["gpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["gpus"] / SECONDS_PER_HOUR)
