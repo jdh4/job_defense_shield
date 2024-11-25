@@ -1,0 +1,62 @@
+site_name: "Job Defense Shield"
+site_url: https://jd4.github.io/job_defense_shield/
+repo_url: "https://github.com/jd4/job_defense_shield"
+repo_name: jdh4/job_defense_shield
+nav:
+  - Overview: index.md
+  - Installation: setup.md
+  - Alerts:
+    - Overview:             alert/overview.md
+    - Zero GPU Utilization: alert/zero_gpu_util.md
+    - Cancel 0% GPU Jobs:   alert/cancel_gpu_jobs.md
+    - Low GPU Utilization:  alert/low_gpu_util.md
+    - MIG:                  alert/mig.md
+    - Too Many CPU Nodes:   alert/cpu_fragmentation.md
+    - Custom:               alert/custom.md
+  - Reports:
+    - Overview:             reports/overview.md
+  - Contributions: contributions.md
+  - Support: support.md
+  - Publications: publications.md
+theme:
+  name: material
+  features:
+    - navigation.footer
+    - content.code.copy
+  palette:
+    # light mode
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Light mode
+      primary: red
+      accent: blue
+    # dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Dark mode
+      primary: red
+      accent: deep purple
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  # content tabs
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jdh4/job_defense_shield
+  generator: false
+
+copyright: "&copy;2024 Princeton University. All rights reserved."
