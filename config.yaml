@@ -12,6 +12,24 @@ should-be-using-mig-della-gpu:
     - einstein
 
 
+#########################
+## ZERO UTIL GPU HOURS ##
+#########################
+zero-util-gpu-hours:
+  cluster: della
+  partitions:
+    - gpu
+    - pli-c
+    - pli
+  min_run_time: 0               # minutes
+  gpu_hours_threshold_user: 24  # hours
+  max_num_jobid: 4              # count
+  user_emails_bcc:
+    - extra@institution.xyz
+  report_emails:
+    - admin@institution.xyz
+
+
 ############################
 ## TOO MANY CORES PER GPU ##
 ############################

@@ -4,6 +4,7 @@ import pandas as pd
 import utils
 from base import Alert
 from utils import SECONDS_PER_HOUR
+from utils import SECONDS_PER_MINUTE
 from utils import get_first_name
 from utils import send_email_cses
 from utils import add_dividers
@@ -15,15 +16,20 @@ class ZeroUtilGPUHours(Alert):
     """Identify users with many GPU-hours at 0% GPU utilization."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.excluded_users = []
+        self.user_emails_bcc = []
+        self.report_emails = []
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster == "della") &
-                          (self.df.partition == "gpu") &
+        self.df = self.df[(self.df.cluster == self.cluster) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.gpus > 0) &
                           (self.df.admincomment != {}) &
-                          (self.df["elapsedraw"] >= SECONDS_PER_HOUR)].copy()
+                          (~self.df.netid.isin(self.excluded_users)) &
+                          (self.df["elapsedraw"] >= self.min_run_time * SECONDS_PER_MINUTE)].copy()
+        # 60496390
         self.gp = pd.DataFrame({"NetID":[]})
         self.admin = pd.DataFrame()
         x = utils.HOURS_PER_DAY
@@ -42,13 +48,18 @@ class ZeroUtilGPUHours(Alert):
             self.df = self.df[["jobid", "netid", "gpus", "GPUs-Unused", "GPU-Unused-Util", "Zero-Util-GPU-Hours"]]
             renamings = {"jobid":"JobID", "netid":"NetID", "gpus":"GPUs"}
             self.df = self.df.rename(columns=renamings)
+            def jobid_list(series):
+                ellipsis = "+" if len(series) > self.max_num_jobid else ""
+                return ",".join(series[:self.max_num_jobid]) + ellipsis
             # for each user sum the number of GPU-hours with zero GPU utilization
-            self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":"sum", "NetID":"size"})
+            self.gp = self.df.groupby("NetID").agg({"Zero-Util-GPU-Hours":"sum",
+                                                    "NetID":"size",
+                                                    "JobID":jobid_list})
             self.gp = self.gp.rename(columns={"NetID":"Jobs"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.admin = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 25].copy()
+            self.admin = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_admin].copy()
             # apply a threshold to focus on the heaviest offenders
-            self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= 100]
+            self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_user]
             self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
     def send_emails_to_users(self):
@@ -122,6 +133,7 @@ class ZeroUtilGPUHours(Alert):
         else:
             self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
             self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
+            self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"0%-GPU-Hours"})
             self.admin.reset_index(drop=True, inplace=True)
             self.admin.index += 1
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

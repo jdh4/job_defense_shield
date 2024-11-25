@@ -365,19 +365,22 @@ if __name__ == "__main__":
           if args.email:
               zero_gpu.send_emails_to_users()
 
-  ######################### 
+  #########################
   ## ZERO UTIL GPU-HOURS ##
-  ######################### 
+  #########################
   if args.zero_util_gpu_hours:
-      zero_gpu_hours = ZeroUtilGPUHours(df,
-                             days_between_emails=args.days,
-                             violation="zero_util_gpu_hours",
-                             vpath=args.files,
-                             subject="WARNING OF ACCOUNT SUSPENSION: Underutilization of the GPUs on Della")
-      if args.email and is_today_a_work_day():
-          zero_gpu_hours.send_emails_to_users()
-      title="Zero Utilization GPU-Hours (of COMPLETED 1+ Hour Jobs)"
-      s += zero_gpu_hours.generate_report_for_admins(title)
+      alerts = [alert for alert in cfg.keys() if "zero-util-gpu-hours" in alert]
+      for alert in alerts:
+          zero_gpu_hours = ZeroUtilGPUHours(df,
+                                 days_between_emails=args.days,
+                                 violation="zero_util_gpu_hours",
+                                 vpath=args.files,
+                                 subject="GPU-hours at 0% utilization",
+                                 **cfg[alert])
+          if args.email and is_today_a_work_day():
+              zero_gpu_hours.send_emails_to_users()
+          title="Zero Utilization GPU-Hours (of COMPLETED  Jobs)"
+          s += zero_gpu_hours.generate_report_for_admins(title, keep_index=True)
 
   #######################
   ## GPU FRAGMENTATION ##

@@ -80,7 +80,7 @@ def test_zero_util_gpu_hours():
         }
     },
     "total_time": -1}
-    df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
+    df = pd.DataFrame({"jobid":["12345", "12346", "12347", "12348", "12349"],
                        "netid":["user1", "user1", "user2", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job2, job1],
                        "cluster":["della"] * n_jobs,
@@ -88,10 +88,22 @@ def test_zero_util_gpu_hours():
                        "partition":["gpu"] * n_jobs,
                        "elapsedraw":[wallclock_secs] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
-    zero = ZeroUtilGPUHours(df, 0, "", "", "Subject")
-    actual = zero.gp[["NetID", "Zero-Util-GPU-Hours", "Jobs"]]
+    zero = ZeroUtilGPUHours(df,
+                            0,
+                            "",
+                            "",
+                            "Subject",
+                            cluster="della",
+                            partitions=["gpu"],
+                            excluded_users=[],
+                            min_run_time=15,
+                            gpu_hours_threshold_user=0,
+                            gpu_hours_threshold_admin=0,
+                            max_num_jobid=3)
+    actual = zero.gp[["NetID", "Zero-Util-GPU-Hours", "Jobs", "JobID"]]
     expected = pd.DataFrame({"NetID":["user1", "user2"],
                              "Zero-Util-GPU-Hours":[(3 + 1 + 1) * wallclock_hrs,
                                                     3 * wallclock_hrs],
-                             "Jobs":[3, 1]})
+                             "Jobs":[3, 1],
+                             "JobID":["12345,12346,12348", "12349"]})
     pd.testing.assert_frame_equal(actual.reset_index(drop=True), expected)
