@@ -29,6 +29,7 @@ class MostGPUs(Alert):
                                              if row["admincomment"] != {} else ("--", 0), axis="columns")
       self.gp["GPU-eff"] = self.gp["GPU-eff-tpl"].apply(lambda tpl: tpl[0])
       self.gp["GPU-eff"] = self.gp["GPU-eff"].apply(lambda x: x if x == "--" else f"{round(x)}%")
+      self.gp["hours"] = self.gp["hours"].apply(lambda hrs: round(hrs, 1))
       cols = ["jobid", "netid", "cluster", "gpus", "nodes", "cores", "state",
               "partition", "hours", "GPU-eff"]
       self.gp = self.gp[cols]
