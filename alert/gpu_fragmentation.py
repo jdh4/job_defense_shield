@@ -64,6 +64,7 @@ class MultinodeGPUFragmentation(Alert):
                 usr = self.df[self.df.NetID == user].copy()
                 has_low_gpu_util = bool(usr[usr["GPU-eff"] < self.gpu_util_thres].shape[0])
                 usr["GPU-eff"] = usr["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
                 s =  f"{get_first_name(user)},\n\n"
                 s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"

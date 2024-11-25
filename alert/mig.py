@@ -66,7 +66,7 @@ class MultiInstanceGPU(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
-                usr["Hours"] = usr["Hours"].apply(lambda x: str(x).replace(".0", ""))
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 s =  f"{get_first_name(user)},\n\n"
                 s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
                 s +=  "\n\n"

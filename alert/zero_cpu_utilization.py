@@ -65,6 +65,7 @@ class ZeroCPU(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
                 usr.drop(columns=["NetID"], inplace=True)
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr["Nodes-Used"] = usr["Nodes"] - usr["Nodes-Unused"]
                 num_jobs = usr.shape[0]
                 all_single = bool(usr.shape[0] == usr[usr["Nodes"] == 1].shape[0])

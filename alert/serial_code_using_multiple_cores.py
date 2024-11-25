@@ -72,6 +72,7 @@ class SerialCodeUsingMultipleCores(Alert):
                 usr = self.df[self.df.NetID == user].copy()
                 cpu_hours_wasted = usr["CPU-Hours-Wasted"].sum()
                 usr = usr.drop(columns=["NetID", "cores-minus-1", "CPU-Hours-Wasted"])
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 prev_emails = self.get_emails_sent_count(user, self.violation, days=90)
                 num_disp = 15
                 total_jobs = usr.shape[0]
@@ -95,7 +96,7 @@ class SerialCodeUsingMultipleCores(Alert):
                     """)
 
                     if num_wasted_nodes > 1:
-                        s += f"\nYour jobs allocated {cpu_hours_wasted} CPU-hours that were never used. This is equivalent to\n"
+                        s += f"\nYour jobs allocated {round(cpu_hours_wasted)} CPU-hours that were never used. This is equivalent to\n"
                         s += f"making {num_wasted_nodes} nodes unavailable to all users (including yourself) for 1 week!\n"
 
                     s += textwrap.dedent(f"""

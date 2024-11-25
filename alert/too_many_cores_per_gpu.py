@@ -45,6 +45,7 @@ class TooManyCoresPerGpu(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 s = f"{get_first_name(user)},\n\n"
                 s += f"Your {self.cluster_name} jobs may be using more CPU-cores per GPU than necessary:\n\n"
                 usr_str = usr.to_string(index=False, justify="center").split("\n")
