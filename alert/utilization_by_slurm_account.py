@@ -15,12 +15,12 @@ class UtilizationBySlurmAccount(Alert):
     def _filter_and_add_new_fields(self):
         self.df = self.df[self.df["elapsedraw"] > 0].copy()
         # dataframe 1 of 2 where the results are summed over users
-        d = {"netid":lambda series: series.unique().size,
+        d = {"user":lambda series: series.unique().size,
              "cpu-hours":"sum",
              "gpu-hours":"sum"}
         self.gp = self.df.groupby(["cluster", "partition", "account"]).agg(d)
         self.gp = self.gp.reset_index()
-        self.gp = self.gp.rename(columns={"netid":"users"})
+        self.gp = self.gp.rename(columns={"user":"users"})
         self.gp = self.gp.sort_values(by=["cluster", "partition", "cpu-hours"],
                                       ascending=[True, True, False])
         cols = ["cpu-hours", "gpu-hours"]
@@ -40,7 +40,7 @@ class UtilizationBySlurmAccount(Alert):
         # dataframe 2 of 2 where the values for each user are explicit
         d = {"cpu-hours":"sum",
              "gpu-hours":"sum"}
-        self.by_user = self.df.groupby(["cluster", "partition", "account", "netid"]).agg(d)
+        self.by_user = self.df.groupby(["cluster", "partition", "account", "user"]).agg(d)
         self.by_user = self.by_user.reset_index()
         self.by_user = self.by_user.sort_values(by=["cluster", "partition", "account", "cpu-hours"],
                                                 ascending=[True, True, True, False])

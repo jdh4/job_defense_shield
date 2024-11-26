@@ -23,7 +23,7 @@ class MultinodeGPUFragmentation(Alert):
                           (self.df.nodes > 1) &
                           (self.df.nodes == self.df.gpus) &
                           (self.df["elapsed-hours"] >= 1)].copy()
-        self.df.rename(columns={"netid":"NetID"}, inplace=True)
+        self.df.rename(columns={"user":"User"}, inplace=True)
         # add new fields
         if not self.df.empty:
             self.df["GPU-eff-tpl"] = self.df.apply(lambda row:
@@ -41,7 +41,7 @@ class MultinodeGPUFragmentation(Alert):
             self.gpu_util_thres = 50
             self.df["GPUs-per-Node"] = 1
             cols = ["jobid",
-                    "NetID",
+                    "User",
                     "gpus",
                     "nodes",
                     "GPUs-per-Node",
@@ -58,10 +58,10 @@ class MultinodeGPUFragmentation(Alert):
             self.df = self.df.rename(columns=renamings)
 
     def send_emails_to_users(self):
-        for user in self.df.NetID.unique():
+        for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.NetID == user].copy()
+                usr = self.df[self.df.User == user].copy()
                 has_low_gpu_util = bool(usr[usr["GPU-eff"] < self.gpu_util_thres].shape[0])
                 usr["GPU-eff"] = usr["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))

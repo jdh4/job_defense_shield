@@ -2,7 +2,7 @@ import pandas as pd
 from alert.utilization_overview import UtilizationOverview
 
 def test_jobs_overview():
-    df = pd.DataFrame({"netid":["user1", "user2", "user3", "user1", "user5", "user4"],
+    df = pd.DataFrame({"user":["user1", "user2", "user3", "user1", "user5", "user4"],
                        "cluster":["della", "stellar", "della", "della", "traverse", "traverse"],
                        "partition":["gpu", "gpu", "mig", "cli", "all", "all"],
                        "cpu-hours":[10, 20, 10, 50, 30, 10], 

@@ -9,7 +9,7 @@ def test_jobs_overview():
     wall_secs = 36000
     secs_per_hour = 60 * 60
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user2", "user1", "user1", "user2", "user1"],
+                       "user":["user1", "user2", "user1", "user1", "user2", "user1"],
                        "cluster":["della"] * n_jobs,
                        "cores":[num_cores] * n_jobs,
                        "state":["COMPLETED", "COMPLETED", "COMPLETED", "COMPLETED", "COMPLETED", "CANCELLED"],
@@ -19,8 +19,8 @@ def test_jobs_overview():
                        "gpu-job":[0, 0, 0, 0, 0, 1],
                        "elapsedraw":[wall_secs, wall_secs, 0, wall_secs, wall_secs, wall_secs]})
     jobs = JobsOverview(df, 7, "", "", "")
-    actual = jobs.gp[["netid", "jobs", "cpu", "gpu", "COM", "CLD", "cpu-hours", "gpu-hours", "partitions"]]
-    expected = pd.DataFrame({"netid":["user1", "user2"],
+    actual = jobs.gp[["user", "jobs", "cpu", "gpu", "COM", "CLD", "cpu-hours", "gpu-hours", "partitions"]]
+    expected = pd.DataFrame({"user":["user1", "user2"],
                              "jobs":[3, 2],
                              "cpu":[2, 2],
                              "gpu":[1, 0],

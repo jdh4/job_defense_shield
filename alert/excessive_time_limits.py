@@ -21,7 +21,7 @@ class ExcessiveTimeLimits(Alert):
                           (self.df.partition == self.partition) &
                           (self.df.state == "COMPLETED") &
                           (self.df["elapsed-hours"] >= 1)].copy()
-        self.gp = pd.DataFrame({"NetID":[]})
+        self.gp = pd.DataFrame({"User":[]})
         # add new fields
         if not self.df.empty:
             xpu = "cpu"
@@ -29,10 +29,10 @@ class ExcessiveTimeLimits(Alert):
             d = {f"{xpu}-waste-hours":"sum",
                  f"{xpu}-alloc-hours":"sum",
                  f"{xpu}-hours":"sum",
-                 "netid":"size",
+                 "user":"size",
                  "partition":lambda series: ",".join(sorted(set(series))),
                  "ratio":"median"}
-            self.gp = self.df.groupby("netid").agg(d).rename(columns={"netid":"jobs", "ratio":"median(%)"})
+            self.gp = self.df.groupby("user").agg(d).rename(columns={"user":"jobs", "ratio":"median(%)"})
             self.gp = self.gp.sort_values(by=f"{xpu}-hours", ascending=False).reset_index(drop=False)
             self.gp["rank"] = self.gp.index + 1
             self.gp = self.gp.sort_values(by=f"{xpu}-waste-hours", ascending=False).reset_index(drop=False)
@@ -46,7 +46,7 @@ class ExcessiveTimeLimits(Alert):
                               (self.gp["mean(%)"] < 20) &
                               (self.gp["median(%)"] < 20) &
                               (self.gp["rank"] < 10)]
-            cols = ["netid",
+            cols = ["user",
                     f"{xpu}-waste-hours",
                     f"{xpu}-hours",
                     f"{xpu}-alloc-hours",
@@ -57,16 +57,16 @@ class ExcessiveTimeLimits(Alert):
                     "partition"]
             self.gp = self.gp[cols]
             self.gp["cluster"] = self.cluster
-            renamings = {"netid":"NetID",
+            renamings = {"user":"User",
                          f"{xpu}-waste-hours":f"{xpu.upper()}-Hours-Unused"}
             self.gp = self.gp.rename(columns=renamings)
 
     def send_emails_to_users(self):
-        for user in self.gp.NetID.unique():
+        for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.gp[self.gp.NetID == user].copy()
-                jobs = self.df[self.df.netid == user].copy()
+                usr = self.gp[self.gp.User == user].copy()
+                jobs = self.df[self.df.user == user].copy()
                 xpu = "cpu"
                 num_disp = 10
                 total_jobs = jobs.shape[0]
@@ -75,8 +75,8 @@ class ExcessiveTimeLimits(Alert):
                 jobs["Time-Used"] = jobs["elapsedraw"].apply(seconds_to_slurm_time_format)
                 jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x: seconds_to_slurm_time_format(SECONDS_PER_MINUTE * x))
                 jobs["Percent-Used"] = jobs["ratio"].apply(lambda x: f"{round(x)}%")
-                jobs = jobs[["jobid", "netid", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]].sort_values(by="jobid")
-                renamings = {"jobid":"JobID", "netid":"NetID", "cores":"CPU-Cores"}
+                jobs = jobs[["jobid", "user", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]].sort_values(by="jobid")
+                renamings = {"jobid":"JobID", "user":"User", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
                 s = f"{Greeting(user).greeting()}"

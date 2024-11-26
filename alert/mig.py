@@ -1,5 +1,4 @@
 import textwrap
-import numpy as np
 import pandas as pd
 from base import Alert
 from utils import add_dividers
@@ -23,7 +22,7 @@ class MultiInstanceGPU(Alert):
                           (self.df.cores == 1) &
                           (self.df.gpus == 1) &
                           (self.df.admincomment != {}) &
-                          (~self.df.netid.isin(self.excluded_users)) &
+                          (~self.df.user.isin(self.excluded_users)) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= 1)].copy()
         # add new fields
@@ -57,15 +56,15 @@ class MultiInstanceGPU(Alert):
         self.df["CPU-Mem-Used"] = self.df["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
         self.df["GPU-Mem-Used"] = self.df["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
         self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%" if x > 0.5 else f"{round(x, 1)}%")
-        renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "netid":"NetID"}
+        renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "user":"User"}
         self.df = self.df.rename(columns=renamings)
-        self.df = self.df[["JobID", "NetID", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
+        self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
 
     def send_emails_to_users(self):
-        for user in self.df.NetID.unique():
+        for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.NetID == user].copy()
+                usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 s = f"{Greeting(user).greeting()}"
                 s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
@@ -122,13 +121,13 @@ class MultiInstanceGPU(Alert):
         if self.df.empty:
             return ""
         else:
-            self.admin = self.df.groupby("NetID").agg({"Hours":np.sum, "NetID":np.size})
-            self.admin = self.admin.rename(columns={"NetID":"Jobs", "Hours":"Full-A100-GPU-Hours"})
+            self.admin = self.df.groupby("User").agg({"Hours":"sum", "User":"size"})
+            self.admin = self.admin.rename(columns={"User":"Jobs", "Hours":"Full-A100-GPU-Hours"})
             self.admin = self.admin.sort_values(by="Full-A100-GPU-Hours", ascending=False)
             self.admin.reset_index(drop=False, inplace=True)
             self.admin.index += 1
-            self.admin["email90"] = self.admin["NetID"].apply(lambda netid:
-                                                   self.get_emails_sent_count(netid,
+            self.admin["email90"] = self.admin["User"].apply(lambda user:
+                                                   self.get_emails_sent_count(user,
                                                                               self.violation,
                                                                               days=90))
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 from alert.fragmentation import MultinodeCPUFragmentation
 
@@ -200,7 +199,7 @@ def test_zero_cpu_utilization():
     "total_time": 21913}
 
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user1", "user2", "user3", "user2"],
+                       "user":["user1", "user1", "user2", "user3", "user2"],
                        "admincomment":[job1, job2, job3, job4, job5],
                        "cluster":["della", "della", "stellar", "stellar", "della"],
                        "jobname":["myjob"] * n_jobs,
@@ -212,8 +211,8 @@ def test_zero_cpu_utilization():
                        "partition":["cpu", "cpu", "pu", "pppl", "cpu"],
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
     cpu_frag = MultinodeCPUFragmentation(df, 0, "", "", "Subject")
-    actual = cpu_frag.df[["NetID", "cluster", "nodes", "min-nodes"]]
-    expected = pd.DataFrame({"NetID":["user1", "user1", "user2"],
+    actual = cpu_frag.df[["User", "cluster", "nodes", "min-nodes"]]
+    expected = pd.DataFrame({"User":["user1", "user1", "user2"],
                              "cluster":["della", "della", "stellar"],
                              "nodes":[12, 5, 4],
                              "min-nodes":[3, 2, 3]})

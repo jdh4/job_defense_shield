@@ -285,8 +285,7 @@ if __name__ == "__main__":
             "jobname"]  
   fields = ",".join(fields)
   assert fields.split(",")[-1] == "jobname"
-  renamings = {"user":"netid",
-               "cputimeraw":"cpu-seconds",
+  renamings = {"cputimeraw":"cpu-seconds",
                "nnodes":"nodes",
                "ncpus":"cores",
                "timelimitraw":"limit-minutes"}

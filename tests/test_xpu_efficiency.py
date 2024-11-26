@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 from alert.xpu_efficiency import LowEfficiency
 
@@ -55,7 +54,7 @@ def test_low_efficiency():
     },
     "total_time": -1}
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user1", "user1", "user2"],
+                       "user":["user1", "user1", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job4],
                        "cluster":["della"] * n_jobs,
                        "jobname":["myjob"] * n_jobs,
@@ -78,8 +77,8 @@ def test_low_efficiency():
                             absolute_thres_hours=1,
                             num_top_users=15,
                             excluded_users=["aturing"])
-    actual = low_eff.ce[["netid", "partition", "cpu-hours", "proportion(%)", "eff(%)", "jobs"]]
-    expected = pd.DataFrame({"netid":["user1"],
+    actual = low_eff.ce[["user", "partition", "cpu-hours", "proportion(%)", "eff(%)", "jobs"]]
+    expected = pd.DataFrame({"user":["user1"],
                              "partition":["cpu"],
                              "cpu-hours":[round(3 * num_cores * wallclock_secs / 3600)],
                              "proportion(%)":[75],

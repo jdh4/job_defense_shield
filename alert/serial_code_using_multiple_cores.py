@@ -19,7 +19,7 @@ class SerialCodeUsingMultipleCores(Alert):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == "della") &
                           (self.df.partition == "cpu") &
-                          (~self.df.netid.isin(["vonholdt"])) &
+                          (~self.df.user.isin(["vonholdt"])) &
                           (self.df.nodes == 1) &
                           (self.df.cores > 1) &
                           (self.df.admincomment != {}) &
@@ -46,32 +46,32 @@ class SerialCodeUsingMultipleCores(Alert):
         self.df = self.df[(self.df["ratio"] <= 1) & (self.df["ratio"] > 0.85)]
         renamings = {"elapsed-hours":"Hours",
                      "jobid":"JobID",
-                     "netid":"NetID",
+                     "user":"User",
                      "partition":"Partition",
                      "cores":"CPU-cores",
                      "cpu-eff":"CPU-Util",
                      "inverse-cores":"100%/CPU-cores"}
         self.df = self.df.rename(columns=renamings)
         self.df = self.df[["JobID",
-                           "NetID",
+                           "User",
                            "Partition",
                            "CPU-cores",
                            "CPU-Util",
                            "100%/CPU-cores",
                            "Hours"]]
-        self.df = self.df.sort_values(by=["NetID", "JobID"])
+        self.df = self.df.sort_values(by=["User", "JobID"])
         self.df["100%/CPU-cores"] = self.df["100%/CPU-cores"].apply(lambda x: f"{x}%")
         self.df["CPU-Util"] = self.df["CPU-Util"].apply(lambda x: f"{x}%")
         self.df["cores-minus-1"] = self.df["CPU-cores"] - 1
         self.df["CPU-Hours-Wasted"] = self.df["Hours"] * self.df["cores-minus-1"]
 
     def send_emails_to_users(self):
-        for user in self.df.NetID.unique():
+        for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.NetID == user].copy()
+                usr = self.df[self.df.User == user].copy()
                 cpu_hours_wasted = usr["CPU-Hours-Wasted"].sum()
-                usr = usr.drop(columns=["NetID", "cores-minus-1", "CPU-Hours-Wasted"])
+                usr = usr.drop(columns=["User", "cores-minus-1", "CPU-Hours-Wasted"])
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 prev_emails = self.get_emails_sent_count(user, self.violation, days=90)
                 num_disp = 15
@@ -87,7 +87,7 @@ class SerialCodeUsingMultipleCores(Alert):
                     usr_str = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
                     s +=  "\n".join([4 * " " + row for row in usr_str])
                     s +=  "\n"
-                    s += textwrap.dedent(f"""
+                    s += textwrap.dedent("""
                     The CPU utilization (CPU-Util) of each job above is approximately equal to
                     100% divided by the number of allocated CPU-cores (100%/CPU-cores). This
                     suggests that you may be running a code that can only use 1 CPU-core. If this is
@@ -140,9 +140,9 @@ class SerialCodeUsingMultipleCores(Alert):
         if self.df.empty:
             return ""
         else:
-            d = {"CPU-Hours-Wasted":"sum", "NetID":"size", "CPU-cores":"mean"}
-            self.gp = self.df.groupby("NetID").agg(d)
-            self.gp = self.gp.rename(columns={"NetID":"Jobs"})
+            d = {"CPU-Hours-Wasted":"sum", "User":"size", "CPU-cores":"mean"}
+            self.gp = self.df.groupby("User").agg(d)
+            self.gp = self.gp.rename(columns={"User":"Jobs"})
             self.gp = self.gp[self.gp["CPU-Hours-Wasted"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]
             if self.gp.empty:
                 return ""
@@ -150,11 +150,11 @@ class SerialCodeUsingMultipleCores(Alert):
             self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x: round(x, 1))
             self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.gp["email90"] = self.gp.NetID.apply(lambda netid:
-                                               self.get_emails_sent_count(netid,
+            self.gp["email90"] = self.gp.User.apply(lambda user:
+                                               self.get_emails_sent_count(user,
                                                                           self.violation,
                                                                           days=90))
-            self.gp = self.gp[["NetID", "CPU-Hours-Wasted", "AvgCores", "Jobs", "email90"]]
+            self.gp = self.gp[["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "email90"]]
             self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1

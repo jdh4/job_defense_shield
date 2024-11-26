@@ -67,7 +67,7 @@ def test_mig():
         "total_time": 42151.20111846924
     }
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user1", "user2", "user1", "user2"],
+                       "user":["user1", "user1", "user2", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job2, job1],
                        "cluster":["della"] * n_jobs,
                        "cores":[1] * n_jobs,
@@ -83,8 +83,8 @@ def test_mig():
                            cluster="della",
                            partition="gpu",
                            excluded_users=["aturing"])
-    actual = mig.df[["NetID", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
-    expected = pd.DataFrame({"NetID":["user1", "user2", "user1"],
+    actual = mig.df[["User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
+    expected = pd.DataFrame({"User":["user1", "user2", "user1"],
                              "GPU-Util":["9%", "6%", "9%"],
                              "GPU-Mem-Used":["7 GB", "5 GB", "7 GB"],
                              "CPU-Mem-Used":["4 GB", "4 GB", "4 GB"],

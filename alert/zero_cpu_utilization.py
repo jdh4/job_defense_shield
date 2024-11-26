@@ -42,7 +42,7 @@ class ZeroCPU(Alert):
             self.df["interactive"] = self.df["jobname"].apply(is_interactive)
             self.df["CPU-Util-Unused"] = "0%"
             cols = ["jobid",
-                    "netid",
+                    "user",
                     "cluster",
                     "nodes",
                     "nodes-unused",
@@ -51,7 +51,7 @@ class ZeroCPU(Alert):
                     "elapsed-hours"]
             self.df = self.df[cols]
             renamings = {"jobid":"JobID",
-                         "netid":"NetID",
+                         "user":"User",
                          "cluster":"Cluster",
                          "nodes":"Nodes",
                          "nodes-unused":"Nodes-Unused",
@@ -60,11 +60,11 @@ class ZeroCPU(Alert):
             self.df = self.df.rename(columns=renamings)
 
     def send_emails_to_users(self):
-        for user in self.df.NetID.unique():
+        for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.NetID == user].copy()
-                usr.drop(columns=["NetID"], inplace=True)
+                usr = self.df[self.df.User == user].copy()
+                usr.drop(columns=["User"], inplace=True)
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr["Nodes-Used"] = usr["Nodes"] - usr["Nodes-Unused"]
                 num_jobs = usr.shape[0]
@@ -136,5 +136,5 @@ class ZeroCPU(Alert):
         if self.df.empty:
             return ""
         else:
-            self.df = self.df.sort_values(["NetID", "JobID"]) 
+            self.df = self.df.sort_values(["User", "JobID"]) 
             return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

@@ -107,10 +107,10 @@ class ActiveCPUMemory(Alert):
             self.admin = self.df.copy()
 
     def send_emails_to_users(self):
-        for user in self.df.netid.unique():
+        for user in self.df.user.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.netid == user].copy()
+                usr = self.df[self.df.user == user].copy()
                 mem_used = float(usr['mem-used'].values[0])
                 cores = int(usr['cores'].values[0])
                 usr["mem-used"]  =  usr["mem-used"].apply(lambda x: f'{str(x).replace(".0", "")} GB')
@@ -189,7 +189,7 @@ class ActiveCPUMemory(Alert):
             return ""
         else:
             cols = ["jobid",
-                    "netid",
+                    "user",
                     "cluster",
                     "partition",
                     "mem-alloc",

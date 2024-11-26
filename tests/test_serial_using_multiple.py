@@ -49,7 +49,7 @@ def test_serial_using_multiple_cores():
     },
     "total_time": -1}
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user1", "user2", "user1", "user2"],
+                       "user":["user1", "user1", "user2", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job2, job1],
                        "cluster":["della"] * n_jobs,
                        "nodes":[1] * n_jobs,
@@ -63,8 +63,8 @@ def test_serial_using_multiple_cores():
                                     16 * wallclock_hrs,
                                     32 * wallclock_hrs]})
     serial = SerialCodeUsingMultipleCores(df, 0, "", "", "Subject")
-    actual = serial.df[["NetID", "CPU-cores", "100%/CPU-cores", "CPU-Util", "Hours"]]
-    expected = pd.DataFrame({"NetID":["user1", "user1", "user1", "user2"],
+    actual = serial.df[["User", "CPU-cores", "100%/CPU-cores", "CPU-Util", "Hours"]]
+    expected = pd.DataFrame({"User":["user1", "user1", "user1", "user2"],
                              "CPU-cores":[32, 16, 16, 32],
                              "100%/CPU-cores":["3.1%", "6.2%", "6.2%", "3.1%"],
                              "CPU-Util":["3.1%", "6.2%", "6.2%", "3.1%"],

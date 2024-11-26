@@ -12,11 +12,11 @@ class UtilizationOverview(Alert):
     def _filter_and_add_new_fields(self):
         def compute_utilization(fields: list, simple: bool=True):
             """Aggregate the data based on fields."""
-            d = {"netid":lambda series: series.unique().size,
+            d = {"user":lambda series: series.unique().size,
                  "cpu-hours":"sum",
                  "gpu-hours":"sum"}
             gp = self.df.groupby(fields).agg(d)
-            gp = gp.rename(columns={"netid":"users"})
+            gp = gp.rename(columns={"user":"users"})
             gp = gp.reset_index().sort_values(by=["cluster", "cpu-hours"],
                                               ascending=[True, False])
             cols = ["cpu-hours", "gpu-hours"]

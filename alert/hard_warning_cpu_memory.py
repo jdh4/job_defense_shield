@@ -51,7 +51,7 @@ class HardWarningCPUMemory(Alert):
                     #s += 'The data associated with this email is shown below:\n\n'
                     s += f'Over the past {dt.days+1} days you were sent {num_warnings} emails with the subject "Requesting Too\n'
                     s += 'Much CPU Memory". The data associated with these emails is shown below:\n\n'
-                    cols = ["NetID",
+                    cols = ["User",
                             "cluster",
                             "partition",
                             "mem-hrs-unused",
@@ -84,7 +84,7 @@ class HardWarningCPUMemory(Alert):
                     print(s)
 
                     # append the new violations to the log file
-                    usr = pd.DataFrame({"netid":[user],
+                    usr = pd.DataFrame({"user":[user],
                                         "tb_hours_unused":[tb_hrs_unused],
                                         "tb_hours_used":[tb_hrs_used],
                                         "num_warnings":[num_warnings]})

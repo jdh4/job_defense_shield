@@ -112,15 +112,15 @@ class MultinodeCPUFragmentation(Alert):
                                                                        row["cores"],
                                                                        row["memory-per-node-used"]),
                                                                        axis="columns")
-            self.df = self.df.sort_values(["cluster", "netid"], ascending=[True, False])
+            self.df = self.df.sort_values(["cluster", "user"], ascending=[True, False])
             self.df = self.df[self.df["min-nodes"] < self.df["nodes"]]
             self.df["memory-per-node-used"] = self.df["memory-per-node-used"].apply(lambda x: f"{x} GB")
             self.df["cores-per-node"] = self.df["cores-per-node"].apply(lambda x: str(x).replace(".0", ""))
-            self.df = self.df.rename(columns={"netid":"NetID",
+            self.df = self.df.rename(columns={"user":"User",
                                               "elapsed-hours":"hours",
                                               "memory-per-node-used":"mem-per-node-used"})
             cols = ["jobid",
-                    "NetID",
+                    "User",
                     "cluster",
                     "partition",
                     "nodes",
@@ -132,7 +132,7 @@ class MultinodeCPUFragmentation(Alert):
             self.df = self.df[cols]
 
     def send_emails_to_users(self):
-        for user in self.df.NetID.unique():
+        for user in self.df.User.unique():
 
 
             if user == "martirez": continue  # EXCLUDED USER--HANDLE VIA CONFIG FILE
@@ -141,9 +141,8 @@ class MultinodeCPUFragmentation(Alert):
 
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.NetID == user].copy()
+                usr = self.df[self.df.User == user].copy()
                 renamings = {"jobid":"JobID",
-                             "netid":"NetID",
                              "cluster":"Cluster",
                              "nodes":"Nodes",
                              "mem-per-node-used":"Mem-per-Node",
@@ -165,7 +164,7 @@ class MultinodeCPUFragmentation(Alert):
                 s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
                 s += "than necessary:"
                 s += "\n\n"
-                usr = usr.drop(columns=["NetID", "partition", "cores"])
+                usr = usr.drop(columns=["User", "partition", "cores"])
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([4 * " " + row for row in usr_str.split("\n")])

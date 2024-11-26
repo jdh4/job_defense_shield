@@ -43,7 +43,7 @@ class ZeroGpuUtilization(Alert):
                           (self.df.elapsedraw >= lower) &
                           (self.df.elapsedraw <  upper) &
                           (self.df["limit-minutes"] > self.cancel_minutes) &
-                          (~self.df.netid.isin(self.excluded_users))].copy()
+                          (~self.df.user.isin(self.excluded_users))].copy()
         # read cache of jobs that are known to be using the gpus
         pre_approved = []
         if os.path.isfile(self.jobids_file):
@@ -51,7 +51,7 @@ class ZeroGpuUtilization(Alert):
                 jobs_using_gpus = pickle.load(fp)
             pre_approved = self.jb[self.jb.jobid.isin(jobs_using_gpus)].jobid.tolist()
             self.jb = self.jb[~self.jb.jobid.isin(jobs_using_gpus)]
-        self.jb.rename(columns={"netid":"NetID"}, inplace=True)
+        self.jb.rename(columns={"user":"User"}, inplace=True)
         if not self.jb.empty:
             self.jb["jobstats"] = self.jb.apply(lambda row:
                                                 ZeroGpuUtilization.get_stats_for_running_job(row["jobid"],
@@ -71,19 +71,19 @@ class ZeroGpuUtilization(Alert):
             self.jb["salloc"] = self.jb["jobname"].apply(lambda x: True if x.startswith("interactive") else False)
             msk = self.jb["interactive"] & (self.jb.gpus == 1) & (self.jb["limit-minutes"] <= self.max_interactive_hours * MINUTES_PER_HOUR)
             self.jb = self.jb[~msk]
-            self.jb = self.jb[["jobid", "NetID", "cluster", "partition", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
+            self.jb = self.jb[["jobid", "User", "cluster", "partition", "gpus", "GPUs-Unused", "elapsedraw", "salloc"]]
             renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster", "partition":"Partition"}
             self.jb.rename(columns=renamings, inplace=True)
 
     def send_emails_to_users(self):
-        for user in self.jb.NetID.unique():
+        for user in self.jb.User.unique():
             emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization", days=10000)
             #################
             # first warning #
             #################
             upper = (self.first_warning_minutes + self.sampling_period_minutes) * SECONDS_PER_MINUTE
             usr = self.jb[(self.jb.elapsedraw < upper) &
-                          (self.jb.NetID == user)].copy()
+                          (self.jb.User == user)].copy()
             if not usr.empty:
                 s = f"{Greeting(user).greeting()}"
                 text = (
@@ -94,7 +94,7 @@ class ZeroGpuUtilization(Alert):
 
                 usr["GPU-Util"] = "0%"
                 usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-                usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
+                usr.drop(columns=["User", "elapsedraw", "salloc"], inplace=True)
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
@@ -147,8 +147,7 @@ class ZeroGpuUtilization(Alert):
             upper = (self.second_warning_minutes + self.sampling_period_minutes) * SECONDS_PER_MINUTE
             usr = self.jb[(self.jb.elapsedraw >= lower) &
                           (self.jb.elapsedraw <  upper) &
-                          (self.jb.NetID == user)].copy()
-            print(usr)
+                          (self.jb.User == user)].copy()
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
                 s = f"{Greeting(user).greeting()}"
                 text = (
@@ -159,7 +158,7 @@ class ZeroGpuUtilization(Alert):
 
                 usr["GPU-Util"] = "0%"
                 usr["Hours"] = usr.elapsedraw.apply(lambda x: round(x / SECONDS_PER_HOUR, 1))
-                usr.drop(columns=["NetID", "elapsedraw", "salloc"], inplace=True)
+                usr.drop(columns=["User", "elapsedraw", "salloc"], inplace=True)
 
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
@@ -176,7 +175,7 @@ class ZeroGpuUtilization(Alert):
             # cancel jobs #
             ###############
             lower = self.cancel_minutes * SECONDS_PER_MINUTE
-            usr = self.jb[(self.jb.elapsedraw >= lower) & (self.jb.NetID == user)].copy()
+            usr = self.jb[(self.jb.elapsedraw >= lower) & (self.jb.User == user)].copy()
             print(usr)
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
                 s = f"{Greeting(user).greeting()}"
