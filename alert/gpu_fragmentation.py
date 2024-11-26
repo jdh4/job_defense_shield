@@ -1,10 +1,10 @@
 import textwrap
 from base import Alert
 from efficiency import gpu_efficiency
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 from utils import JOBSTATES
+from greeting import Greeting
 
 
 class MultinodeGPUFragmentation(Alert):
@@ -64,8 +64,9 @@ class MultinodeGPUFragmentation(Alert):
                 usr = self.df[self.df.NetID == user].copy()
                 has_low_gpu_util = bool(usr[usr["GPU-eff"] < self.gpu_util_thres].shape[0])
                 usr["GPU-eff"] = usr["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
                 s +=  "over multiple nodes:\n\n"
                 s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
@@ -74,7 +75,7 @@ class MultinodeGPUFragmentation(Alert):
                     s += f"There is at least one job above with a GPU efficiency of less than {self.gpu_util_thres}%. In these\n"
                     s +=  "cases please consider using only 1 GPU per job to improve the efficiency."
                 s += "\n"
-                s += textwrap.dedent(f"""
+                s += textwrap.dedent("""
                 The GPU nodes on Della have either 2 GPUs per node or 4 GPUs per node. For future
                 jobs, please try to use as few nodes as possible by allocating more GPUs per node.
                 This is done by modifying the --gres Slurm directive as explained here:

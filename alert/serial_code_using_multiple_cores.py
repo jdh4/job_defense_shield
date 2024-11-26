@@ -1,9 +1,9 @@
 import textwrap
 from base import Alert
 from utils import add_dividers
-from utils import get_first_name
 from utils import send_email
 from efficiency import cpu_efficiency
+from greeting import Greeting
 
 
 class SerialCodeUsingMultipleCores(Alert):
@@ -72,6 +72,7 @@ class SerialCodeUsingMultipleCores(Alert):
                 usr = self.df[self.df.NetID == user].copy()
                 cpu_hours_wasted = usr["CPU-Hours-Wasted"].sum()
                 usr = usr.drop(columns=["NetID", "cores-minus-1", "CPU-Hours-Wasted"])
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 prev_emails = self.get_emails_sent_count(user, self.violation, days=90)
                 num_disp = 15
                 total_jobs = usr.shape[0]
@@ -80,7 +81,7 @@ class SerialCodeUsingMultipleCores(Alert):
                 hours_per_week = 24 * 7
                 num_wasted_nodes = round(cpu_hours_wasted / cores_per_node / hours_per_week)
                 if cpu_hours_wasted >= SerialCodeUsingMultipleCores.cpu_hours_threshold:
-                    s =  f"{get_first_name(user)},\n\n"
+                    s = f"{Greeting(user).greeting()}"
                     s += f"Below are {case} that ran on Della (cpu) in the past {self.days_between_emails} days:"
                     s +=  "\n\n"
                     usr_str = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
@@ -95,7 +96,7 @@ class SerialCodeUsingMultipleCores(Alert):
                     """)
 
                     if num_wasted_nodes > 1:
-                        s += f"\nYour jobs allocated {cpu_hours_wasted} CPU-hours that were never used. This is equivalent to\n"
+                        s += f"\nYour jobs allocated {round(cpu_hours_wasted)} CPU-hours that were never used. This is equivalent to\n"
                         s += f"making {num_wasted_nodes} nodes unavailable to all users (including yourself) for 1 week!\n"
 
                     s += textwrap.dedent(f"""

@@ -1,10 +1,10 @@
 import textwrap
 import pandas as pd
 from base import Alert
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 from efficiency import cpu_nodes_with_zero_util
+from greeting import Greeting
 
 
 class ZeroCPU(Alert):
@@ -65,6 +65,7 @@ class ZeroCPU(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
                 usr.drop(columns=["NetID"], inplace=True)
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr["Nodes-Used"] = usr["Nodes"] - usr["Nodes-Unused"]
                 num_jobs = usr.shape[0]
                 all_single = bool(usr.shape[0] == usr[usr["Nodes"] == 1].shape[0])
@@ -73,7 +74,7 @@ class ZeroCPU(Alert):
                 usr.drop(columns=["Nodes-Used"], inplace=True)
                 if num_jobs == 1 and all_single:
                     continue
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are your recent jobs that did not use all of the allocated nodes:\n\n"
                 usr_str = usr.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])

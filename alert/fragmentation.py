@@ -4,9 +4,9 @@ import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
 from efficiency import cpu_nodes_with_zero_util
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
+from greeting import Greeting
 
 
 class MultinodeCPUFragmentation(Alert):
@@ -161,15 +161,16 @@ class MultinodeCPUFragmentation(Alert):
                 all_not_physics = bool(della[della.partition != "physics"].shape[0] == della.shape[0])
                 max_cores = usr["cores"].max()
                 edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
                 s += "than necessary:"
                 s += "\n\n"
                 usr = usr.drop(columns=["NetID", "partition", "cores"])
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([4 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
-                s += textwrap.dedent(f"""
+                s += textwrap.dedent("""
                 The "Nodes" column shows the number of nodes used to run the job. The
                 "Nodes-Needed" column shows the minimum number of nodes needed to run the
                 job (these values are calculated based on the number of requested CPU-cores

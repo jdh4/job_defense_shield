@@ -1,12 +1,12 @@
 import textwrap
+import numpy as np
 import pandas as pd
 from base import Alert
 from utils import add_dividers
-from utils import get_first_name
 from utils import send_email
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
-import numpy as np
+from greeting import Greeting
 
 
 class MultiInstanceGPU(Alert):
@@ -66,13 +66,13 @@ class MultiInstanceGPU(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
-                usr["Hours"] = usr["Hours"].apply(lambda x: str(x).replace(".0", ""))
-                s =  f"{get_first_name(user)},\n\n"
+                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
                 s +=  "\n\n"
                 s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
                 s +=  "\n"
-                s += textwrap.dedent(f"""
+                s += textwrap.dedent("""
                 The jobs above have a low GPU utilization and they use less than 10 GB of GPU
                 memory and less than 32 GB of CPU memory. Such jobs could be run on the MIG
                 GPUs. A MIG GPU has 1/7th the performance and memory of an A100. To run on a

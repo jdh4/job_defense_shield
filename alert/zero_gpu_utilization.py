@@ -7,10 +7,9 @@ from base import Alert
 from utils import SECONDS_PER_MINUTE
 from utils import SECONDS_PER_HOUR
 from utils import MINUTES_PER_HOUR
-from utils import get_first_name
 from utils import send_email
 from efficiency import num_gpus_with_zero_util
-
+from greeting import Greeting
 
 class ZeroGpuUtilization(Alert):
 
@@ -86,7 +85,7 @@ class ZeroGpuUtilization(Alert):
             usr = self.jb[(self.jb.elapsedraw < upper) &
                           (self.jb.NetID == user)].copy()
             if not usr.empty:
-                s = f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 text = (
                 'You have GPU job(s) that have been running for more than 1 hour but appear to not be using the GPU(s):'
                 )
@@ -109,7 +108,7 @@ class ZeroGpuUtilization(Alert):
 
                 s += "\n"
                 text = (
-                f'Please consider cancelling the job(s) listed above by using the "scancel" command:'
+                'Please consider cancelling the job(s) listed above by using the "scancel" command:'
                 )
                 s += "\n".join(textwrap.wrap(text, width=80))
                 s += "\n\n"
@@ -151,7 +150,7 @@ class ZeroGpuUtilization(Alert):
                           (self.jb.NetID == user)].copy()
             print(usr)
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
-                s = f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 text = (
                 'This is a second warning. The jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
                 )
@@ -180,7 +179,7 @@ class ZeroGpuUtilization(Alert):
             usr = self.jb[(self.jb.elapsedraw >= lower) & (self.jb.NetID == user)].copy()
             print(usr)
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
-                s = f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 text = (
                 'The jobs below have been cancelled because they ran for at least 2 hours at 0% GPU utilization:'
                 )
@@ -207,7 +206,7 @@ class ZeroGpuUtilization(Alert):
                 """)
                 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                for email in admin_self.emails: 
+                for email in self.admin_emails:
                     send_email(s, f"{email}", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 

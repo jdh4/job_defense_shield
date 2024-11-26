@@ -29,6 +29,7 @@ class MostCores(Alert):
                                          if row["admincomment"] != {} else ("--", 0), axis="columns")
       self.gp["CPU-eff"] = self.gp["CPU-eff-tpl"].apply(lambda tpl: tpl[0])
       self.gp["CPU-eff"] = self.gp["CPU-eff"].apply(lambda x: x if x == "--" else f"{round(x)}%")
+      self.gp["hours"] = self.gp["hours"].apply(lambda hrs: round(hrs, 1))
       cols = ["jobid", "netid", "cluster", "cores", "nodes", "gpus",
               "state", "partition", "hours", "CPU-eff"]
       self.gp = self.gp[cols]

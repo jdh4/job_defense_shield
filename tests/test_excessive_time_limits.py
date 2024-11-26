@@ -1,12 +1,5 @@
-import pytest
 import pandas as pd
 from alert.excessive_time_limits import ExcessiveTimeLimits
-
-@pytest.fixture(autouse=True)
-def setUp():
-    print()
-    print("setUp")
-    print("tearDown")
 
 def test_excessive_time_limits():
     n_jobs = 6

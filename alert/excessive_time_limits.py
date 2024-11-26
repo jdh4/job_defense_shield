@@ -3,9 +3,9 @@ import pandas as pd
 from base import Alert
 from utils import SECONDS_PER_MINUTE
 from utils import seconds_to_slurm_time_format
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
+from greeting import Greeting
 
 
 class ExcessiveTimeLimits(Alert):
@@ -79,7 +79,7 @@ class ExcessiveTimeLimits(Alert):
                 renamings = {"jobid":"JobID", "netid":"NetID", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are {case} that ran on Della ({xpu.upper()}) in the past {edays} days:\n\n"
                 s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
                 s += "\n"

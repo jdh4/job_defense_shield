@@ -7,7 +7,6 @@ from base import Alert
 from efficiency import cpu_memory_usage
 from utils import MINUTES_PER_HOUR
 from utils import HOURS_PER_DAY
-from utils import get_first_name
 from utils import send_email
 from utils import send_email_html
 from utils import add_dividers
@@ -128,7 +127,7 @@ class ActiveCPUMemory(Alert):
                              "cores":"Cores",
                              "elapsed-hours":"Elapsed-Hours"}
                 usr = usr[cols].rename(columns=renamings)
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += "Below are jobs currently running on Della (cpu):\n\n"
                 #usr_str = usr.to_string(index=False, justify="center")
                 #s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])

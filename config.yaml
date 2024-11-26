@@ -23,11 +23,8 @@ zero-util-gpu-hours:
     - pli
   min_run_time: 0               # minutes
   gpu_hours_threshold_user: 24  # hours
-  max_num_jobid: 4              # count
-  user_emails_bcc:
-    - extra@institution.xyz
-  report_emails:
-    - admin@institution.xyz
+  gpu_hours_threshold_admin: 0  # hours
+  max_num_jobid: 3              # count
 
 
 ############################
