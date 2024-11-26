@@ -15,8 +15,6 @@ from utils import send_email
 from utils import show_history_of_emails_sent
 
 from efficiency import get_stats_dict
-from alert.datascience import datascience_node_violators
-
 from alert.zero_gpu_utilization import ZeroGpuUtilization
 from alert.mig import MultiInstanceGPU
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
@@ -107,8 +105,6 @@ if __name__ == "__main__":
                       help='Identify users with the most zero GPU utilization hours')
   parser.add_argument('--low-xpu-efficiency', action='store_true', default=False,
                       help='Identify users with low CPU/GPU efficiency')
-  parser.add_argument('--datascience', action='store_true', default=False,
-                      help='Identify jobs that unjustly used the datascience nodes')
   parser.add_argument('--excess-cpu-memory', action='store_true', default=False,
                       help='Identify users that are allocating too much CPU memory')
   parser.add_argument('--hard-warning-cpu-memory', action='store_true', default=False,
@@ -236,11 +232,6 @@ if __name__ == "__main__":
                                       "cpu_fragmentation",
                                       "CPU FRAGMENTATION PER NODE",
                                       args.days)
-      if args.datascience:
-          show_history_of_emails_sent(args.files,
-                                      "datascience",
-                                      "DATASCIENCE",
-                                      args.days) 
       if args.serial_using_multiple:
           show_history_of_emails_sent(args.files,
                                       "serial_using_multiple",
@@ -379,8 +370,10 @@ if __name__ == "__main__":
                                  **cfg[alert])
           if args.email and is_today_a_work_day():
               zero_gpu_hours.send_emails_to_users()
-          title="Zero Utilization GPU-Hours (of COMPLETED  Jobs)"
-          s += zero_gpu_hours.generate_report_for_admins(title, keep_index=True)
+          title="Zero Utilization GPU-Hours"
+          s += zero_gpu_hours.generate_report_for_admins(title,
+                                                         start_date,
+                                                         keep_index=True)
 
   #######################
   ## GPU FRAGMENTATION ##
@@ -415,11 +408,6 @@ if __name__ == "__main__":
           title = f"{low_eff.cluster_name} efficiencies of top {low_eff.num_top_users} users (30+ minute jobs, ignoring running)"
           s += low_eff.generate_report_for_admins(title, keep_index=True)
 
-  #################
-  ## DATASCIENCE ##
-  #################
-  if args.datascience:
-      ds = datascience_node_violators(df, args.email, args.files)
 
   #######################
   ## EXCESS CPU MEMORY ##

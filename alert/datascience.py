@@ -8,9 +8,9 @@ from efficiency import cpu_memory_usage
 from utils import JOBSTATES
 from utils import SECONDS_PER_HOUR
 from utils import HOURS_PER_DAY
-from utils import get_first_name
 from utils import send_email
 from pandas.tseries.holiday import USFederalHolidayCalendar
+from greeting import Greeting
 
 def large_memory_needed(usage, account, safety=1.0):
   """Boolean function that decides if the DS node was needed."""
@@ -50,7 +50,7 @@ def datascience_node_violators(df, email, vpath):
         last_write_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
           last_write_date = datetime.fromtimestamp(os.path.getmtime(vfile))
-        s = f"{get_first_name(netid)},\n\n"
+        s = f"{Greeting(netid).greeting()}"
         usr["memory-used"]  = usr["memory-used"].apply(lambda x: f"{x} GB")
         usr["memory-alloc"] = usr["memory-alloc"].apply(lambda x: f"{x} GB")
         max_mem = "380 GB" if is_physics else "190 GB"

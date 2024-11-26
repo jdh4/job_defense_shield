@@ -1,3 +1,4 @@
+from datetime import datetime
 import textwrap
 import pandas as pd
 import utils
@@ -108,7 +109,7 @@ class ZeroUtilGPUHours(Alert):
                 # append the new violations to the log file
                 Alert.update_violation_log(usr, vfile)
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, title: str, start_date, keep_index: bool=False) -> str:
         if self.admin.empty:
             return ""
         else:
@@ -117,4 +118,13 @@ class ZeroUtilGPUHours(Alert):
             self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"0%-GPU-Hours"})
             self.admin.reset_index(drop=True, inplace=True)
             self.admin.index += 1
-            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+            post  = f"                  Cluster: {self.cluster}\n" 
+            post += f"               Partitions: {', '.join(self.partitions)}\n" 
+            fmt = "%a %b %-d, %Y at %-I:%M %p"
+            post += f"                    Start: {start_date.strftime(fmt)}\n" 
+            post += f"                      End: {datetime.now().strftime(fmt)}\n" 
+            post += f"             min_run_time: {self.min_run_time} minutes\n" 
+            post += f"gpu_hours_threshold_admin: {self.gpu_hours_threshold_admin} GPU-hours\n" 
+            post += f"            max_num_jobid: {self.max_num_jobid}\n"
+            post += "* This report applies to completed jobs only"
+            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title, post=post)

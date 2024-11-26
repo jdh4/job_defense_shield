@@ -36,19 +36,21 @@ states = {
   }
 JOBSTATES = dict(zip(states.values(), states.keys()))
 
-def add_dividers(df_str: str, title: str="", pre: str="\n\n\n") -> str:
-  rows = df_str.split("\n")
-  width = max([len(row) for row in rows])
-  padding = " " * max(1, math.ceil((width - len(title)) / 2))
-  divider = padding + title + padding
-  if bool(title):
-    rows.insert(0, divider)
-    rows.insert(1, "-" * len(divider))
-    rows.insert(3, "-" * len(divider))
-  else:
-    rows.insert(0, "-" * len(divider))
-    rows.insert(2, "-" * len(divider))
-  return pre + "\n".join(rows)
+def add_dividers(df_str: str, title: str="", pre: str="\n\n\n", post: str="") -> str:
+    rows = df_str.split("\n")
+    width = max([len(row) for row in rows] + [len(title)])
+    heading = title.center(width)
+    divider = "-" * width
+    if bool(title):
+        rows.insert(0, heading)
+        rows.insert(1, divider)
+        rows.insert(3, divider)
+    else:
+        rows.insert(0, divider)
+        rows.insert(2, divider)
+    if post:
+        rows.append(divider)
+    return pre + "\n".join(rows) + "\n" + post
 
 def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
   files = sorted(glob.glob(f"{vpath}/{mydir}/*.csv"))
