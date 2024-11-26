@@ -1,7 +1,6 @@
 import textwrap
 from base import Alert
 from efficiency import gpu_efficiency
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 from utils import JOBSTATES
@@ -66,7 +65,7 @@ class MultinodeGPUFragmentation(Alert):
                 usr["GPU-eff"] = usr["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
                 s +=  "over multiple nodes:\n\n"
                 s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])

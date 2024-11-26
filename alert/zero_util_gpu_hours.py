@@ -1,14 +1,13 @@
 import textwrap
 import pandas as pd
-
 import utils
 from base import Alert
 from utils import SECONDS_PER_HOUR
 from utils import SECONDS_PER_MINUTE
-from utils import get_first_name
 from utils import send_email_cses
 from utils import add_dividers
 from efficiency import num_gpus_with_zero_util
+from greeting import Greeting
 
 
 class ZeroUtilGPUHours(Alert):
@@ -29,7 +28,6 @@ class ZeroUtilGPUHours(Alert):
                           (self.df.admincomment != {}) &
                           (~self.df.netid.isin(self.excluded_users)) &
                           (self.df["elapsedraw"] >= self.min_run_time * SECONDS_PER_MINUTE)].copy()
-        # 60496390
         self.gp = pd.DataFrame({"NetID":[]})
         self.admin = pd.DataFrame()
         x = utils.HOURS_PER_DAY
@@ -69,31 +67,9 @@ class ZeroUtilGPUHours(Alert):
                 usr = self.df[self.df.NetID == user].copy()
                 zero_hours = round(self.gp[self.gp.NetID == user]["Zero-Util-GPU-Hours"].values[0])
                 emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
-                s =  f"Requestor: {user}@princeton.edu\n\n"
-                s += f"{get_first_name(user, formal=True)},\n\n"
-                if emails_sent == 0:
-                    s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
-                    s +=  "Della. This is a waste of valuable resources.\n"
-                elif emails_sent == 1:
-                    s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
-                    s +=  "Della. Additionally, in the last 30 days you have been sent a warning email\n"
-                    s +=  "with the subject \"Jobs with zero GPU utilization\".\n"
-                else:
-                    s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
-                    s += f"Della. Additionally, in the last 30 days you have been sent {emails_sent} warning emails\n"
-                    s +=  "with the subject \"Jobs with zero GPU utilization\".\n"
-                if emails_sent <= 1:
-                    s += textwrap.dedent(f"""
-                    Be aware that your account can be suspended when you waste this amount of
-                    GPU resources. Since this appears to be an isolated incident, no action
-                    will be taken and your account will remain active.
-                    """)
-                else:
-                    s += textwrap.dedent(f"""
-                    At this time you need to stop underutilizing the GPUs or YOUR ACCOUNT WILL BE
-                    SUSPENDED and your sponsor will be contacted. The GPUs are valuable resources
-                    and they must be used efficiently.
-                    """)
+                s = f"{Greeting(user).greeting()}"
+                s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
+                s += "Della. This is a waste of valuable resources.\n"
                 s += textwrap.dedent(f"""
                 See this webpage for three common reasons why a user may encounter 0% GPU
                 utilization:

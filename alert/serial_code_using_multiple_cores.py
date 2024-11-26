@@ -1,9 +1,9 @@
 import textwrap
 from base import Alert
 from utils import add_dividers
-from utils import get_first_name
 from utils import send_email
 from efficiency import cpu_efficiency
+from greeting import Greeting
 
 
 class SerialCodeUsingMultipleCores(Alert):
@@ -81,7 +81,7 @@ class SerialCodeUsingMultipleCores(Alert):
                 hours_per_week = 24 * 7
                 num_wasted_nodes = round(cpu_hours_wasted / cores_per_node / hours_per_week)
                 if cpu_hours_wasted >= SerialCodeUsingMultipleCores.cpu_hours_threshold:
-                    s =  f"{get_first_name(user)},\n\n"
+                    s = f"{Greeting(user).greeting()}"
                     s += f"Below are {case} that ran on Della (cpu) in the past {self.days_between_emails} days:"
                     s +=  "\n\n"
                     usr_str = usr.head(num_disp).to_string(index=False, justify="center").split("\n")

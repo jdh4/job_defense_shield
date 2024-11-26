@@ -2,7 +2,6 @@ import textwrap
 import pandas as pd
 from base import Alert
 from utils import add_dividers
-from utils import get_first_name
 from utils import send_email
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
@@ -67,7 +66,7 @@ class MultiInstanceGPU(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
                 s +=  "\n\n"
                 s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])

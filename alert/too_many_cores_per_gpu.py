@@ -1,6 +1,5 @@
 import textwrap
 from base import Alert
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 
@@ -46,7 +45,7 @@ class TooManyCoresPerGpu(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.NetID == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                s = f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Your {self.cluster_name} jobs may be using more CPU-cores per GPU than necessary:\n\n"
                 usr_str = usr.to_string(index=False, justify="center").split("\n")
                 s += "\n".join([3 * " " + row for row in usr_str])

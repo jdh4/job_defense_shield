@@ -1,7 +1,6 @@
 import textwrap
 import pandas as pd
 from base import Alert
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 from efficiency import cpu_nodes_with_zero_util
@@ -74,7 +73,7 @@ class ZeroCPU(Alert):
                 usr.drop(columns=["Nodes-Used"], inplace=True)
                 if num_jobs == 1 and all_single:
                     continue
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are your recent jobs that did not use all of the allocated nodes:\n\n"
                 usr_str = usr.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])

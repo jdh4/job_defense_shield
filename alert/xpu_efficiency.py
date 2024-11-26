@@ -4,7 +4,6 @@ from base import Alert
 from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
 from utils import SECONDS_PER_HOUR
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 
@@ -138,7 +137,7 @@ class LowEfficiency(Alert):
                 myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
                 partitions = usr['Partition(s)'].values[0]
                 edays = self.days_between_emails
-                s = f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s +=f"Over the last {edays} days you have used {myrank} {self.xpu.upper()}-hours on {self.cluster_name} but\n"
                 s +=f"your mean {self.xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
                 usr_str = usr.drop(columns=["Cluster"]).to_string(index=False, justify="center")

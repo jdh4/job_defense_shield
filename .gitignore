@@ -5,6 +5,7 @@ log/
 .pytest_cache/
 cron.backup
 .coverage
+greeting.py
 
 ##################################################################
 # Everything below is taken from                                 #

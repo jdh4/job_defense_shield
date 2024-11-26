@@ -4,7 +4,6 @@ import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
 from efficiency import cpu_nodes_with_zero_util
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 
@@ -161,7 +160,7 @@ class MultinodeCPUFragmentation(Alert):
                 all_not_physics = bool(della[della.partition != "physics"].shape[0] == della.shape[0])
                 max_cores = usr["cores"].max()
                 edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
                 s += "than necessary:"
                 s += "\n\n"

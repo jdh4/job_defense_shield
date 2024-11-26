@@ -2,7 +2,6 @@ import textwrap
 import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
-from utils import get_first_name
 from utils import send_email
 from utils import add_dividers
 
@@ -145,8 +144,9 @@ class ExcessCPUMemory(Alert):
                              "cores":"Cores",
                              "elapsed-hours":"Hours"}
                 jobs = jobs.rename(columns=renamings)
+                jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s =  f"{get_first_name(user)},\n\n"
+                s = f"{Greeting(user).greeting()}"
                 s += f"Below are {case} that ran on Della (cpu) in the past {edays} days:\n\n"
                 jobs_str = jobs.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])
