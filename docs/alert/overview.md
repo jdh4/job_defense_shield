@@ -4,11 +4,11 @@
 underutilizing the systems.
 - option to include actively running jobs each alert
 - netid -> username
+- is --days floating point?
+- external code for is_today_a_workday
 - flag to send all user emails to admins (--dry-run)
-- greeting mechanism that is external (one choice is Hello username)
 - may need to relate user to an external email by writing code
 - cleaning mechansim
-- what excluded-users is empty or not in config.yaml
 - move subject out of base.py and other attributes
 - consider logger with clean ouput
 - specify location of file for alert
@@ -32,35 +32,75 @@ $ mkdir -p jds/greeting
 # then write code
 ```
 
-```python
-def greeting(username: str) -> str:
-    return f"Hello {username}"
-```
+Here is simple example that will work at any institution:
 
 ```python
-def greeting(username: str) -> str:
-    if time < noon:
-        return "Good morning,"
-    elif time < 5 pm:
-        return "Good afternoon:"
-    return f"Hello {username}"
+class Greeting:
+
+    def __init__(self, user):
+        self.user = user
+
+    def greeting(self):
+        """Return the greeting or first line for user emails."""
+        return f"Hello {self.user},\n\n"
 ```
 
+Below is another example for `greeting.py` that uses the built-in `pwd` module
+to interact with the password database to get the first name of the user:
+
 ```python
-def get_first_name(netid: str, formal: bool=False) -> str:
-    """Get the first name of the user by calling ldapsearch."""
-    cmd = f"ldapsearch -x uid={netid} displayname"
-    output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=5, text=True, check=True)
-    lines = output.stdout.split('\n')
-    for line in lines:
-        if line.startswith("displayname:"):
-            full_name = line.replace("displayname:", "").strip()
-            if ": " in full_name:
-                full_name = b64decode(full_name).decode("utf-8")
-            if full_name.replace(".", "").replace(",", "").replace(" ", "").replace("-", "").isalpha():
-                return f"Dear {full_name.split()[0]}" if formal else f"Hi {full_name.split()[0]}"
-    return "Hello"
+import pwd
+
+class Greeting:
+
+    def __init__(self, user):
+        self.user = user
+
+  def greeting(self):
+      """Return the greeting or first line for user emails."""
+      try:
+          user_info = pwd.getpwnam(self.user)
+      except KeyError:
+          return f"Hello {self.user},\n\n"
+      full_name = user_info.pw_gecos
+      first_name = full_name.split()[0]
+      return f"Hello {first_name} ({self.user}),\n\n"
 ```
+
+Here is a more advanced example that calls `ldapsearch` to find the first name of the user:
+
+```python
+import string
+import subprocess
+from base64 import b64decode
+
+class Greeting:
+
+    def __init__(self, user):
+        self.user = user
+
+    def greeting(self):
+        """Return the greeting or first line for user emails."""
+        cmd = f"ldapsearch -x uid={self.user} displayname"
+        output = subprocess.run(cmd,
+                                stdout=subprocess.PIPE,
+                                shell=True,
+                                timeout=5,
+                                text=True,
+                                check=True)
+        lines = output.stdout.split('\n')
+        trans_table = str.maketrans('', '', string.punctuation)
+        for line in lines:
+            if line.startswith("displayname:"):
+                full_name = line.replace("displayname:", "").strip()
+                if ": " in full_name:
+                    full_name = b64decode(full_name).decode("utf-8")
+                if full_name.translate(trans_table).replace(" ", "").isalpha():
+                    return f"Hi {full_name.split()[0]},\n\n"
+        return f"Hello {self.user},\n\n"
+```
+
+One could also write a `greeting` method based on `getent passwd`.
 
 
 ## Grace Period
@@ -128,3 +168,17 @@ ${PY}/python -uB ${BASE}/job_defense_shield.py --days=7 \
                                                --most-gpus \
                                                --most-cores > ${BASE}/log/report.log 2>&1
 ```
+
+## Configuration File
+
+Show a file with multiple alerts and global settings are the top. Explain that the --<alert> flag determines which alerts described in the configuration file run.
+
+## Next Steps
+
+At this point you are ready to setup the first alert that actually emails users. The simplest and most broadly applicable alert is  excess run time.
+
+They key takeaways are to create your config file. You can have multiple entries for the same alert type.
+
+## Configuring Crontab
+
+Setup crontab to automatically call the code.

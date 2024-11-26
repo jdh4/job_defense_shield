@@ -72,6 +72,24 @@ cluster    partition    users   cpu-hours    gpu-hours
 traverse           all    1   126183 (100%) 31546 (100%)
 ```
 
+## Email Test
+
+Make a `config.yaml` file:
+
+```
+$ cat config.yaml
+utilization-overview:
+  admin-emails:
+    - your-email@institution.xyz
+```
+
+Now try again and you should received the report by email:
+
+```
+$ job_defense_shield.py --utilization-overview --days=7 --email-admins
+```
+
+
 ## Troubleshooting the Installation
 
 Finding the right `python`

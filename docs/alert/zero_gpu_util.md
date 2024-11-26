@@ -58,9 +58,10 @@ zero-util-gpu-hours:
 
 The parameters are explained below:
 
-- `cluster`: Specify the cluster name. Use multiple alerts for multiple clusters.
+- `cluster`: Specify the cluster name as it appears in the Slurm database. One cluster name
+per alert. Use multiple `zero-util-gpu-hours` alerts for multiple clusters.
 
-- `partitions`: Specify one or more partition. The number of GPU-hours is summed over all partitions.
+- `partitions`: Specify one or more Slurm partitions. The number of GPU-hours is summed over all partitions.
 Use multiple alerts to change this behavior.
 
 - `min_run_time`: Minutes number of minutes that a job must have ran to be considered.
@@ -75,17 +76,36 @@ will appear in the report for administrators.
 - `max_num_jobid`: Maximum number of JobID's to show for a given user. If the number of
 jobs per user is greater than this value then a "+" character is appended to the end of the list.
 
-- `excluded_users`: List of users to exclude from receiving emails. These users will still appear
+- `excluded_users`: (Optional) List of users to exclude from receiving emails. These users will still appear
 in reports for system administrators when `--report` is used.
 
-- `user_emails_bcc`: The emails sent to users will also be sent to these administator emails. This applies
+- `user_emails_bcc`: (Optional) The emails sent to users will also be sent to these administator emails. This applies
 when the `--email` option is used.
 
-- `report_emails`: Reports will be sent to these administator emails. This applies
+- `report_emails`: (Optional) Reports will be sent to these administator emails. This applies
 when the `--report` option is used.
 
 For jobs that allocate multiple GPUs, only the GPU-hours
 for the GPUs at 0% utilization are included.
+
+Below is second example entry for `config.yaml`:
+
+```
+zero-util-gpu-hours:
+  cluster: stellar
+  partitions:
+    - h100
+  min_run_time: 30               # minutes
+  gpu_hours_threshold_user: 24   # hours
+  gpu_hours_threshold_admin: 12  # hours
+  max_num_jobid: 3               # count
+```
+
+For the configuration above, only jobs that ran for 30 minutes or more are considered. Users will receive
+an email (when `--email-users` is used) if they consumed 24 GPU-hours or more at 0% utilization. System
+administrators will see users in the report (using `--email-admins`) that consumed 12 GPU-hours or more.
+The JobID will be shown for up to three jobs per user. Notice that the optional settings
+(`excluded_users`, `user_emails_bcc`, `report_emails`) are omitted in the YAML entry.
 
 
 ## How to Write Your Email File

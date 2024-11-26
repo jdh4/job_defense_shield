@@ -12,9 +12,11 @@ nav:
     - Low GPU Utilization:  alert/low_gpu_util.md
     - MIG:                  alert/mig.md
     - Too Many CPU Nodes:   alert/cpu_fragmentation.md
+    - Excess CPU Memory:    alert/excess_cpu_memory.md
     - Custom:               alert/custom.md
   - Reports:
     - Overview:             reports/overview.md
+    - Usage By Slurm Account: reports/account.md
   - Contributions: contributions.md
   - Support: support.md
   - Publications: publications.md
