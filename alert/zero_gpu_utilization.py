@@ -108,7 +108,7 @@ class ZeroGpuUtilization(Alert):
 
                 s += "\n"
                 text = (
-                f'Please consider cancelling the job(s) listed above by using the "scancel" command:'
+                'Please consider cancelling the job(s) listed above by using the "scancel" command:'
                 )
                 s += "\n".join(textwrap.wrap(text, width=80))
                 s += "\n\n"
@@ -206,7 +206,7 @@ class ZeroGpuUtilization(Alert):
                 """)
                 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
-                for email in admin_self.emails: 
+                for email in self.admin_emails:
                     send_email(s, f"{email}", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
 

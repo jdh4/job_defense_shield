@@ -2,6 +2,7 @@ import textwrap
 from base import Alert
 from utils import send_email
 from utils import add_dividers
+from greeting import Greeting
 
 
 class TooManyCoresPerGpu(Alert):

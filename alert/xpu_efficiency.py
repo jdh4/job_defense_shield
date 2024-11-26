@@ -6,6 +6,7 @@ from efficiency import gpu_efficiency
 from utils import SECONDS_PER_HOUR
 from utils import send_email
 from utils import add_dividers
+from greeting import Greeting
 
 
 class LowEfficiency(Alert):

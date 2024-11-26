@@ -30,7 +30,6 @@ class ZeroUtilGPUHours(Alert):
                           (self.df["elapsedraw"] >= self.min_run_time * SECONDS_PER_MINUTE)].copy()
         self.gp = pd.DataFrame({"NetID":[]})
         self.admin = pd.DataFrame()
-        x = utils.HOURS_PER_DAY
         # add new fields
         if not self.df.empty:
             self.df["zero-tuple"] = self.df.apply(lambda row:
@@ -43,7 +42,13 @@ class ZeroUtilGPUHours(Alert):
             self.df = self.df[(self.df["error_code"] == 0) & (self.df["GPUs-Unused"] > 0)]
             self.df["Zero-Util-GPU-Hours"] = self.df["GPUs-Unused"] * self.df["elapsedraw"] / SECONDS_PER_HOUR
             self.df["GPU-Unused-Util"] = "0%"
-            self.df = self.df[["jobid", "netid", "gpus", "GPUs-Unused", "GPU-Unused-Util", "Zero-Util-GPU-Hours"]]
+            cols = ["jobid",
+                    "netid",
+                    "gpus",
+                    "GPUs-Unused",
+                    "GPU-Unused-Util",
+                    "Zero-Util-GPU-Hours"]
+            self.df = self.df[cols]
             renamings = {"jobid":"JobID", "netid":"NetID", "gpus":"GPUs"}
             self.df = self.df.rename(columns=renamings)
             def jobid_list(series):

@@ -6,6 +6,7 @@ from efficiency import cpu_memory_usage
 from efficiency import cpu_nodes_with_zero_util
 from utils import send_email
 from utils import add_dividers
+from greeting import Greeting
 
 
 class MultinodeCPUFragmentation(Alert):
@@ -169,7 +170,7 @@ class MultinodeCPUFragmentation(Alert):
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([4 * " " + row for row in usr_str.split("\n")])
                 s += "\n"
-                s += textwrap.dedent(f"""
+                s += textwrap.dedent("""
                 The "Nodes" column shows the number of nodes used to run the job. The
                 "Nodes-Needed" column shows the minimum number of nodes needed to run the
                 job (these values are calculated based on the number of requested CPU-cores

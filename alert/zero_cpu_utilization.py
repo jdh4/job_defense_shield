@@ -4,6 +4,7 @@ from base import Alert
 from utils import send_email
 from utils import add_dividers
 from efficiency import cpu_nodes_with_zero_util
+from greeting import Greeting
 
 
 class ZeroCPU(Alert):

@@ -4,6 +4,7 @@ from efficiency import gpu_efficiency
 from utils import send_email
 from utils import add_dividers
 from utils import JOBSTATES
+from greeting import Greeting
 
 
 class MultinodeGPUFragmentation(Alert):
@@ -74,7 +75,7 @@ class MultinodeGPUFragmentation(Alert):
                     s += f"There is at least one job above with a GPU efficiency of less than {self.gpu_util_thres}%. In these\n"
                     s +=  "cases please consider using only 1 GPU per job to improve the efficiency."
                 s += "\n"
-                s += textwrap.dedent(f"""
+                s += textwrap.dedent("""
                 The GPU nodes on Della have either 2 GPUs per node or 4 GPUs per node. For future
                 jobs, please try to use as few nodes as possible by allocating more GPUs per node.
                 This is done by modifying the --gres Slurm directive as explained here:

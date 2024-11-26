@@ -4,6 +4,7 @@ from base import Alert
 from efficiency import cpu_memory_usage
 from utils import send_email
 from utils import add_dividers
+from greeting import Greeting
 
 
 class ExcessCPUMemory(Alert):
