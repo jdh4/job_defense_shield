@@ -27,7 +27,7 @@ class MultinodeCPUFragmentation(Alert):
         # value for della is hard-coded at the moment
         safety = 0.2
         cores_frac = 0.8
-        if cluster == "tiger" and \
+        if cluster == "tiger2" and \
            cores_per_node < cores_frac * 40 and \
            mem_per_node_used < (1 - safety) * 192:
             return True
@@ -60,7 +60,7 @@ class MultinodeCPUFragmentation(Alert):
             return cores_vs_memory(cores, 40, mem_per_node_used, 380)
         elif cluster == "della" and partition != "physics":
             return cores_vs_memory(cores, 32, mem_per_node_used, 190)
-        elif cluster == "tiger":
+        elif cluster == "tiger2":
             return cores_vs_memory(cores, 40, mem_per_node_used, 192)
         elif cluster == "stellar" and partition in ("all", "pppl", "pu"):
             return cores_vs_memory(cores, 96, mem_per_node_used, 768)
@@ -76,7 +76,7 @@ class MultinodeCPUFragmentation(Alert):
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df.partition.isin(["all", "cpu", "ext", "physics", "pppl", "pu"])) &
                           (~self.df.qos.isin(["stellar-debug"])) &
-                          (self.df.cluster.isin(["della", "stellar", "tiger"]))].copy()
+                          (self.df.cluster.isin(["della", "stellar", "tiger2"]))].copy()
         # add new fields
         if not self.df.empty:
             self.df["nodes-tuple"] = self.df.apply(lambda row:
@@ -152,7 +152,7 @@ class MultinodeCPUFragmentation(Alert):
                 usr = usr.rename(columns=renamings)
                 min_nodes = usr["Nodes-Needed"].mode().values[0]
                 is_stellar = "stellar" in usr.Cluster.tolist()
-                is_tiger = "tiger" in usr.Cluster.tolist()
+                is_tiger = "tiger2" in usr.Cluster.tolist()
                 is_della = "della" in usr.Cluster.tolist()
                 della = usr[usr.Cluster == "della"].copy()
                 all_physics = "physics" in della.partition.tolist() and \

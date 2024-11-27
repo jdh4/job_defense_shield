@@ -170,8 +170,8 @@ low-xpu-efficiency-stellar-intel:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-tiger:
-  cluster: tiger
+low-xpu-efficiency:
+  cluster: tiger2
   cluster_name: "Tiger"
   partitions:
     - cpu
@@ -254,14 +254,14 @@ excess-cpu-memory-stellar:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
-excess-cpu-memory-tiger:
+excess-cpu-memory:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
   median_ratio_threshold: 0.25
   num_top_users: 5
   clusters:
-    - tiger
+    - tiger2
   partition:
     - cpu
     - ext

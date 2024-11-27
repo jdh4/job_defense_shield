@@ -1,11 +1,10 @@
+import re
 import math
 import glob
-import subprocess
 import smtplib
 from datetime import datetime
 from datetime import timedelta
 import pandas as pd
-from base64 import b64decode
 from pandas.tseries.holiday import USFederalHolidayCalendar
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -35,6 +34,11 @@ states = {
   'TO'  :'TIMEOUT'
   }
 JOBSTATES = dict(zip(states.values(), states.keys()))
+
+def gpus_per_job(tres: str) -> int:
+    """Return the number of allocated GPUs."""
+    gpus = re.findall(r"gres/gpu=\d+", tres)
+    return int(gpus[0].replace("gres/gpu=", "")) if gpus else 0
 
 def add_dividers(df_str: str, title: str="", pre: str="\n\n\n", post: str="") -> str:
     rows = df_str.split("\n")

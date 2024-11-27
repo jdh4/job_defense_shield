@@ -45,7 +45,6 @@ class ActiveCPUMemory(Alert):
         """Get the job statistics for running jobs by calling jobstats"""
         import importlib.machinery
         import importlib.util
-        cluster = cluster.replace("tiger", "tiger2")
         loader = importlib.machinery.SourceFileLoader('jobstats', '/usr/local/bin/jobstats')
         spec = importlib.util.spec_from_loader('jobstats', loader)
         mymodule = importlib.util.module_from_spec(spec)

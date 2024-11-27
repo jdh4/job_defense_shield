@@ -10,6 +10,7 @@ import yaml
 
 from utils import SECONDS_PER_MINUTE
 from utils import SECONDS_PER_HOUR
+from utils import gpus_per_job
 from utils import is_today_a_work_day
 from utils import send_email
 from utils import show_history_of_emails_sent
@@ -59,22 +60,6 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
         rw[numeric_fields] = rw[numeric_fields].apply(pd.to_numeric)
         if use_cache: rw.to_csv(fname, index=False)
     return rw
-
-
-def gpus_per_job(tres: str) -> int:
-    """Return the number of GPUs used."""
-    # billing=8,cpu=4,mem=16G,node=1
-    # billing=112,cpu=112,gres/gpu=16,mem=33600M,node=4
-    if "gres/gpu=" in tres:
-        for part in tres.split(","):
-            if "gres/gpu=" in part:
-                gpus = int(part.split("=")[-1])
-                assert gpus > 0
-                return gpus
-        raise Exception(f"GPU count not extracted for {tres}")
-    else:
-        return 0
-
 
 def add_new_and_derived_fields(df):
     df["cpu-seconds"] = df["elapsedraw"] * df["cores"]
@@ -259,7 +244,7 @@ if __name__ == "__main__":
   # convert slurm timestamps to seconds
   os.environ["SLURM_TIME_FORMAT"] = "%s"
 
-  flags = f"-a -X -P -n --clusters={args.clusters.replace('tiger', 'tiger2')}"
+  flags = f"-a -X -P -n --clusters={args.clusters}"
   if args.partition:
       flags = f"{flags} --partition={args.partition}"
   start_date = datetime.now() - timedelta(days=args.days)
@@ -299,8 +284,6 @@ if __name__ == "__main__":
   use_cache = False if (args.email or args.report) else True
   raw = raw_dataframe_from_sacct(flags, start_date, fields, renamings, numeric_fields, use_cache)
 
-  raw = raw[~raw.cluster.isin(["tukey", "perseus"])]
-  raw.cluster   =   raw.cluster.str.replace("tiger2", "tiger")
   raw.partition = raw.partition.str.replace("datascience", "datasci")
   raw = raw[pd.notna(raw.state)]
   raw.state = raw.state.apply(lambda x: "CANCELLED" if "CANCEL" in x else x)

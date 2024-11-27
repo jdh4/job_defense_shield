@@ -5,7 +5,7 @@ def test_zero_util_gpu_hours():
     n_jobs = 5
     wallclock_secs = 1000000
     wallclock_hrs = wallclock_secs / 3600
-    # job 1 (8555322 on tiger)
+    # job 1 (8555322 on tiger2)
     job1 = {
     "gpus": 4,
     "nodes": {
