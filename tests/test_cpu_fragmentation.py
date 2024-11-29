@@ -211,8 +211,8 @@ def test_zero_cpu_utilization():
                        "partition":["cpu", "cpu", "pu", "pppl", "cpu"],
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
     cpu_frag = MultinodeCPUFragmentation(df, 0, "", "", "Subject")
-    actual = cpu_frag.df[["User", "cluster", "nodes", "min-nodes"]]
-    expected = pd.DataFrame({"User":["user1", "user1", "user2"],
+    actual = cpu_frag.df[["user", "cluster", "nodes", "min-nodes"]]
+    expected = pd.DataFrame({"user":["user1", "user1", "user2"],
                              "cluster":["della", "della", "stellar"],
                              "nodes":[12, 5, 4],
                              "min-nodes":[3, 2, 3]})

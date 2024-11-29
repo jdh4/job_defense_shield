@@ -5,7 +5,7 @@ from utils import SECONDS_PER_MINUTE
 from utils import seconds_to_slurm_time_format
 from utils import send_email
 from utils import add_dividers
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class ExcessiveTimeLimits(Alert):
@@ -61,7 +61,8 @@ class ExcessiveTimeLimits(Alert):
                          f"{xpu}-waste-hours":f"{xpu.upper()}-Hours-Unused"}
             self.gp = self.gp.rename(columns=renamings)
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
@@ -79,7 +80,7 @@ class ExcessiveTimeLimits(Alert):
                 renamings = {"jobid":"JobID", "user":"User", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
                 edays = self.days_between_emails
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Below are {case} that ran on Della ({xpu.upper()}) in the past {edays} days:\n\n"
                 s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
                 s += "\n"

@@ -7,7 +7,7 @@ from utils import SECONDS_PER_MINUTE
 from utils import send_email_cses
 from utils import add_dividers
 from efficiency import num_gpus_with_zero_util
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class ZeroUtilGPUHours(Alert):
@@ -65,14 +65,15 @@ class ZeroUtilGPUHours(Alert):
             self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_user]
             self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 zero_hours = round(self.gp[self.gp.User == user]["Zero-Util-GPU-Hours"].values[0])
                 emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
                 s += "Della. This is a waste of valuable resources.\n"
                 s += textwrap.dedent("""

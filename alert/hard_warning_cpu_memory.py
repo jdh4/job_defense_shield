@@ -5,7 +5,7 @@ from datetime import datetime
 from datetime import timedelta
 from base import Alert
 from utils import send_email_cses
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class HardWarningCPUMemory(Alert):
@@ -18,8 +18,9 @@ class HardWarningCPUMemory(Alert):
     def _filter_and_add_new_fields(self):
         pass
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
         xfiles = glob(f"{self.vpath}/excess_cpu_memory/*.email.csv")
+        g = GreetingFactory().create_greeting(method)
         for xfile in xfiles:
             user = xfile.split("/")[-1].split(".email")[0]
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
@@ -46,7 +47,7 @@ class HardWarningCPUMemory(Alert):
                     dt = datetime.now() - usr.email_sent.min()
                     #assert dt.days > 1
                     s =  f"Requestor: {user}@princeton.edu\n\n"
-                    s += f"{Greeting(user).greeting()}"
+                    s += f"{g.greeting(user)}"
                     #s += f'You recently received an email with the subject "Requesting Too Much CPU Memory".\n'
                     #s += 'The data associated with this email is shown below:\n\n'
                     s += f'Over the past {dt.days+1} days you were sent {num_warnings} emails with the subject "Requesting Too\n'

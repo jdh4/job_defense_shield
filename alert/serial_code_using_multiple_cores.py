@@ -3,7 +3,7 @@ from base import Alert
 from utils import add_dividers
 from utils import send_email
 from efficiency import cpu_efficiency
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class SerialCodeUsingMultipleCores(Alert):
@@ -65,7 +65,8 @@ class SerialCodeUsingMultipleCores(Alert):
         self.df["cores-minus-1"] = self.df["CPU-cores"] - 1
         self.df["CPU-Hours-Wasted"] = self.df["Hours"] * self.df["cores-minus-1"]
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
@@ -81,7 +82,7 @@ class SerialCodeUsingMultipleCores(Alert):
                 hours_per_week = 24 * 7
                 num_wasted_nodes = round(cpu_hours_wasted / cores_per_node / hours_per_week)
                 if cpu_hours_wasted >= SerialCodeUsingMultipleCores.cpu_hours_threshold:
-                    s = f"{Greeting(user).greeting()}"
+                    s = f"{g.greeting(user)}"
                     s += f"Below are {case} that ran on Della (cpu) in the past {self.days_between_emails} days:"
                     s +=  "\n\n"
                     usr_str = usr.head(num_disp).to_string(index=False, justify="center").split("\n")

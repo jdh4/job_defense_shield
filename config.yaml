@@ -1,9 +1,17 @@
 %YAML 1.1
 ---
+#####################
+## GLOBAL SETTINGS ##
+#####################
+greeting: getent
+workday: usa
+reply: rcsystems@princeton.edu
+
+
 #########################
 ## SHOULD BE USING MIG ##
 #########################
-should-be-using-mig-della-gpu:
+should-be-using-mig:
   cluster: della
   partition: gpu
   excluded_users:
@@ -23,8 +31,8 @@ zero-util-gpu-hours:
     - pli
   min_run_time: 0               # minutes
   gpu_hours_threshold_user: 24  # hours
-  gpu_hours_threshold_admin: 0  # hours
-  max_num_jobid: 3              # count
+  gpu_hours_threshold_admin: 24 # hours
+  max_num_jobid: 2              # count
 
 
 ############################
@@ -51,7 +59,7 @@ too-many-cores-per-gpu:
 ############################
 ## LOW CPU/GPU EFFICIENCY ##
 ############################
-low-xpu-efficiency-della-cpu:
+low-xpu-efficiency:
   cluster: della
   cluster_name: "Della (cpu)"
   partitions:
@@ -70,7 +78,7 @@ low-xpu-efficiency-della-cpu:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-della-gpu:
+low-xpu-efficiency:
   cluster: della
   cluster_name: "Della (gpu)"
   partitions:
@@ -89,7 +97,7 @@ low-xpu-efficiency-della-gpu:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-della-pli-c:
+low-xpu-efficiency:
   cluster: della
   cluster_name: "Della (pli-c)"
   partitions:
@@ -109,7 +117,7 @@ low-xpu-efficiency-della-pli-c:
     - kl5675@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-della-pli:
+low-xpu-efficiency:
   cluster: della
   cluster_name: "Della (pli)"
   partitions:
@@ -129,7 +137,7 @@ low-xpu-efficiency-della-pli:
     - kl5675@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-della-physics:
+low-xpu-efficiency:
   cluster: della
   cluster_name: "Della (physics)"
   partitions:
@@ -148,7 +156,7 @@ low-xpu-efficiency-della-physics:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-stellar-intel:
+low-xpu-efficiency:
   cluster: stellar
   cluster_name: "Stellar (Intel)"
   partitions:
@@ -195,7 +203,7 @@ low-xpu-efficiency:
 #######################
 ## EXCESS CPU MEMORY ##
 #######################
-excess-cpu-memory-della-cpu:
+excess-cpu-memory:
   tb_hours_per_day: 10
   ratio_threshold: 0.35
   mean_ratio_threshold: 0.35
@@ -215,7 +223,7 @@ excess-cpu-memory-della-cpu:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
-excess-cpu-memory-della-datascience:
+excess-cpu-memory:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
@@ -233,7 +241,7 @@ excess-cpu-memory-della-datascience:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
-excess-cpu-memory-stellar:
+excess-cpu-memory:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
@@ -248,26 +256,6 @@ excess-cpu-memory-stellar:
     - serial
   combine_partitions: False
   cores_per_node: 76.8
-  excluded_users:
-    - aturing
-    - einstein
-  admin_emails:
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
-
-excess-cpu-memory:
-  tb_hours_per_day: 10000
-  ratio_threshold: 0.25
-  mean_ratio_threshold: 0.25
-  median_ratio_threshold: 0.25
-  num_top_users: 5
-  clusters:
-    - tiger2
-  partition:
-    - cpu
-    - ext
-    - serial
-  combine_partitions: True
-  cores_per_node: 32
   excluded_users:
     - aturing
     - einstein

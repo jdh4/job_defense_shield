@@ -10,6 +10,8 @@ from utils import HOURS_PER_DAY
 from utils import send_email
 from utils import send_email_html
 from utils import add_dividers
+from greeting import GreetingFactory
+
 
 class ActiveCPUMemory(Alert):
 
@@ -105,7 +107,8 @@ class ActiveCPUMemory(Alert):
                                                                     round(x / MINUTES_PER_HOUR))
             self.admin = self.df.copy()
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.df.user.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
@@ -126,7 +129,7 @@ class ActiveCPUMemory(Alert):
                              "cores":"Cores",
                              "elapsed-hours":"Elapsed-Hours"}
                 usr = usr[cols].rename(columns=renamings)
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += "Below are jobs currently running on Della (cpu):\n\n"
                 #usr_str = usr.to_string(index=False, justify="center")
                 #s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])

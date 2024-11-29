@@ -9,7 +9,8 @@ from utils import SECONDS_PER_HOUR
 from utils import MINUTES_PER_HOUR
 from utils import send_email
 from efficiency import num_gpus_with_zero_util
-from greeting import Greeting
+from greeting import GreetingFactory
+
 
 class ZeroGpuUtilization(Alert):
 
@@ -74,7 +75,8 @@ class ZeroGpuUtilization(Alert):
             renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster", "partition":"Partition"}
             self.jb.rename(columns=renamings, inplace=True)
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.jb.User.unique():
             emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization", days=10000)
             #################
@@ -84,7 +86,7 @@ class ZeroGpuUtilization(Alert):
             usr = self.jb[(self.jb.elapsedraw < upper) &
                           (self.jb.User == user)].copy()
             if not usr.empty:
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 text = (
                 'You have GPU job(s) that have been running for more than 1 hour but appear to not be using the GPU(s):'
                 )
@@ -148,7 +150,7 @@ class ZeroGpuUtilization(Alert):
                           (self.jb.elapsedraw <  upper) &
                           (self.jb.User == user)].copy()
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 text = (
                 'This is a second warning. The jobs below will be cancelled in about 15 minutes unless GPU activity is detected:'
                 )
@@ -177,7 +179,7 @@ class ZeroGpuUtilization(Alert):
             usr = self.jb[(self.jb.elapsedraw >= lower) & (self.jb.User == user)].copy()
             print(usr)
             if not usr.empty and (emails_sent >= self.min_previous_warnings):
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 text = (
                 'The jobs below have been cancelled because they ran for at least 2 hours at 0% GPU utilization:'
                 )

@@ -4,7 +4,7 @@ from base import Alert
 from efficiency import cpu_memory_usage
 from utils import send_email
 from utils import add_dividers
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class ExcessCPUMemory(Alert):
@@ -113,7 +113,8 @@ class ExcessCPUMemory(Alert):
                               (self.gp["mean-ratio"] < self.mean_ratio_threshold) &
                               (self.gp["median-ratio"] < self.median_ratio_threshold)]
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
@@ -147,7 +148,7 @@ class ExcessCPUMemory(Alert):
                 jobs = jobs.rename(columns=renamings)
                 jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Below are {case} that ran on Della (cpu) in the past {edays} days:\n\n"
                 jobs_str = jobs.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])

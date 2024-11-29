@@ -6,7 +6,7 @@ from efficiency import gpu_efficiency
 from utils import SECONDS_PER_HOUR
 from utils import send_email
 from utils import add_dividers
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class LowEfficiency(Alert):
@@ -108,8 +108,9 @@ class LowEfficiency(Alert):
         self.admin = self.ce[cols][filters].copy()
         self.ce = self.ce[cols][filters]
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
         rank_text = {1:"the most", 2:"the 2nd most", 3:"the 3rd most"}
+        g = GreetingFactory().create_greeting(method)
         for user in self.ce.user.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
@@ -138,7 +139,7 @@ class LowEfficiency(Alert):
                 usr = usr[cols].rename(columns=renamings)
                 myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
                 edays = self.days_between_emails
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s +=f"Over the last {edays} days you have used {myrank} {self.xpu.upper()}-hours on {self.cluster_name} but\n"
                 s +=f"your mean {self.xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
                 usr_str = usr.drop(columns=["Cluster"]).to_string(index=False, justify="center")

@@ -5,7 +5,7 @@ from utils import add_dividers
 from utils import send_email
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class MultiInstanceGPU(Alert):
@@ -60,13 +60,14 @@ class MultiInstanceGPU(Alert):
         self.df = self.df.rename(columns=renamings)
         self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
                 s +=  "\n\n"
                 s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])

@@ -2,7 +2,7 @@ import textwrap
 from base import Alert
 from utils import send_email
 from utils import add_dividers
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class TooManyCoresPerGpu(Alert):
@@ -40,13 +40,14 @@ class TooManyCoresPerGpu(Alert):
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Your {self.cluster_name} jobs may be using more CPU-cores per GPU than necessary:\n\n"
                 usr_str = usr.to_string(index=False, justify="center").split("\n")
                 s += "\n".join([3 * " " + row for row in usr_str])

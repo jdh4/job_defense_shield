@@ -336,7 +336,8 @@ if __name__ == "__main__":
                                         subject="Jobs with Zero GPU Utilization",
                                         **cfg[alert])
           if args.email:
-              zero_gpu.send_emails_to_users()
+              greeting_method = cfg["greeting"]
+              zero_gpu.send_emails_to_users(greeting_method)
 
   #########################
   ## ZERO UTIL GPU-HOURS ##
@@ -351,7 +352,8 @@ if __name__ == "__main__":
                                  subject="GPU-hours at 0% utilization",
                                  **cfg[alert])
           if args.email and is_today_a_work_day():
-              zero_gpu_hours.send_emails_to_users()
+              greeting_method = cfg["greeting"]
+              zero_gpu_hours.send_emails_to_users(greeting_method)
           title="Zero Utilization GPU-Hours"
           s += zero_gpu_hours.generate_report_for_admins(title,
                                                          start_date,
@@ -369,7 +371,8 @@ if __name__ == "__main__":
                              cluster="della",
                              partition="gpu")
       if args.email and is_today_a_work_day():
-          gpu_frag.send_emails_to_users()
+          greeting_method = cfg["greeting"]
+          gpu_frag.send_emails_to_users(greeting_method)
       title = "Multinode GPU jobs with fragmentation (all jobs, 1+ hours)"
       s += gpu_frag.generate_report_for_admins(title)
 
@@ -386,7 +389,8 @@ if __name__ == "__main__":
                                   subject="Jobs with Low Efficiency",
                                   **cfg[alert])
           if args.email and is_today_a_work_day():
-              low_eff.send_emails_to_users()
+              greeting_method = cfg["greeting"]
+              low_eff.send_emails_to_users(greeting_method)
           title = f"{low_eff.cluster_name} efficiencies of top {low_eff.num_top_users} users (30+ minute jobs, ignoring running)"
           s += low_eff.generate_report_for_admins(title, keep_index=True)
 
@@ -404,7 +408,8 @@ if __name__ == "__main__":
                                       subject="Requesting Too Much CPU Memory",
                                       **cfg[alert])
           if args.email and is_today_a_work_day():
-              mem_hours.send_emails_to_users()
+              greeting_method = cfg["greeting"]
+              mem_hours.send_emails_to_users(greeting_method)
           title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
           s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
@@ -417,7 +422,8 @@ if __name__ == "__main__":
                                  cluster="della",
                                  partition="cpu")
       if args.email and is_today_a_work_day():
-          mem.send_emails_to_users()
+          greeting_method = cfg["greeting"]
+          mem.send_emails_to_users(greeting_method)
 
   #######################
   ## ACTIVE CPU MEMORY ##
@@ -429,7 +435,8 @@ if __name__ == "__main__":
                             vpath=args.files,
                             subject="Requesting Too Much CPU Memory for Jobs on Della")
       #if args.email and is_today_a_work_day():
-      mem.send_emails_to_users()
+      greeting_method = cfg["greeting"]
+      mem.send_emails_to_users(greeting_method)
       title = "Actively running jobs allocating too much memory"
       s += mem.generate_report_for_admins(title)
 
@@ -445,7 +452,8 @@ if __name__ == "__main__":
                              cluster="della",
                              partition="cpu")
       if args.email and is_today_a_work_day():
-          low_time.send_emails_to_users()
+          greeting_method = cfg["greeting"]
+          low_time.send_emails_to_users(greeting_method)
       title = "Excessive time limits (all jobs, 1+ hours)"
       s += low_time.generate_report_for_admins(title)
 
@@ -459,7 +467,8 @@ if __name__ == "__main__":
                                         vpath=args.files,
                                         subject="Serial Jobs Using Multiple CPU-cores")
       if args.email and is_today_a_work_day():
-          serial.send_emails_to_users()
+          greeting_method = cfg["greeting"]
+          serial.send_emails_to_users(greeting_method)
       title = "Potential serial codes using multiple CPU-cores (Della cpu)"
       s += serial.generate_report_for_admins(title, keep_index=True)
 
@@ -473,7 +482,8 @@ if __name__ == "__main__":
                          vpath=args.files,
                          subject="Jobs with Zero CPU Utilization")
       if args.email and is_today_a_work_day():
-          zero_cpu.send_emails_to_users()
+          greeting_method = cfg["greeting"]
+          zero_cpu.send_emails_to_users(greeting_method)
       title = "Jobs with Zero CPU Utilization (1+ hours)"
       s += zero_cpu.generate_report_for_admins(title, keep_index=False)
 
@@ -487,14 +497,15 @@ if __name__ == "__main__":
                                           vpath=args.files,
                                           subject="Jobs Using Too Many Nodes")
       if args.email and is_today_a_work_day():
-          cpu_frag.send_emails_to_users()
+          greeting_method = cfg["greeting"]
+          cpu_frag.send_emails_to_users(greeting_method)
       title = "CPU fragmentation (1+ hours)"
       s += cpu_frag.generate_report_for_admins(title, keep_index=False)
 
 
-  ####################################
-  ## JOBS THAT SHOULD HAVE USED MIG ##
-  ####################################
+  ############################
+  ## TOO MANY CORES PER GPU ##
+  ############################
   if args.too_many_cores_per_gpu:
       alerts = [alert for alert in cfg.keys() if "too-many-cores-per-gpu" in alert]
       for alert in alerts:
@@ -505,7 +516,8 @@ if __name__ == "__main__":
                                    subject="Consider Using Fewer CPU-Cores per GPU",
                                    **cfg[alert])
           if args.email and is_today_a_work_day():
-              cpg.send_emails_to_users()
+              greeting_method = cfg["greeting"]
+              cpg.send_emails_to_users(greeting_method)
           s += cpg.generate_report_for_admins("Too Many Cores Per GPU")
 
   ####################################
@@ -521,7 +533,8 @@ if __name__ == "__main__":
                                  subject="Consider Using the MIG GPUs on Della",
                                  **cfg[alert])
           if args.email and is_today_a_work_day():
-              mig.send_emails_to_users()
+              greeting_method = cfg["greeting"]
+              mig.send_emails_to_users(greeting_method)
           s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
 
 

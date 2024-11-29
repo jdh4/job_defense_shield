@@ -4,7 +4,7 @@ from efficiency import gpu_efficiency
 from utils import send_email
 from utils import add_dividers
 from utils import JOBSTATES
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class MultinodeGPUFragmentation(Alert):
@@ -57,7 +57,8 @@ class MultinodeGPUFragmentation(Alert):
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
 
-    def send_emails_to_users(self):
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
@@ -66,7 +67,7 @@ class MultinodeGPUFragmentation(Alert):
                 usr["GPU-eff"] = usr["GPU-eff"].apply(lambda x: "--" if x == 999 else f"{round(x)}%")
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Below are jobs that ran on Della in the past {edays} days that used 1 GPU per node\n"
                 s +=  "over multiple nodes:\n\n"
                 s +=  "\n".join([4 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
