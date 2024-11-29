@@ -191,3 +191,21 @@ class LowEfficiency(Alert):
             return ""
         else:
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+
+
+class LowEfficiencyCPU(LowEfficiency):
+
+    """Specialized implementation of LowEfficiency for CPUs."""
+
+    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.xpu = "cpu"
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+
+
+class LowEfficiencyGPU(LowEfficiency):
+
+    """Specialized implementation of LowEfficiency for GPUs."""
+
+    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.xpu = "gpu"
+        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)

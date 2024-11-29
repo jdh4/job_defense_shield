@@ -1,3 +1,5 @@
+"""Functions for calculating CPU/GPU efficiencies and CPU/GPU memory usage."""
+
 import json
 import gzip
 import base64
@@ -86,6 +88,7 @@ def gpu_efficiency(ss, elapsedraw, jobid, cluster, single=False, precision=1, ve
 
 
 def cpu_memory_usage(ss, jobid, cluster, precision=0, verbose=True):
+    """Return the total memory used and allocated."""
     if 'nodes' not in ss:
         if verbose:
             msg = "Warning: nodes not in ss for cpu_memory_usage."

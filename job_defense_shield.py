@@ -32,7 +32,8 @@ from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
-from alert.xpu_efficiency import LowEfficiency
+from alert.compute_efficiency import LowEfficiencyCPU
+from alert.compute_efficiency import LowEfficiencyGPU
 from alert.active_cpu_memory import ActiveCPUMemory
 from alert.too_many_cores_per_gpu import TooManyCoresPerGpu
 
@@ -46,11 +47,14 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
         ymd = start_date.strftime('%Y-%m-%d')
         hms = start_date.strftime('%H:%M:%S')
         cmd = f"sacct {flags} -S {ymd}T{hms} -E now -o {fields}"
-        if use_cache: print("\nCalling sacct (which may require several seconds) ... ", end="", flush=True)
+        if use_cache:
+            print("\nCalling sacct (which may require several seconds) ... ", end="", flush=True)
         output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=120, text=True, check=True)
-        if use_cache: print("done.", flush=True)
+        if use_cache:
+            print("done.", flush=True)
         lines = output.stdout.split('\n')
-        if lines != [] and lines[-1] == "": lines = lines[:-1]
+        if lines != [] and lines[-1] == "":
+            lines = lines[:-1]
         cols = fields.split(",")
         rw = pd.DataFrame([line.split("|")[:len(cols)] for line in lines])
         rw.columns = cols
@@ -58,7 +62,8 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
         rw = rw[pd.notna(rw.elapsedraw)]
         rw = rw[rw.elapsedraw.str.isnumeric()]
         rw[numeric_fields] = rw[numeric_fields].apply(pd.to_numeric)
-        if use_cache: rw.to_csv(fname, index=False)
+        if use_cache:
+            rw.to_csv(fname, index=False)
     return rw
 
 def add_new_and_derived_fields(df):
@@ -88,8 +93,10 @@ if __name__ == "__main__":
                       help='Identify running GPU jobs with zero utilization')
   parser.add_argument('--zero-util-gpu-hours', action='store_true', default=False,
                       help='Identify users with the most zero GPU utilization hours')
-  parser.add_argument('--low-xpu-efficiency', action='store_true', default=False,
-                      help='Identify users with low CPU/GPU efficiency')
+  parser.add_argument('--low-cpu-efficiency', action='store_true', default=False,
+                      help='Identify users with low CPU efficiency')
+  parser.add_argument('--low-gpu-efficiency', action='store_true', default=False,
+                      help='Identify users with low GPU efficiency')
   parser.add_argument('--excess-cpu-memory', action='store_true', default=False,
                       help='Identify users that are allocating too much CPU memory')
   parser.add_argument('--hard-warning-cpu-memory', action='store_true', default=False,
@@ -187,10 +194,15 @@ if __name__ == "__main__":
                                       "should_be_using_mig",
                                       "SHOULD HAVE USED MIG",
                                       args.days)
-      if args.low_xpu_efficiency:
+      if args.low_cpu_efficiency:
           show_history_of_emails_sent(args.files,
-                                      "low_xpu_efficiency",
-                                      "LOW CPU/GPU EFFICIENCY",
+                                      "low_cpu_efficiency",
+                                      "LOW CPU EFFICIENCY",
+                                      args.days)
+      if args.low_gpu_efficiency:
+          show_history_of_emails_sent(args.files,
+                                      "low_gpu_efficiency",
+                                      "LOW GPU EFFICIENCY",
                                       args.days)
       if args.zero_util_gpu_hours:
           show_history_of_emails_sent(args.files,
@@ -376,22 +388,40 @@ if __name__ == "__main__":
       title = "Multinode GPU jobs with fragmentation (all jobs, 1+ hours)"
       s += gpu_frag.generate_report_for_admins(title)
 
-  ############################
-  ## LOW CPU/GPU EFFICIENCY ##
-  ############################
-  if args.low_xpu_efficiency:
-      alerts = [alert for alert in cfg.keys() if "low-xpu-efficiency" in alert]
+  ########################
+  ## LOW CPU EFFICIENCY ##
+  ########################
+  if args.low_cpu_efficiency:
+      alerts = [alert for alert in cfg.keys() if "low-cpu-efficiency" in alert]
       for alert in alerts:
-          low_eff = LowEfficiency(df,
-                                  days_between_emails=args.days,
-                                  violation="low_xpu_efficiency",
-                                  vpath=args.files,
-                                  subject="Jobs with Low Efficiency",
-                                  **cfg[alert])
+          low_eff = LowEfficiencyCPU(df,
+                                     days_between_emails=args.days,
+                                     violation="low_cpu_efficiency",
+                                     vpath=args.files,
+                                     subject="Jobs with Low CPU Efficiency",
+                                     **cfg[alert])
           if args.email and is_today_a_work_day():
               greeting_method = cfg["greeting"]
               low_eff.send_emails_to_users(greeting_method)
-          title = f"{low_eff.cluster_name} efficiencies of top {low_eff.num_top_users} users (30+ minute jobs, ignoring running)"
+          title = "Low CPU Efficiencies"
+          s += low_eff.generate_report_for_admins(title, keep_index=True)
+
+  ########################
+  ## LOW GPU EFFICIENCY ##
+  ########################
+  if args.low_gpu_efficiency:
+      alerts = [alert for alert in cfg.keys() if "low-gpu-efficiency" in alert]
+      for alert in alerts:
+          low_eff = LowEfficiencyGPU(df,
+                                     days_between_emails=args.days,
+                                     violation="low_gpu_efficiency",
+                                     vpath=args.files,
+                                     subject="Jobs with Low GPU Efficiency",
+                                     **cfg[alert])
+          if args.email and is_today_a_work_day():
+              greeting_method = cfg["greeting"]
+              low_eff.send_emails_to_users(greeting_method)
+          title = "Low GPU Efficiencies"
           s += low_eff.generate_report_for_admins(title, keep_index=True)
 
 
