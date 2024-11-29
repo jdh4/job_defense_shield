@@ -10,21 +10,25 @@ from abc import ABC, abstractmethod
 class Greeting(ABC):
 
     @abstractmethod
-    def greeting(self):
+    def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
         pass
 
 
 class GreetingBasic(Greeting):
 
-    def greeting(self, user):
+    """A basic greeting."""
+
+    def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
         return f"Hello {user},\n\n"
 
 
 class GreetingGetent:
 
-    def greeting(self, user):
+    """A greeting based on getent passwd."""
+
+    def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
         try:
             user_info = pwd.getpwnam(user)
@@ -37,12 +41,15 @@ class GreetingGetent:
 
 class GreetingLDAP(Greeting):
 
-    def greeting(self, user):
+    """A more advanced greeting that uses LDAP. The ldap3 Python
+       module is not used to avoid having an additional dependency."""
+
+    def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
         cmd = f"ldapsearch -x uid={user} displayname"
         output = subprocess.run(cmd,
                                 stdout=subprocess.PIPE,
-                                shell=True,
+                                shell=False,
                                 timeout=5,
                                 text=True,
                                 check=True)
@@ -60,7 +67,7 @@ class GreetingLDAP(Greeting):
 
 class GreetingCustom(Greeting):
 
-    def greeting(self, user):
+    def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
         pass
 

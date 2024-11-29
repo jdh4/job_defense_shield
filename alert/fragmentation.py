@@ -298,5 +298,5 @@ class MultinodeCPUFragmentation(Alert):
         if self.df.empty:
             return ""
         else:
-            self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
+            self.df["hours"] = self.df["hours"].apply(lambda hrs: round(hrs, 1))
             return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

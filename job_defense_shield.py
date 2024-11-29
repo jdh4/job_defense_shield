@@ -120,12 +120,12 @@ if __name__ == "__main__":
                       help='List the largest jobs by number of allocated GPUs')
   parser.add_argument('--jobs-overview', action='store_true', default=False,
                       help='List the users with the most jobs')
-  parser.add_argument('-d', '--days', type=int, default=14, metavar='N',
-                      help='Use job data over N previous days from now (default: 14)')
+  parser.add_argument('-d', '--days', type=int, default=7, metavar='N',
+                      help='Use job data over N previous days from now (default: 7)')
   parser.add_argument('-M', '--clusters', type=str, default="all",
-                      help='Specify cluster(s) (e.g., --clusters=della,traverse)')
+                      help='Specify cluster(s) (e.g., --clusters=frontier,summit)')
   parser.add_argument('-r', '--partition', type=str, default="",
-                      help='Specify partition(s) (e.g., --partition=gpu,mig)')
+                      help='Specify partition(s) (e.g., --partition=cpu,bigmem)')
   parser.add_argument('--num-top-users', type=int, default=15,
                       help='Specify the number of users to consider')
   parser.add_argument('--files', type=str, default="/tigress/jdh4/utilities/job_defense_shield/violations",
