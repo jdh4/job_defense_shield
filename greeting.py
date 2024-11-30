@@ -67,6 +67,8 @@ class GreetingLDAP(Greeting):
 
 class GreetingCustom(Greeting):
 
+    """Write custom code for your institution."""
+
     def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
         pass

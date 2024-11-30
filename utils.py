@@ -5,7 +5,6 @@ import smtplib
 from datetime import datetime
 from datetime import timedelta
 import pandas as pd
-from pandas.tseries.holiday import USFederalHolidayCalendar
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -45,7 +44,7 @@ def add_dividers(df_str: str, title: str="", pre: str="\n\n\n", post: str="") ->
     width = max([len(row) for row in rows] + [len(title)])
     heading = title.center(width)
     divider = "-" * width
-    if bool(title):
+    if title:
         rows.insert(0, heading)
         rows.insert(1, divider)
         rows.insert(3, divider)
@@ -97,18 +96,6 @@ def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
   print(f"Number of X: {X}")
   print(f"Number of users: {num_users}")
   return None
-
-def is_today_a_work_day() -> bool:
-    """Determine if today is a work day."""
-    date_today = datetime.now().strftime("%Y-%m-%d")
-    cal = USFederalHolidayCalendar()
-    us_holiday = date_today in cal.holidays()
-    pu_holidays = ["2023-05-29", "2023-06-16", "2023-07-04", 
-                   "2023-09-04", "2023-11-23", "2023-11-24",
-                   "2023-12-26", "2024-01-02", "2024-01-15"]
-    pu_holiday = date_today in pu_holidays
-    day_of_week = datetime.strptime(date_today, "%Y-%m-%d").weekday()
-    return (not us_holiday) and (not pu_holiday) and (day_of_week < 5)
 
 def seconds_to_slurm_time_format(seconds: int) -> str:
     """Convert the number of seconds to DD-HH:MM:SS"""

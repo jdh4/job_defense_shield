@@ -3,10 +3,11 @@
 #####################
 ## GLOBAL SETTINGS ##
 #####################
-greeting: getent
-workday: usa
-reply: rcsystems@princeton.edu
-files: /tigress/jdh4/utilities/job_defense_shield/violations
+greeting-method: getent
+workday-method: usa
+reply-to: rcsystems@princeton.edu
+violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
+jobstats-module-path: /usr/local/bin/jobstats
 
 
 #########################
