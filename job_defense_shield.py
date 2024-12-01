@@ -14,8 +14,9 @@ from utils import gpus_per_job
 from utils import send_email
 from utils import show_history_of_emails_sent
 from workday import WorkdayFactory
-
 from efficiency import get_stats_dict
+from raw_job_data import SlurmSacct
+
 from alert.zero_gpu_utilization import ZeroGpuUtilization
 from alert.mig import MultiInstanceGPU
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
@@ -66,23 +67,6 @@ def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fi
             rw.to_csv(fname, index=False)
     return rw
 
-def add_new_and_derived_fields(df):
-    df["cpu-seconds"] = df["elapsedraw"] * df["cores"]
-    df["gpus"] = df.alloctres.apply(gpus_per_job)
-    df["gpu-seconds"] = df["elapsedraw"] * df["gpus"]
-    df["gpu-job"] = np.where((df["alloctres"].str.contains("gres/gpu=")) & (~df["alloctres"].str.contains("gres/gpu=0")), 1, 0)
-    df["cpu-only-seconds"] = np.where(df["gpus"] == 0, df["cpu-seconds"], 0)
-    df["elapsed-hours"] = df["elapsedraw"] / SECONDS_PER_HOUR
-    df.loc[df["start"] != "Unknown", "start-date"] = pd.to_datetime(df["start"].astype(int), unit='s').dt.strftime("%a %-m/%d")
-    df["cpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["cores"] / SECONDS_PER_HOUR)
-    df["gpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["gpus"] / SECONDS_PER_HOUR)
-    df["cpu-alloc-hours"] = np.round(df["limit-minutes"] * SECONDS_PER_MINUTE * df["cores"] / SECONDS_PER_HOUR)
-    df["gpu-alloc-hours"] = np.round(df["limit-minutes"] * SECONDS_PER_MINUTE * df["gpus"] / SECONDS_PER_HOUR)
-    df["cpu-hours"] = df["cpu-seconds"] / SECONDS_PER_HOUR
-    df["gpu-hours"] = df["gpu-seconds"] / SECONDS_PER_HOUR
-    df["admincomment"] = df["admincomment"].apply(get_stats_dict)
-    return df
-
 
 if __name__ == "__main__":
 
@@ -129,6 +113,10 @@ if __name__ == "__main__":
                         help='List the users with the most jobs')
     parser.add_argument('-d', '--days', type=int, default=7, metavar='N',
                         help='Use job data over N previous days from now (default: 7)')
+    parser.add_argument('-S', '--starttime', type=str, default=None,
+                        help='Start date/time of window (e.g., 2025-01-01T09:00:00)')
+    parser.add_argument('-E', '--endtime', type=str, default=None,
+                        help='End date/time of window (e.g., 2025-01-31T22:00:00)')
     parser.add_argument('-M', '--clusters', type=str, default="all",
                         help='Specify cluster(s) (e.g., --clusters=frontier,summit)')
     parser.add_argument('-r', '--partition', type=str, default="",
@@ -249,14 +237,7 @@ if __name__ == "__main__":
     pd.set_option("display.max_columns", None)
     pd.set_option("display.width", 1000)
 
-    # convert slurm timestamps to seconds
-    os.environ["SLURM_TIME_FORMAT"] = "%s"
-
-    flags = f"-a -X -P -n --clusters={args.clusters}"
-    if args.partition:
-        flags = f"{flags} --partition={args.partition}"
     start_date = datetime.now() - timedelta(days=args.days)
-    # jobname must be last in list below to catch "|" chars in raw_dataframe_from_sacct()
     fields = ["jobid",
               "user",
               "cluster",
@@ -277,7 +258,12 @@ if __name__ == "__main__":
               "admincomment",
               "jobname"]  
     fields = ",".join(fields)
+    # jobname must be last in list below to catch "|" characters in jobname
     assert fields.split(",")[-1] == "jobname"
+
+    raw = SlurmSacct(args.days, args.start, args.end, fields, args.clusters, args.partition)
+    raw = raw.get_job_data()
+
     renamings = {"cputimeraw":"cpu-seconds",
                  "nnodes":"nodes",
                  "ncpus":"cores",
@@ -290,8 +276,9 @@ if __name__ == "__main__":
                       "submit",
                       "eligible"]
     use_cache = False if (args.email or args.report) else True
-    raw = raw_dataframe_from_sacct(flags, start_date, fields, renamings, numeric_fields, use_cache)
 
+    # clean
+    #SacctClean()
     raw.partition = raw.partition.str.replace("datascience", "datasci")
     raw = raw[pd.notna(raw.state)]
     raw.state = raw.state.apply(lambda x: "CANCELLED" if "CANCEL" in x else x)
@@ -317,6 +304,23 @@ if __name__ == "__main__":
         df["secs-from-start"] = df["start"] - start_date.timestamp()
         df["secs-from-start"] = df["secs-from-start"].apply(lambda x: x if x < 0 else 0)
         df["elapsedraw"] = df["elapsedraw"] + df["secs-from-start"]
+
+    def add_new_and_derived_fields(df):
+        df["cpu-seconds"] = df["elapsedraw"] * df["cores"]
+        df["gpus"] = df.alloctres.apply(gpus_per_job)
+        df["gpu-seconds"] = df["elapsedraw"] * df["gpus"]
+        df["gpu-job"] = np.where((df["alloctres"].str.contains("gres/gpu=")) & (~df["alloctres"].str.contains("gres/gpu=0")), 1, 0)
+        df["cpu-only-seconds"] = np.where(df["gpus"] == 0, df["cpu-seconds"], 0)
+        df["elapsed-hours"] = df["elapsedraw"] / SECONDS_PER_HOUR
+        df.loc[df["start"] != "Unknown", "start-date"] = pd.to_datetime(df["start"].astype(int), unit='s').dt.strftime("%a %-m/%d")
+        df["cpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["cores"] / SECONDS_PER_HOUR)
+        df["gpu-waste-hours"] = np.round((df["limit-minutes"] * SECONDS_PER_MINUTE - df["elapsedraw"]) * df["gpus"] / SECONDS_PER_HOUR)
+        df["cpu-alloc-hours"] = np.round(df["limit-minutes"] * SECONDS_PER_MINUTE * df["cores"] / SECONDS_PER_HOUR)
+        df["gpu-alloc-hours"] = np.round(df["limit-minutes"] * SECONDS_PER_MINUTE * df["gpus"] / SECONDS_PER_HOUR)
+        df["cpu-hours"] = df["cpu-seconds"] / SECONDS_PER_HOUR
+        df["gpu-hours"] = df["gpu-seconds"] / SECONDS_PER_HOUR
+        df["admincomment"] = df["admincomment"].apply(get_stats_dict)
+        return df
 
     df = add_new_and_derived_fields(df)
     df.reset_index(drop=True, inplace=True)

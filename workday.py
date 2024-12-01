@@ -43,7 +43,7 @@ class CustomWorkday(Workday):
 
 class WorkdayFactory:
 
-    def create_workday(method):
+    def create_workday(self, method):
         if method == "usa":
             return UsaWorkday()
         elif method == "custom":
