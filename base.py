@@ -58,7 +58,10 @@ class Alert:
         """Return boolean specifying whether sufficient time has passed."""
         last_sent_email_date = datetime(1970, 1, 1)
         if os.path.exists(vfile):
-            violation_history = pd.read_csv(vfile, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
+            violation_history = pd.read_csv(vfile,
+                                            parse_dates=["email_sent"],
+                                            date_format="mixed",
+                                            dayfirst=False)
             last_sent_email_date = violation_history["email_sent"].max()
         seconds_since_last_email = datetime.now().timestamp() - last_sent_email_date.timestamp()
         seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR

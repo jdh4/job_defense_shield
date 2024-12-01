@@ -15,9 +15,9 @@ class MostCores(Alert):
       # filter the dataframe
       pass
       # add new fields
-      cols = ["jobid", "netid", "cluster", "cores", "nodes", "gpus", "state",
+      cols = ["jobid", "user", "cluster", "cores", "nodes", "gpus", "state",
               "partition", "elapsed-hours", "admincomment", "elapsedraw"]
-      self.gp = self.df[cols].groupby("netid").apply(lambda d: d.iloc[d["cores"].argmax()])
+      self.gp = self.df[cols].groupby("user").apply(lambda d: d.iloc[d["cores"].argmax()])
       self.gp = self.gp.sort_values("cores", ascending=False)[:10]
       self.gp = self.gp.rename(columns={"elapsed-hours":"hours"})
       self.gp.state = self.gp.state.apply(lambda x: JOBSTATES[x])
@@ -30,7 +30,7 @@ class MostCores(Alert):
       self.gp["CPU-eff"] = self.gp["CPU-eff-tpl"].apply(lambda tpl: tpl[0])
       self.gp["CPU-eff"] = self.gp["CPU-eff"].apply(lambda x: x if x == "--" else f"{round(x)}%")
       self.gp["hours"] = self.gp["hours"].apply(lambda hrs: round(hrs, 1))
-      cols = ["jobid", "netid", "cluster", "cores", "nodes", "gpus",
+      cols = ["jobid", "user", "cluster", "cores", "nodes", "gpus",
               "state", "partition", "hours", "CPU-eff"]
       self.gp = self.gp[cols]
 

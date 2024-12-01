@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 from alert.excess_cpu_memory import ExcessCPUMemory
 
@@ -44,7 +43,7 @@ def test_excess_cpu_memory():
     "total_time": -1}
     num_cores = 13
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user1", "user2", "user1", "user2"],
+                       "user":["user1", "user1", "user2", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job3, job1],
                        "cluster":["della"] * n_jobs,
                        "account":["cbe"] * n_jobs,
@@ -71,8 +70,8 @@ def test_excess_cpu_memory():
                            clusters=["della"],
                            partition=["cpu"],
                            excluded_users=["aturing"])
-    actual = xmem.gp[["NetID", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]
-    expected = pd.DataFrame({"NetID":["user1", "user2"],
+    actual = xmem.gp[["User", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]
+    expected = pd.DataFrame({"User":["user1", "user2"],
                              "ratio":[(1+5+10)/(3*100), (10+1)/(2*100)],
                              "mean-ratio":[(1/100+5/100+10/100)/3,(10/100+1/100)/2],
                              "median-ratio":[5/100, (10/100+1/100)/2],

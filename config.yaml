@@ -1,9 +1,19 @@
 %YAML 1.1
 ---
+#####################
+## GLOBAL SETTINGS ##
+#####################
+greeting-method: getent
+workday-method: usa
+reply-to: rcsystems@princeton.edu
+violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
+jobstats-module-path: /usr/local/bin/jobstats
+
+
 #########################
 ## SHOULD BE USING MIG ##
 #########################
-should-be-using-mig-della-gpu:
+should-be-using-mig:
   cluster: della
   partition: gpu
   excluded_users:
@@ -23,8 +33,8 @@ zero-util-gpu-hours:
     - pli
   min_run_time: 0               # minutes
   gpu_hours_threshold_user: 24  # hours
-  gpu_hours_threshold_admin: 0  # hours
-  max_num_jobid: 3              # count
+  gpu_hours_threshold_admin: 24 # hours
+  max_num_jobid: 2              # count
 
 
 ############################
@@ -48,15 +58,14 @@ too-many-cores-per-gpu:
     - kl5675@princeton.edu
 
 
-############################
-## LOW CPU/GPU EFFICIENCY ##
-############################
-low-xpu-efficiency-della-cpu:
+########################
+## LOW CPU EFFICIENCY ##
+########################
+low-cpu-efficiency:
   cluster: della
   cluster_name: "Della (cpu)"
   partitions:
     - cpu
-  xpu: cpu
   eff_thres_pct: 60
   eff_target_pct: 90 
   proportion_thres_pct: 2
@@ -70,71 +79,11 @@ low-xpu-efficiency-della-cpu:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-della-gpu:
-  cluster: della
-  cluster_name: "Della (gpu)"
-  partitions:
-    - gpu
-  xpu: gpu
-  eff_thres_pct: 15
-  eff_target_pct: 50 
-  proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 15
-  excluded_users:
-    - aturing
-    - einstein
-  admin_emails:
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
-    - halverson@princeton.edu
-    - msbc@princeton.edu
-
-low-xpu-efficiency-della-pli-c:
-  cluster: della
-  cluster_name: "Della (pli-c)"
-  partitions:
-    - pli-c
-  xpu: gpu
-  eff_thres_pct: 40
-  eff_target_pct: 75
-  proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 5
-  excluded_users:
-    - aturing
-    - einstein
-  admin_emails:
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
-    - halverson@princeton.edu
-    - kl5675@princeton.edu
-    - msbc@princeton.edu
-
-low-xpu-efficiency-della-pli:
-  cluster: della
-  cluster_name: "Della (pli)"
-  partitions:
-    - pli
-  xpu: gpu
-  eff_thres_pct: 40
-  eff_target_pct: 75
-  proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 5
-  excluded_users:
-    - aturing
-    - einstein
-  admin_emails:
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
-    - halverson@princeton.edu
-    - kl5675@princeton.edu
-    - msbc@princeton.edu
-
-low-xpu-efficiency-della-physics:
+low-cpu-efficiency:
   cluster: della
   cluster_name: "Della (physics)"
   partitions:
     - physics
-  xpu: cpu
   eff_thres_pct: 60
   eff_target_pct: 90
   proportion_thres_pct: 2
@@ -148,7 +97,7 @@ low-xpu-efficiency-della-physics:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-stellar-intel:
+low-cpu-efficiency:
   cluster: stellar
   cluster_name: "Stellar (Intel)"
   partitions:
@@ -156,7 +105,6 @@ low-xpu-efficiency-stellar-intel:
     - pppl
     - pu
     - serial
-  xpu: cpu
   eff_thres_pct: 60
   eff_target_pct: 90
   proportion_thres_pct: 2
@@ -170,16 +118,17 @@ low-xpu-efficiency-stellar-intel:
     - halverson@princeton.edu
     - msbc@princeton.edu
 
-low-xpu-efficiency-tiger:
-  cluster: tiger
-  cluster_name: "Tiger"
+
+########################
+## LOW GPU EFFICIENCY ##
+########################
+low-gpu-efficiency:
+  cluster: della
+  cluster_name: "Della (gpu)"
   partitions:
-    - cpu
-    - ext
-    - serial
-  xpu: cpu
-  eff_thres_pct: 60
-  eff_target_pct: 90
+    - gpu
+  eff_thres_pct: 15
+  eff_target_pct: 50 
   proportion_thres_pct: 2
   absolute_thres_hours: 50
   num_top_users: 15
@@ -189,13 +138,51 @@ low-xpu-efficiency-tiger:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
+    - msbc@princeton.edu
+
+low-gpu-efficiency:
+  cluster: della
+  cluster_name: "Della (pli-c)"
+  partitions:
+    - pli-c
+  eff_thres_pct: 40
+  eff_target_pct: 75
+  proportion_thres_pct: 2
+  absolute_thres_hours: 50
+  num_top_users: 5
+  excluded_users:
+    - aturing
+    - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+    - kl5675@princeton.edu
+    - msbc@princeton.edu
+
+low-gpu-efficiency:
+  cluster: della
+  cluster_name: "Della (pli)"
+  partitions:
+    - pli
+  eff_thres_pct: 40
+  eff_target_pct: 75
+  proportion_thres_pct: 2
+  absolute_thres_hours: 50
+  num_top_users: 5
+  excluded_users:
+    - aturing
+    - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+    - kl5675@princeton.edu
     - msbc@princeton.edu
 
 
 #######################
 ## EXCESS CPU MEMORY ##
 #######################
-excess-cpu-memory-della-cpu:
+excess-cpu-memory:
   tb_hours_per_day: 10
   ratio_threshold: 0.35
   mean_ratio_threshold: 0.35
@@ -215,7 +202,7 @@ excess-cpu-memory-della-cpu:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
-excess-cpu-memory-della-datascience:
+excess-cpu-memory:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
@@ -233,7 +220,7 @@ excess-cpu-memory-della-datascience:
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
-excess-cpu-memory-stellar:
+excess-cpu-memory:
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
@@ -248,26 +235,6 @@ excess-cpu-memory-stellar:
     - serial
   combine_partitions: False
   cores_per_node: 76.8
-  excluded_users:
-    - aturing
-    - einstein
-  admin_emails:
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
-
-excess-cpu-memory-tiger:
-  tb_hours_per_day: 10000
-  ratio_threshold: 0.25
-  mean_ratio_threshold: 0.25
-  median_ratio_threshold: 0.25
-  num_top_users: 5
-  clusters:
-    - tiger
-  partition:
-    - cpu
-    - ext
-    - serial
-  combine_partitions: True
-  cores_per_node: 32
   excluded_users:
     - aturing
     - einstein

@@ -14,7 +14,7 @@ class JobsOverview(Alert):
     def _filter_and_add_new_fields(self):
         self.df = self.df[self.df["elapsedraw"] > 0].copy()
         cols = ["jobid",
-                "netid",
+                "user",
                 "cluster",
                 "cores",
                 "state",
@@ -30,7 +30,7 @@ class JobsOverview(Alert):
         self.df["OOM"] = self.df.state.apply(lambda s: s == "OUT_OF_MEMORY")
         self.df["TO"]  = self.df.state.apply(lambda s: s == "TIMEOUT")
         self.df["F"]   = self.df.state.apply(lambda s: s == "FAILED")
-        d = {"netid":"size",
+        d = {"user":"size",
              "COM":"sum",
              "CLD":"sum",
              "F":"sum",
@@ -40,8 +40,8 @@ class JobsOverview(Alert):
              "gpu-seconds":"sum",
              "gpu-job":"sum",
              "partition":lambda series: ",".join(sorted(set(series)))}
-        self.gp = self.df.groupby(["cluster", "netid"]).agg(d)
-        self.gp = self.gp.rename(columns={"netid":"jobs"})
+        self.gp = self.df.groupby(["cluster", "user"]).agg(d)
+        self.gp = self.gp.rename(columns={"user":"jobs"})
         self.gp = self.gp.reset_index(drop=False)
         self.gp = self.gp.sort_values("jobs", ascending=False)
         self.gp = self.gp.rename(columns={"partition":"partitions", "gpu-job":"gpu"})
@@ -51,7 +51,7 @@ class JobsOverview(Alert):
         self.gp["cpu-hours"] = self.gp["cpu-hours"].apply(round)
         self.gp["gpu-hours"] = self.gp["gpu-hours"].apply(round)
         self.gp.drop(columns=["cpu-seconds", "gpu-seconds"], inplace=True)
-        cols = ["netid",
+        cols = ["user",
                 "cluster",
                 "jobs",
                 "cpu",

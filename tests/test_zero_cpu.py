@@ -1,4 +1,3 @@
-import pytest
 import pandas as pd
 from alert.zero_cpu_utilization import ZeroCPU
 
@@ -79,7 +78,7 @@ def test_zero_cpu_utilization():
     },
     "total_time": -1}
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
-                       "netid":["user1", "user1", "user2", "user1", "user2"],
+                       "user":["user1", "user1", "user2", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job2, job1],
                        "cluster":["della"] * n_jobs,
                        "jobname":["myjob"] * n_jobs,
@@ -89,8 +88,8 @@ def test_zero_cpu_utilization():
                        "partition":["cpu"] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
     zero_cpu = ZeroCPU(df, 0, "", "", "Subject")
-    actual = zero_cpu.df[["NetID", "Nodes", "Nodes-Unused"]]
-    expected = pd.DataFrame({"NetID":["user1", "user1", "user1", "user2"],
+    actual = zero_cpu.df[["User", "Nodes", "Nodes-Unused"]]
+    expected = pd.DataFrame({"User":["user1", "user1", "user1", "user2"],
                              "Nodes":[4, 2, 2, 4],
                              "Nodes-Unused":[3, 1, 1, 3]})
     pd.testing.assert_frame_equal(actual.reset_index(drop=True), expected)

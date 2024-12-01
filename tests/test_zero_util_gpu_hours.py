@@ -5,7 +5,7 @@ def test_zero_util_gpu_hours():
     n_jobs = 5
     wallclock_secs = 1000000
     wallclock_hrs = wallclock_secs / 3600
-    # job 1 (8555322 on tiger)
+    # job 1 (8555322 on tiger2)
     job1 = {
     "gpus": 4,
     "nodes": {
@@ -81,7 +81,7 @@ def test_zero_util_gpu_hours():
     },
     "total_time": -1}
     df = pd.DataFrame({"jobid":["12345", "12346", "12347", "12348", "12349"],
-                       "netid":["user1", "user1", "user2", "user1", "user2"],
+                       "user":["user1", "user1", "user2", "user1", "user2"],
                        "admincomment":[job1, job2, job3, job2, job1],
                        "cluster":["della"] * n_jobs,
                        "gpus":[4, 1, 2, 1, 4],
@@ -100,8 +100,8 @@ def test_zero_util_gpu_hours():
                             gpu_hours_threshold_user=0,
                             gpu_hours_threshold_admin=0,
                             max_num_jobid=3)
-    actual = zero.gp[["NetID", "Zero-Util-GPU-Hours", "Jobs", "JobID"]]
-    expected = pd.DataFrame({"NetID":["user1", "user2"],
+    actual = zero.gp[["User", "Zero-Util-GPU-Hours", "Jobs", "JobID"]]
+    expected = pd.DataFrame({"User":["user1", "user2"],
                              "Zero-Util-GPU-Hours":[(3 + 1 + 1) * wallclock_hrs,
                                                     3 * wallclock_hrs],
                              "Jobs":[3, 1],

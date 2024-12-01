@@ -6,7 +6,7 @@ from efficiency import cpu_memory_usage
 from efficiency import cpu_nodes_with_zero_util
 from utils import send_email
 from utils import add_dividers
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class MultinodeCPUFragmentation(Alert):
@@ -27,7 +27,7 @@ class MultinodeCPUFragmentation(Alert):
         # value for della is hard-coded at the moment
         safety = 0.2
         cores_frac = 0.8
-        if cluster == "tiger" and \
+        if cluster == "tiger2" and \
            cores_per_node < cores_frac * 40 and \
            mem_per_node_used < (1 - safety) * 192:
             return True
@@ -60,7 +60,7 @@ class MultinodeCPUFragmentation(Alert):
             return cores_vs_memory(cores, 40, mem_per_node_used, 380)
         elif cluster == "della" and partition != "physics":
             return cores_vs_memory(cores, 32, mem_per_node_used, 190)
-        elif cluster == "tiger":
+        elif cluster == "tiger2":
             return cores_vs_memory(cores, 40, mem_per_node_used, 192)
         elif cluster == "stellar" and partition in ("all", "pppl", "pu"):
             return cores_vs_memory(cores, 96, mem_per_node_used, 768)
@@ -76,7 +76,7 @@ class MultinodeCPUFragmentation(Alert):
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df.partition.isin(["all", "cpu", "ext", "physics", "pppl", "pu"])) &
                           (~self.df.qos.isin(["stellar-debug"])) &
-                          (self.df.cluster.isin(["della", "stellar", "tiger"]))].copy()
+                          (self.df.cluster.isin(["della", "stellar", "tiger2"]))].copy()
         # add new fields
         if not self.df.empty:
             self.df["nodes-tuple"] = self.df.apply(lambda row:
@@ -112,15 +112,14 @@ class MultinodeCPUFragmentation(Alert):
                                                                        row["cores"],
                                                                        row["memory-per-node-used"]),
                                                                        axis="columns")
-            self.df = self.df.sort_values(["cluster", "netid"], ascending=[True, False])
+            self.df = self.df.sort_values(["cluster", "user"], ascending=[True, False])
             self.df = self.df[self.df["min-nodes"] < self.df["nodes"]]
             self.df["memory-per-node-used"] = self.df["memory-per-node-used"].apply(lambda x: f"{x} GB")
             self.df["cores-per-node"] = self.df["cores-per-node"].apply(lambda x: str(x).replace(".0", ""))
-            self.df = self.df.rename(columns={"netid":"NetID",
-                                              "elapsed-hours":"hours",
+            self.df = self.df.rename(columns={"elapsed-hours":"hours",
                                               "memory-per-node-used":"mem-per-node-used"})
             cols = ["jobid",
-                    "NetID",
+                    "user",
                     "cluster",
                     "partition",
                     "nodes",
@@ -131,8 +130,9 @@ class MultinodeCPUFragmentation(Alert):
                     "min-nodes"]
             self.df = self.df[cols]
 
-    def send_emails_to_users(self):
-        for user in self.df.NetID.unique():
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
+        for user in self.df.user.unique():
 
 
             if user == "martirez": continue  # EXCLUDED USER--HANDLE VIA CONFIG FILE
@@ -141,9 +141,8 @@ class MultinodeCPUFragmentation(Alert):
 
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.df[self.df.NetID == user].copy()
+                usr = self.df[self.df.user == user].copy()
                 renamings = {"jobid":"JobID",
-                             "netid":"NetID",
                              "cluster":"Cluster",
                              "nodes":"Nodes",
                              "mem-per-node-used":"Mem-per-Node",
@@ -153,7 +152,7 @@ class MultinodeCPUFragmentation(Alert):
                 usr = usr.rename(columns=renamings)
                 min_nodes = usr["Nodes-Needed"].mode().values[0]
                 is_stellar = "stellar" in usr.Cluster.tolist()
-                is_tiger = "tiger" in usr.Cluster.tolist()
+                is_tiger = "tiger2" in usr.Cluster.tolist()
                 is_della = "della" in usr.Cluster.tolist()
                 della = usr[usr.Cluster == "della"].copy()
                 all_physics = "physics" in della.partition.tolist() and \
@@ -161,11 +160,11 @@ class MultinodeCPUFragmentation(Alert):
                 all_not_physics = bool(della[della.partition != "physics"].shape[0] == della.shape[0])
                 max_cores = usr["cores"].max()
                 edays = self.days_between_emails
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
                 s += "than necessary:"
                 s += "\n\n"
-                usr = usr.drop(columns=["NetID", "partition", "cores"])
+                usr = usr.drop(columns=["User", "partition", "cores"])
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([4 * " " + row for row in usr_str.split("\n")])
@@ -299,4 +298,5 @@ class MultinodeCPUFragmentation(Alert):
         if self.df.empty:
             return ""
         else:
+            self.df["hours"] = self.df["hours"].apply(lambda hrs: round(hrs, 1))
             return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

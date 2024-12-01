@@ -4,7 +4,7 @@ from base import Alert
 from efficiency import cpu_memory_usage
 from utils import send_email
 from utils import add_dividers
-from greeting import Greeting
+from greeting import GreetingFactory
 
 
 class ExcessCPUMemory(Alert):
@@ -26,11 +26,11 @@ class ExcessCPUMemory(Alert):
                           (self.df.state != "OUT_OF_MEMORY") &
                           self.df.cluster.isin(self.clusters) &
                           self.df.partition.isin(self.partition) &
-                          (~self.df.netid.isin(self.excluded_users)) &
+                          (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= 1)].copy()
         if self.combine_partitions:
             self.df["partition"] = ",".join(sorted(self.partition))
-        self.gp = pd.DataFrame({"NetID":[]})
+        self.gp = pd.DataFrame({"User":[]})
         self.admin = pd.DataFrame()
         # add new fields
         if not self.df.empty:
@@ -64,9 +64,9 @@ class ExcessCPUMemory(Alert):
                  "account":pd.Series.mode,
                  "mean-ratio":"mean",
                  "median-ratio":"median",
-                 "netid":"size"}
-            self.gp = self.df.groupby(["cluster", "partition", "netid"]).agg(d)
-            self.gp = self.gp.rename(columns={"netid":"jobs"})
+                 "user":"size"}
+            self.gp = self.df.groupby(["cluster", "partition", "user"]).agg(d)
+            self.gp = self.gp.rename(columns={"user":"jobs"})
             self.gp.reset_index(drop=False, inplace=True)
             total_mem_hours = self.gp["mem-hrs-alloc"].sum()
             assert total_mem_hours != 0, "total_mem_hours found to be zero"
@@ -75,7 +75,7 @@ class ExcessCPUMemory(Alert):
             self.gp = self.gp.sort_values("mem-hrs-unused", ascending=False)
             cols = ["cluster",
                     "partition",
-                    "netid",
+                    "user",
                     "account",
                     "proportion",
                     "mem-hrs-unused",
@@ -89,14 +89,14 @@ class ExcessCPUMemory(Alert):
                     "cpu-hours",
                     "jobs"]
             self.gp = self.gp[cols]
-            renamings = {"netid":"NetID",
+            renamings = {"user":"User",
                          "elapsed-hours":"hrs",
                          "cores":"avg-cores",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
             # should email90 be computed for a specific cluster and partition?
-            self.gp["email90"] = self.gp["NetID"].apply(lambda netid:
-                                                 self.get_emails_sent_count(netid,
+            self.gp["email90"] = self.gp["User"].apply(lambda user:
+                                                 self.get_emails_sent_count(user,
                                                                             self.violation,
                                                                             days=90))
             cols = ["mem-hrs-unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
@@ -113,12 +113,13 @@ class ExcessCPUMemory(Alert):
                               (self.gp["mean-ratio"] < self.mean_ratio_threshold) &
                               (self.gp["median-ratio"] < self.median_ratio_threshold)]
 
-    def send_emails_to_users(self):
-        for user in self.gp.NetID.unique():
+    def send_emails_to_users(self, method):
+        g = GreetingFactory().create_greeting(method)
+        for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
-                usr = self.gp[self.gp.NetID == user].copy()
-                jobs = self.df[self.df.netid == user].copy()
+                usr = self.gp[self.gp.User == user].copy()
+                jobs = self.df[self.df.user== user].copy()
                 num_disp = 10
                 total_jobs = jobs.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
@@ -147,7 +148,7 @@ class ExcessCPUMemory(Alert):
                 jobs = jobs.rename(columns=renamings)
                 jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s = f"{Greeting(user).greeting()}"
+                s = f"{g.greeting(user)}"
                 s += f"Below are {case} that ran on Della (cpu) in the past {edays} days:\n\n"
                 jobs_str = jobs.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])
@@ -205,7 +206,7 @@ class ExcessCPUMemory(Alert):
         else:
             cols = ["cluster",
                     "partition",
-                    "NetID",
+                    "User",
                     "proportion",
                     "mem-hrs-unused",
                     "mem-hrs-used",
