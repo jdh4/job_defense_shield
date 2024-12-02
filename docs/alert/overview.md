@@ -1,22 +1,36 @@
 # Overview
 
-- The general idea is to examine all of the job data and send emails to user that are
+
+The general idea is to examine all of the job data and send emails to user that are
 underutilizing the systems.
-- option to include actively running jobs each alert
-- netid -> username
-- is --days floating point?
-- external code for is_today_a_workday
+
+Short-term work:
+
 - flag to send all user emails to admins (--dry-run)
-- may need to relate user to an external email by writing code
-- cleaning mechansim
-- move subject out of base.py and other attributes
-- consider logger with clean ouput
-- specify location of file for alert
-- how to keep email message external (like notes in config.py)
+- data cleaning mechansim
 - what is comma in partition like cpu,physics
+- move subject out of base.py and other attributes
+- need to strictly end jobs in window if --end is specified
+- add cluster and partition to has_enough_time_passed_since_last (store cluster and partition with violation email)
+- need ability to wite csv or json for —report for sys admins
+- custom emails and routine to store emails in a list and then send in a separate method
+- set cluster, partitions, handle start and end dates, fields, extra args, get_data, set start, set end
+
+
+Long-term work:
+
+- active finding excess memory of running jobs (need to import jobstats module)
+- consider logger with clean ouput
+- may need to relate user to an external email by writing code
+- how to keep email message external (like notes in config.py)
+- option to include actively running jobs each alert
 
 TODO: return email as list of strings; add new method to send the list; add tests
 
+Why is it --partition instead of --partitiions. We use the same name as sacct
+which is partition.
+
+Look at the `holidays` Python module for writing a custom workday.
 
 ## Custom Greeting
 
