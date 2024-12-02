@@ -207,7 +207,7 @@ def num_gpus_with_zero_util(ss, jobid, cluster, verbose=True):
             gpus = list(ss['nodes'][node]['gpu_utilization'].keys())
         except Exception as e:
             if verbose:
-                msg = f"gpu_utilization not found: node is {node} for max_cpu_memory_used_per_node ({e})."
+                msg = f"gpu_utilization not found: node is {node} for num_gpus_with_zero_util ({e})."
                 print(msg, jobid, cluster)
             error_code = 2
             return (-1, error_code)

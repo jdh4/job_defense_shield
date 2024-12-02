@@ -3,16 +3,16 @@
 #####################
 ## GLOBAL SETTINGS ##
 #####################
+violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
+reply-to: rcsystems@princeton.edu
 greeting-method: getent
 workday-method: usa
-reply-to: rcsystems@princeton.edu
-violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
 jobstats-module-path: /usr/local/bin/jobstats
 
 
-#########################
-## SHOULD BE USING MIG ##
-#########################
+################################
+## ALERT: SHOULD BE USING MIG ##
+################################
 should-be-using-mig:
   cluster: della
   partition: gpu

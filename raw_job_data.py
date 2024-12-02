@@ -58,6 +58,8 @@ class SlurmSacct(RawJobData):
             msg = f"Error running sacct.\n{error.stderr}"
             raise RuntimeError(msg) from error
         rows = result.stdout.split('\n')
+        if rows != [] and rows[-1] == "":
+            rows = rows[:-1]
         cols = self.fields.split(",")
         raw = pd.DataFrame([row.split("|")[:len(cols)] for row in rows])
         raw.columns = cols

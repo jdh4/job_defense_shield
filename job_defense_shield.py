@@ -16,6 +16,7 @@ from utils import show_history_of_emails_sent
 from workday import WorkdayFactory
 from efficiency import get_stats_dict
 from raw_job_data import SlurmSacct
+from cleaner import SacctCleaner
 
 from alert.zero_gpu_utilization import ZeroGpuUtilization
 from alert.mig import MultiInstanceGPU
@@ -256,48 +257,24 @@ if __name__ == "__main__":
               "qos",
               "state",
               "admincomment",
-              "jobname"]  
+              "jobname"]
     fields = ",".join(fields)
     # jobname must be last in list below to catch "|" characters in jobname
     assert fields.split(",")[-1] == "jobname"
 
-    raw = SlurmSacct(args.days, args.start, args.end, fields, args.clusters, args.partition)
+    use_cache = False if (args.email or args.report) else True
+    raw = SlurmSacct(args.days, args.starttime, args.endtime, fields, args.clusters, args.partition)
     raw = raw.get_job_data()
 
-    renamings = {"cputimeraw":"cpu-seconds",
-                 "nnodes":"nodes",
-                 "ncpus":"cores",
-                 "timelimitraw":"limit-minutes"}
-    numeric_fields = ["cpu-seconds",
-                      "elapsedraw",
-                      "limit-minutes",
-                      "nodes",
-                      "cores",
-                      "submit",
-                      "eligible"]
-    use_cache = False if (args.email or args.report) else True
-
-    # clean
-    #SacctClean()
-    raw.partition = raw.partition.str.replace("datascience", "datasci")
-    raw = raw[pd.notna(raw.state)]
-    raw.state = raw.state.apply(lambda x: "CANCELLED" if "CANCEL" in x else x)
-    raw.cores = raw.cores.astype("int64")
-    raw.nodes = raw.nodes.astype("int64")
-
-    # df excludes pending jobs
+    # clean the raw data
+    field_renamings = {"cputimeraw":"cpu-seconds",
+                       "nnodes":"nodes",
+                       "ncpus":"cores",
+                       "timelimitraw":"limit-minutes"}
+    partition_renamings = {"datascience":"datasci"}
+    raw = SacctCleaner(raw, field_renamings, partition_renamings).clean()
     df = raw.copy()
-    print(f"Number of rows (before): {df.shape[0]}")
-    df.start = df.apply(lambda row: row["eligible"]
-                                    if row["start"] == "Unknown"
-                                    else row["start"],
-                                    axis="columns")
-    df = df[pd.notnull(df.alloctres) &
-            (df.alloctres != "") &
-            pd.notnull(df.start) &
-            (~df.start.isin(["", "None"]))]
-    print(f"Number of rows  (after): {df.shape[0]}")
-    df.start = df.start.astype("int64")
+    assert df.isnull().sum().sum() == 0
 
     if args.strict_start:
         # remove usage before the start of the time window
@@ -324,13 +301,6 @@ if __name__ == "__main__":
 
     df = add_new_and_derived_fields(df)
     df.reset_index(drop=True, inplace=True)
-
-    #if not args.email:
-    #if debug:
-    if False:
-        df.info()
-        print(df.describe().astype("int64").T)
-        print("\nTotal NaNs:", df.isnull().sum().sum())
 
     fmt = "%a %b %-d"
     s = f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}"

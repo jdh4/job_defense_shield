@@ -56,8 +56,8 @@ class ZeroUtilGPUHours(Alert):
                 return ",".join(series[:self.max_num_jobid]) + ellipsis
             # for each user sum the number of GPU-hours with zero GPU utilization
             self.gp = self.df.groupby("User").agg({"Zero-Util-GPU-Hours":"sum",
-                                                    "User":"size",
-                                                    "JobID":jobid_list})
+                                                   "User":"size",
+                                                   "JobID":jobid_list})
             self.gp = self.gp.rename(columns={"User":"Jobs"})
             self.gp.reset_index(drop=False, inplace=True)
             self.admin = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_admin].copy()
@@ -73,41 +73,15 @@ class ZeroUtilGPUHours(Alert):
                 usr = self.df[self.df.User == user].copy()
                 zero_hours = round(self.gp[self.gp.User == user]["Zero-Util-GPU-Hours"].values[0])
                 emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
-                s = f"{g.greeting(user)}"
-                s += f"You have consumed {zero_hours} GPU-hours at 0% GPU utilization in the past {self.days_between_emails} days on\n"
-                s += "Della. This is a waste of valuable resources.\n"
-                s += textwrap.dedent("""
-                See this webpage for three common reasons why a user may encounter 0% GPU
-                utilization:
-
-                  https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-                Consider attending an in-person Research Computing help session for assistance:
-
-                  https://researchcomputing.princeton.edu/support/help-sessions
-
-                It is your responsibility to ensure that the GPUs and other resources are being
-                used efficiently by your jobs. Please monitor your jobs using the "jobstats"
-                command:
-                """)
-                s += "\n"
-                s += f"  $ jobstats {usr.JobID.values[0]}"
-                s += "\n\n"
-                s += f"\nBelow are the jobs that ran in the past {self.days_between_emails} days with 0% GPU utilization:\n\n"
-                s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-                s +=  "\n\nPlease reply to this support ticket if you would like assistance in resolving"
-                s +=  "\nthis issue."
-
-                if emails_sent <= 1:
-                    self.subject = "Underutilization of the GPUs on Della"
-                else:
-                    self.subject = "WARNING OF ACCOUNT SUSPENSION: Underutilization of the GPUs on Della"
-                send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="jdh4@princeton.edu")
-                send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                s = ""
+                #self.subject = "Underutilization of the GPUs on Della"
+                #send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="jdh4@princeton.edu")
+                #send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
                 print(s)
+                # self.emails.append(email)
 
                 # append the new violations to the log file
-                Alert.update_violation_log(usr, vfile)
+                #Alert.update_violation_log(usr, vfile)
 
     def generate_report_for_admins(self, title: str, start_date, keep_index: bool=False) -> str:
         if self.admin.empty:
@@ -118,13 +92,9 @@ class ZeroUtilGPUHours(Alert):
             self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"0%-GPU-Hours"})
             self.admin.reset_index(drop=True, inplace=True)
             self.admin.index += 1
-            post  = f"                  Cluster: {self.cluster}\n" 
-            post += f"               Partitions: {', '.join(self.partitions)}\n" 
-            fmt = "%a %b %-d, %Y at %-I:%M %p"
-            post += f"                    Start: {start_date.strftime(fmt)}\n" 
-            post += f"                      End: {datetime.now().strftime(fmt)}\n" 
-            post += f"             min_run_time: {self.min_run_time} minutes\n" 
-            post += f"gpu_hours_threshold_admin: {self.gpu_hours_threshold_admin} GPU-hours\n" 
-            post += f"            max_num_jobid: {self.max_num_jobid}\n"
-            post += "* This report applies to completed jobs only"
+            post  = f"   Cluster: {self.cluster}\n" 
+            post += f"Partitions: {', '.join(self.partitions)}\n" 
+            fmt = "%a %b %d, %Y at %I:%M %p"
+            post += f"     Start: {start_date.strftime(fmt)}\n" 
+            post += f"       End: {datetime.now().strftime(fmt)}\n" 
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title, post=post)
