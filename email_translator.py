@@ -1,8 +1,9 @@
 import os
+from typing import Dict
 
 class EmailTranslator:
 
-    def __init__(self, template_file: str, tags: dict[str, str]):
+    def __init__(self, template_file: str, tags: Dict[str, str]) -> None:
         self.template_file = template_file
         self.tags = tags
         self.lines = None

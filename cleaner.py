@@ -2,6 +2,7 @@
    containing job data."""
 
 from abc import ABC, abstractmethod
+from typing import Dict
 import pandas as pd
 
 
@@ -9,8 +10,8 @@ class BaseCleaner(ABC):
 
     def __init__(self,
                  raw: pd.DataFrame,
-                 field_renamings: dict[str, str],
-                 partition_renamings: dict[str, str]) -> None:
+                 field_renamings: Dict[str, str],
+                 partition_renamings: Dict[str, str]) -> None:
         self.raw = raw
         self.fields = list(raw.columns)
         self.field_renamings = field_renamings
