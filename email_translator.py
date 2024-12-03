@@ -10,8 +10,8 @@ class EmailTranslator:
 
     def _read_template_file(self) -> None:
         if not os.path.isfile(self.template_file):
-            print("ERROR: Did not find email/zero_util_gpu_hours.txt for --zero_util_gpu_hours.")
-            # raise 
+            print(f"ERROR: Did not find {self.template_file}.")
+            # raise
             return None
         else:
             with open(self.template_file, "r", encoding="utf-8") as fp:

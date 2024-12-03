@@ -1,4 +1,3 @@
-import textwrap
 import pandas as pd
 from base import Alert
 from utils import add_dividers
@@ -6,6 +5,7 @@ from utils import send_email
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class MultiInstanceGPU(Alert):
@@ -67,62 +67,34 @@ class MultiInstanceGPU(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                s = f"{g.greeting(user)}"
-                s += f"Below are jobs that ran on an A100 GPU on Della in the past {self.days_between_emails} days:"
-                s +=  "\n\n"
-                s +=  "\n".join([2 * " " + row for row in usr.to_string(index=False, justify="center").split("\n")])
-                s +=  "\n"
-                s += textwrap.dedent("""
-                The jobs above have a low GPU utilization and they use less than 10 GB of GPU
-                memory and less than 32 GB of CPU memory. Such jobs could be run on the MIG
-                GPUs. A MIG GPU has 1/7th the performance and memory of an A100. To run on a
-                MIG GPU, add the "partition" directive to your Slurm script:
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITION>"] = self.partition  # multiple partitions?
+                tags["<TARGET>"] = self.gpu_util_target
+                tags["<NUM-JOBS>"] = str(len(usr))
+                indent = 2 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
+                translator = EmailTranslator("email/mig.txt", tags)
+                s = translator.translate()
 
-                  #SBATCH --nodes=1
-                  #SBATCH --ntasks=1
-                  #SBATCH --cpus-per-task=1
-                  #SBATCH --gres=gpu:1
-                  #SBATCH --partition=mig
-
-                For interactive sessions use, for example:
-
-                  $ salloc --nodes=1 --ntasks=1 --time=1:00:00 --gres=gpu:1 --partition=mig
-
-                If you are using Jupyter OnDemand then set the "Node type" to "mig" when
-                creating the session.
-
-                By running jobs on the MIG GPUs you will experience shorter queue times and
-                you will help keep A100 GPUs free for jobs that need them. For more info:
-
-                  https://researchcomputing.princeton.edu/systems/della#gpus
-
-                As an alternative to MIG, you may consider trying to improve the GPU
-                utilization of your code. A good target value is greater than 50%. Consider
-                writing to the mailing list of the software that you are using or attend
-                an in-person Research Computing help session:
-
-                  https://researchcomputing.princeton.edu/support/help-sessions
-
-                For general information about GPU computing at Princeton:
-
-                  https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
-
-                Replying to this automated email will open a support ticket with Research
-                Computing. Let us know if we can be of help.
-                """)
-                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}")
-                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}")
-                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}")
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
+                for email in self.admin_emails:
+                   send_email(s, f"{email}", subject=f"{self.subject}")
                 print(s)
 
                 # append the new violations to the log file
                 Alert.update_violation_log(usr, vfile)
-   
+ 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
             return ""
         else:
             self.admin = self.df.groupby("User").agg({"Hours":"sum", "User":"size"})
+            self.admin["Hours"] = self.admin["Hours"].apply(lambda hrs: round(hrs, 1))
             self.admin = self.admin.rename(columns={"User":"Jobs", "Hours":"Full-A100-GPU-Hours"})
             self.admin = self.admin.sort_values(by="Full-A100-GPU-Hours", ascending=False)
             self.admin.reset_index(drop=False, inplace=True)

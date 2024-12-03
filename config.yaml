@@ -10,6 +10,10 @@ workday-method: usa
 jobstats-module-path: /usr/local/bin/jobstats
 admin-reports:
   - halverson@princeton.edu
+external-emails:
+  u12345: first.last@gmail.com
+  u98765: last.first@gmail.com
+
 
 ################################
 ## ALERT: SHOULD BE USING MIG ##
@@ -17,10 +21,14 @@ admin-reports:
 should-be-using-mig:
   cluster: della
   partition: gpu
+  gpu_util_target: "50%"
   excluded_users:
     - aturing
     - jzp
     - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
 
 
 #########################
