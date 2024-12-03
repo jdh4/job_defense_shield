@@ -16,9 +16,8 @@ class EmailTranslator:
         else:
             with open(self.template_file, "r", encoding="utf-8") as fp:
                 self.lines = fp.readlines()
-            # self.lines.remove(8 * "0123456789")
 
-    def translate(self) -> str:
+    def replace_tags(self) -> str:
         for key, value in self.tags.items():
             for i in range(len(self.lines)):
                 self.lines[i] = self.lines[i].replace(key, value)

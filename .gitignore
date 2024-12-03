@@ -5,7 +5,6 @@ log/
 .pytest_cache/
 cron.backup
 .coverage
-email/
 
 ##################################################################
 # Everything below is taken from                                 #

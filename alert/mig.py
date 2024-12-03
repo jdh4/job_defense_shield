@@ -79,7 +79,7 @@ class MultiInstanceGPU(Alert):
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 translator = EmailTranslator("email/mig.txt", tags)
-                s = translator.translate()
+                s = translator.replace_tags()
 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
                 for email in self.admin_emails:
