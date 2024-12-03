@@ -8,7 +8,8 @@ reply-to: rcsystems@princeton.edu
 greeting-method: getent
 workday-method: usa
 jobstats-module-path: /usr/local/bin/jobstats
-
+admin-reports:
+  - halverson@princeton.edu
 
 ################################
 ## ALERT: SHOULD BE USING MIG ##

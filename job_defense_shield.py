@@ -258,9 +258,9 @@ if __name__ == "__main__":
               "state",
               "admincomment",
               "jobname"]
-    fields = ",".join(fields)
     # jobname must be last in list below to catch "|" characters in jobname
-    assert fields.split(",")[-1] == "jobname"
+    assert fields[-1] == "jobname"
+    fields = ",".join(fields)
 
     use_cache = False if (args.email or args.report) else True
     raw = SlurmSacct(args.days, args.starttime, args.endtime, fields, args.clusters, args.partition)
@@ -274,7 +274,9 @@ if __name__ == "__main__":
     partition_renamings = {"datascience":"datasci"}
     raw = SacctCleaner(raw, field_renamings, partition_renamings).clean()
     df = raw.copy()
-    assert df.isnull().sum().sum() == 0
+    num_nulls = df.isnull().sum().sum()
+    if num_nulls:
+        print(f"Number of null values in df: {num_nulls}")
 
     if args.strict_start:
         # remove usage before the start of the time window

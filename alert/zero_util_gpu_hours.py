@@ -8,6 +8,7 @@ from utils import send_email_cses
 from utils import add_dividers
 from efficiency import num_gpus_with_zero_util
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class ZeroUtilGPUHours(Alert):
@@ -73,10 +74,19 @@ class ZeroUtilGPUHours(Alert):
                 usr = self.df[self.df.User == user].copy()
                 zero_hours = round(self.gp[self.gp.User == user]["Zero-Util-GPU-Hours"].values[0])
                 emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
-                s = ""
-                #self.subject = "Underutilization of the GPUs on Della"
-                #send_email_cses(s,      "cses@princeton.edu", subject=f"{self.subject}", sender="jdh4@princeton.edu")
-                #send_email_cses(s, "halverson@princeton.edu", subject=f"{self.subject}", sender="cses@princeton.edu")
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<GPU-HOURS>"] = str(zero_hours)
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                tags["<NUM-JOBS>"] = str(len(usr))
+                indent = 2 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
+                translator = EmailTranslator("email/zero_util_gpu_hours.txt", tags)
+                s = translator.translate()
                 print(s)
                 # self.emails.append(email)
 
