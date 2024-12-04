@@ -87,7 +87,14 @@ def test_zero_cpu_utilization():
                        "state":["COMPLETED"] * n_jobs,
                        "partition":["cpu"] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
-    zero_cpu = ZeroCPU(df, 0, "", "", "Subject")
+    zero_cpu = ZeroCPU(df,
+                       0,
+                       "",
+                       "",
+                       "Subject",
+                       cluster="della",
+                       partitions=["cpu"],
+                       min_run_time=0)
     actual = zero_cpu.df[["User", "Nodes", "Nodes-Unused"]]
     expected = pd.DataFrame({"User":["user1", "user1", "user1", "user2"],
                              "Nodes":[4, 2, 2, 4],

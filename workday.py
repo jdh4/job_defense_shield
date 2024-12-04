@@ -1,4 +1,4 @@
-"""Classes to decide whether or not to send emails on holidays."""
+"""Classes to decide work days versus holidays."""
 
 from datetime import datetime
 from abc import ABC, abstractmethod
@@ -14,7 +14,7 @@ class Workday(ABC):
         pass
 
 
-class UsaWorkday(Workday):
+class WorkdayUSA(Workday):
 
     """Do not send emails on US holidays and local holidays."""
 
@@ -33,7 +33,15 @@ class UsaWorkday(Workday):
         return (not us_holiday) and (not local_holiday) and (day_of_week < 5)
 
 
-class CustomWorkday(Workday):
+class WorkdayAlways(Workday):
+
+    """Everyday is a workday."""
+
+    def is_workday(self) -> bool:
+        return True
+
+
+class WorkdayCustom(Workday):
 
     """Write custom code for your institution."""
 
@@ -43,11 +51,16 @@ class CustomWorkday(Workday):
 
 class WorkdayFactory:
 
+    """The factory pattern is used to dynamically choose the method
+       based on the setting in the configuration file."""
+
     def create_workday(self, method):
         if method == "usa":
-            return UsaWorkday()
+            return WorkdayUSA()
+        elif method == "always":
+            return WorkdayAlways()
         elif method == "custom":
-            return CustomWorkday()
+            return WorkdayCustom()
         else:
-            msg = 'Unknown workday. Valid choices are "usa" and "custom".'
+            msg = 'Unknown workday. Valid choices are "usa", "always" and "custom".'
             raise ValueError(msg)

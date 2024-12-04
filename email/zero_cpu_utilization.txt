@@ -1,0 +1,22 @@
+<GREETING>Below are your recent jobs that did not use all of the allocated nodes:
+
+<TABLE>
+
+The CPU utilization was found to be 0% on each of the unused nodes. You can see
+this by running the "jobstats" command, for example:
+
+<JOBSTATS>
+
+Please investigate the reason(s) that the code is not using all of the allocated
+nodes before running additional jobs.
+
+See the following webpage for information about Slurm:
+
+    https://researchcomputing.princeton.edu/support/knowledge-base/slurm
+
+Consider attending an in-person Research Computing help session for assistance:
+
+    https://researchcomputing.princeton.edu/support/help-sessions
+
+Replying to this automated email will open a support ticket with Research
+Computing.

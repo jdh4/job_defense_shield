@@ -1,10 +1,11 @@
-import textwrap
 import pandas as pd
 from base import Alert
 from utils import send_email
 from utils import add_dividers
+from utils import MINUTES_PER_HOUR as mph
 from efficiency import cpu_nodes_with_zero_util
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class ZeroCPU(Alert):
@@ -12,19 +13,16 @@ class ZeroCPU(Alert):
     """CPU jobs with zero utilization on one or more nodes."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.excluded_users = []
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster != "traverse") &
-                          (self.df.partition != "gpu") &
-                          (self.df.partition != "gpu-shared") &
-                          (self.df.partition != "pli") &
-                          (self.df.partition != "pli-c") &
-                          (self.df.partition != "cryoem") &
-                          (self.df.state != "RUNNING") &
+        self.df = self.df[(self.df.cluster == self.cluster) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.admincomment != {}) &
-                          (self.df["elapsed-hours"] >= 1)].copy()
+                          (~self.df.user.isin(self.excluded_users)) &
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         # add new fields
         if not self.df.empty:
             self.df["nodes-tuple"] = self.df.apply(lambda row:
@@ -65,68 +63,28 @@ class ZeroCPU(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
+                if len(usr) == 1 and \
+                   usr.Nodes.values[0] == 1 and \
+                   usr.Cores.values[0] < 4:
+                    continue
                 usr.drop(columns=["User"], inplace=True)
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                usr["Nodes-Used"] = usr["Nodes"] - usr["Nodes-Unused"]
-                num_jobs = usr.shape[0]
-                all_single = bool(usr.shape[0] == usr[usr["Nodes"] == 1].shape[0])
-                all_multi =  bool(usr.shape[0] == usr[usr["Nodes"] > 1].shape[0])
-                all_used_1 = bool(usr.shape[0] == usr[usr["Nodes-Used"] == 1].shape[0])
-                usr.drop(columns=["Nodes-Used"], inplace=True)
-                if num_jobs == 1 and all_single:
-                    continue
-                s = f"{g.greeting(user)}"
-                s += f"Below are your recent jobs that did not use all of the allocated nodes:\n\n"
-                usr_str = usr.to_string(index=False, justify="center")
-                s +=  "\n".join([4 * " " + row for row in usr_str.split("\n")])
-                s += "\n"
-                s += textwrap.dedent(f"""
-                The CPU utilization was found to be 0% on each of the unused nodes. You can see
-                this by running the \"jobstats\" command, for example:
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                tags["<NUM-JOBS>"] = str(len(usr))
+                indent = 4 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
+                translator = EmailTranslator("email/zero_cpu_utilization.txt", tags)
+                s = translator.replace_tags()
 
-                    $ jobstats {usr['JobID'].values[0]}
-                """)
-                if all_single:
-                    s += textwrap.dedent(f"""
-                    Please investigate the reason(s) that the code is not using all of the allocated
-                    nodes before running additional jobs.
-                    """)
-                else:
-                    s += textwrap.dedent(f"""
-                    Please investigate the reason(s) that the code is not using all of the allocated
-                    nodes before running additional jobs. When appropriate, please allocate all of
-                    the cores on a single node before requesting multiple nodes.
-                    """)
-                if all_multi and all_used_1:
-                    s += textwrap.dedent(f"""
-                    Only 1 node was used for each of the jobs above. This suggests that your
-                    code may not be capable of using multiple nodes. Please consult the
-                    documentation or write to the mailing list of your software to confirm that
-                    it is capable of using multiple nodes. If your code cannot use multiple
-                    nodes then please use the following Slurm directive:
-
-                        #SBATCH --nodes=1
-                    """)
-                s += textwrap.dedent(f"""
-                See the following webpage for information about Slurm:
-
-                    https://researchcomputing.princeton.edu/support/knowledge-base/slurm
-
-                Consider attending an in-person Research Computing help session for assistance:
-
-                    https://researchcomputing.princeton.edu/support/help-sessions
-
-                After resolving this issue, consider conducting a scaling analysis to find
-                the optimal number of CPU-cores to use:
-
-                    https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
-
-                Replying to this automated email will open a support ticket with Research
-                Computing. Let us know if we can be of help.
-                """)
-                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}")
-                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}")
-                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}")
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
+                for email in self.admin_emails:
+                   send_email(s, f"{email}", subject=f"{self.subject}")
                 print(s)
 
                 # append the new violations to the log file
@@ -137,6 +95,6 @@ class ZeroCPU(Alert):
         if self.df.empty:
             return ""
         else:
-            self.df = self.df.sort_values(["User", "JobID"]) 
+            self.df = self.df.sort_values(["User", "JobID"])
             self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
             return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

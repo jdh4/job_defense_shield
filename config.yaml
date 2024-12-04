@@ -15,9 +15,9 @@ external-emails:
   u98765: last.first@gmail.com
 
 
-################################
-## ALERT: SHOULD BE USING MIG ##
-################################
+#################################
+## SHOULD BE USING MIG (ALERT) ##
+#################################
 should-be-using-mig:
   cluster: della
   partition: gpu
@@ -31,9 +31,34 @@ should-be-using-mig:
     - halverson@princeton.edu
 
 
-#########################
-## ZERO UTIL GPU HOURS ##
-#########################
+##################################
+## ZERO CPU UTILIZATION (ALERT) ##
+##################################
+zero-cpu-utilization:
+  cluster: stellar
+  partitions:
+    - all
+    - pppl
+    - pu
+  min_run_time: 60 # minutes
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+
+zero-cpu-utilization:
+  cluster: della
+  partitions:
+    - cpu
+    - physics
+  min_run_time: 60 # minutes
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+
+
+################################
+## ALERT: ZERO UTIL GPU HOURS ##
+################################
 zero-util-gpu-hours:
   cluster: della
   partitions:
