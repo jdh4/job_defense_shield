@@ -4,6 +4,7 @@ from base import Alert
 from efficiency import cpu_memory_usage
 from utils import send_email
 from utils import add_dividers
+from utils import MINUTES_PER_HOUR as mph
 from greeting import GreetingFactory
 
 
@@ -21,13 +22,12 @@ class ExcessCPUMemory(Alert):
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.admincomment != {}) &
-                          (self.df.state != "RUNNING") &
+        self.df = self.df[(self.df.cluster.isin(self.clusters)) &
+                          (self.df.partition.isin(self.partition)) &
+                          (self.df.admincomment != {}) &
                           (self.df.state != "OUT_OF_MEMORY") &
-                          self.df.cluster.isin(self.clusters) &
-                          self.df.partition.isin(self.partition) &
                           (~self.df.user.isin(self.excluded_users)) &
-                          (self.df["elapsed-hours"] >= 1)].copy()
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         if self.combine_partitions:
             self.df["partition"] = ",".join(sorted(self.partition))
         self.gp = pd.DataFrame({"User":[]})
@@ -119,7 +119,7 @@ class ExcessCPUMemory(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.gp[self.gp.User == user].copy()
-                jobs = self.df[self.df.user== user].copy()
+                jobs = self.df[self.df.user == user].copy()
                 num_disp = 10
                 total_jobs = jobs.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"

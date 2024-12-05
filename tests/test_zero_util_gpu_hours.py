@@ -3,8 +3,7 @@ from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 
 def test_zero_util_gpu_hours():
     n_jobs = 5
-    wallclock_secs = 1000000
-    wallclock_hrs = wallclock_secs / 3600
+    wallclock_hrs = 1000000 / 3600
     # job 1 (8555322 on tiger2)
     job1 = {
     "gpus": 4,
@@ -86,8 +85,7 @@ def test_zero_util_gpu_hours():
                        "cluster":["della"] * n_jobs,
                        "gpus":[4, 1, 2, 1, 4],
                        "partition":["gpu"] * n_jobs,
-                       "elapsedraw":[wallclock_secs] * n_jobs,
-                       "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
+                       "elapsed-hours":[wallclock_hrs] * n_jobs})
     zero = ZeroUtilGPUHours(df,
                             0,
                             "",

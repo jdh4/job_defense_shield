@@ -69,6 +69,7 @@ def test_excess_cpu_memory():
                            combine_partitions=False,
                            clusters=["della"],
                            partition=["cpu"],
+                           min_run_time=0,
                            excluded_users=["aturing"])
     actual = xmem.gp[["User", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]
     expected = pd.DataFrame({"User":["user1", "user2"],

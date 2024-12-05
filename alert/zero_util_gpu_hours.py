@@ -1,11 +1,11 @@
 from datetime import datetime
 import textwrap
+import numpy as np
 import pandas as pd
 from base import Alert
-from utils import SECONDS_PER_HOUR
-from utils import SECONDS_PER_MINUTE
 from utils import send_email_cses
 from utils import add_dividers
+from utils import MINUTES_PER_HOUR as mph
 from efficiency import num_gpus_with_zero_util
 from greeting import GreetingFactory
 from email_translator import EmailTranslator
@@ -28,7 +28,7 @@ class ZeroUtilGPUHours(Alert):
                           (self.df.gpus > 0) &
                           (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
-                          (self.df["elapsedraw"] >= self.min_run_time * SECONDS_PER_MINUTE)].copy()
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         self.gp = pd.DataFrame({"User":[]})
         self.admin = pd.DataFrame()
         # add new fields
@@ -41,10 +41,11 @@ class ZeroUtilGPUHours(Alert):
             cols = ["GPUs-Unused", "error_code"]
             self.df[cols] = pd.DataFrame(self.df["zero-tuple"].tolist(), index=self.df.index)
             self.df = self.df[(self.df["error_code"] == 0) & (self.df["GPUs-Unused"] > 0)]
-            self.df["Zero-Util-GPU-Hours"] = self.df["GPUs-Unused"] * self.df["elapsedraw"] / SECONDS_PER_HOUR
+            self.df["Zero-Util-GPU-Hours"] = self.df["GPUs-Unused"] * self.df["elapsed-hours"]
             self.df["GPU-Unused-Util"] = "0%"
             cols = ["jobid",
                     "user",
+                    "partition",
                     "gpus",
                     "GPUs-Unused",
                     "GPU-Unused-Util",
@@ -67,19 +68,20 @@ class ZeroUtilGPUHours(Alert):
             self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
     def send_emails_to_users(self, method):
+        # self.gp is not needed here (could use df)
         g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 zero_hours = round(self.gp[self.gp.User == user]["Zero-Util-GPU-Hours"].values[0])
-                emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<GPU-HOURS>"] = str(zero_hours)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                tags["<PARTITIONS>"] = ",".join(np.sort(usr.partition.unique()))
+                usr.drop(columns=["partition"], inplace=True)
                 tags["<NUM-JOBS>"] = str(len(usr))
                 indent = 2 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
@@ -87,11 +89,14 @@ class ZeroUtilGPUHours(Alert):
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 translator = EmailTranslator("email/zero_util_gpu_hours.txt", tags)
                 s = translator.replace_tags()
+
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
+                for email in self.admin_emails:
+                   send_email(s, f"{email}", subject=f"{self.subject}")
                 print(s)
-                # self.emails.append(email)
 
                 # append the new violations to the log file
-                #Alert.update_violation_log(usr, vfile)
+                Alert.update_violation_log(usr, vfile)
 
     def generate_report_for_admins(self, title: str, start_date, keep_index: bool=False) -> str:
         if self.admin.empty:

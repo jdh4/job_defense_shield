@@ -23,7 +23,6 @@ from alert.mig import MultiInstanceGPU
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.gpu_fragmentation import MultinodeGPUFragmentation
 from alert.excess_cpu_memory import ExcessCPUMemory
-from alert.hard_warning_cpu_memory import HardWarningCPUMemory
 from alert.zero_cpu_utilization import ZeroCPU
 from alert.most_gpus import MostGPUs
 from alert.most_cores import MostCores
@@ -36,7 +35,6 @@ from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
 from alert.compute_efficiency import LowEfficiencyCPU
 from alert.compute_efficiency import LowEfficiencyGPU
-from alert.active_cpu_memory import ActiveCPUMemory
 from alert.too_many_cores_per_gpu import TooManyCoresPerGpu
 
 
@@ -84,10 +82,6 @@ if __name__ == "__main__":
                         help='Identify users with low GPU efficiency')
     parser.add_argument('--excess-cpu-memory', action='store_true', default=False,
                         help='Identify users that are allocating too much CPU memory')
-    parser.add_argument('--hard-warning-cpu-memory', action='store_true', default=False,
-                        help='Send a hard warning email to users that are allocating too much CPU memory')
-    parser.add_argument('--active-cpu-memory', action='store_true', default=False,
-                        help='Identify running jobs that are allocating too much CPU memory')
     parser.add_argument('--mig', action='store_true', default=False,
                         help='Identify jobs that should use MIG')
     parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
@@ -155,6 +149,9 @@ if __name__ == "__main__":
     else:
         print("Configuration file not found. Exiting ...")
         sys.exit()
+    for key in cfg.keys():
+        if any([c.isnumeric() for c in key]):
+            print(4 * " " + key)
 
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
@@ -272,7 +269,7 @@ if __name__ == "__main__":
                        "nnodes":"nodes",
                        "ncpus":"cores",
                        "timelimitraw":"limit-minutes"}
-    partition_renamings = {"datascience":"datasci"}
+    partition_renamings = cfg["partition_renamings"]
     raw = SacctCleaner(raw, field_renamings, partition_renamings).clean()
     df = raw.copy()
     num_nulls = df.isnull().sum().sum()
@@ -323,9 +320,9 @@ if __name__ == "__main__":
             if args.email:
                 zero_gpu.send_emails_to_users(greeting_method)
 
-    #########################
-    ## ZERO UTIL GPU-HOURS ##
-    #########################
+    ################################
+    ## ZERO UTILIZATION GPU-HOURS ##
+    ################################
     if args.zero_util_gpu_hours:
         alerts = [alert for alert in cfg.keys() if "zero-util-gpu-hours" in alert]
         for alert in alerts:
@@ -364,16 +361,16 @@ if __name__ == "__main__":
     if args.low_cpu_efficiency:
         alerts = [alert for alert in cfg.keys() if "low-cpu-efficiency" in alert]
         for alert in alerts:
-            low_eff = LowEfficiencyCPU(df,
+            low_cpu = LowEfficiencyCPU(df,
                                        days_between_emails=args.days,
                                        violation="low_cpu_efficiency",
                                        vpath=violation_logs_path,
                                        subject="Jobs with Low CPU Efficiency",
                                        **cfg[alert])
             if args.email and is_workday:
-                low_eff.send_emails_to_users(greeting_method)
+                low_cpu.send_emails_to_users(greeting_method)
             title = "Low CPU Efficiencies"
-            s += low_eff.generate_report_for_admins(title, keep_index=True)
+            s += low_cpu.generate_report_for_admins(title, keep_index=True)
 
     ########################
     ## LOW GPU EFFICIENCY ##
@@ -381,16 +378,16 @@ if __name__ == "__main__":
     if args.low_gpu_efficiency:
         alerts = [alert for alert in cfg.keys() if "low-gpu-efficiency" in alert]
         for alert in alerts:
-            low_eff = LowEfficiencyGPU(df,
+            low_gpu = LowEfficiencyGPU(df,
                                        days_between_emails=args.days,
                                        violation="low_gpu_efficiency",
                                        vpath=violation_logs_path,
                                        subject="Jobs with Low GPU Efficiency",
                                        **cfg[alert])
             if args.email and is_workday:
-                low_eff.send_emails_to_users(greeting_method)
+                low_gpu.send_emails_to_users(greeting_method)
             title = "Low GPU Efficiencies"
-            s += low_eff.generate_report_for_admins(title, keep_index=True)
+            s += low_gpu.generate_report_for_admins(title, keep_index=True)
 
 
     #######################
@@ -398,7 +395,7 @@ if __name__ == "__main__":
     #######################
     if args.excess_cpu_memory:
         alerts = [alert for alert in cfg.keys() if "excess-cpu-memory" in alert]
-        for alert in alerts:
+        for alert in alerts: 
             mem_hours = ExcessCPUMemory(df,
                                         days_between_emails=args.days,
                                         violation="excess_cpu_memory",
@@ -410,31 +407,6 @@ if __name__ == "__main__":
             title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
             s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
-
-    if args.hard_warning_cpu_memory:
-        mem = HardWarningCPUMemory(df,
-                                   days_between_emails=90,
-                                   violation="hard_warning_cpu_memory",
-                                   vpath=violation_logs_path,
-                                   subject="ACTION REQUIRED: Requesting Too Much CPU Memory",
-                                   cluster="della",
-                                   partition="cpu")
-        if args.email and is_workday:
-            mem.send_emails_to_users(greeting_method)
-
-    #######################
-    ## ACTIVE CPU MEMORY ##
-    #######################
-    if args.active_cpu_memory:
-        mem = ActiveCPUMemory(df,
-                              days_between_emails=args.days,
-                              violation="active_cpu_memory",
-                              vpath=violation_logs_path,
-                              subject="Requesting Too Much CPU Memory for Jobs on Della")
-        #if args.email and w.is_workday():
-        mem.send_emails_to_users(greeting_method)
-        title = "Actively running jobs allocating too much memory"
-        s += mem.generate_report_for_admins(title)
 
     ###########################
     ## EXCESSIVE TIME LIMITS ##
