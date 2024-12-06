@@ -79,16 +79,20 @@ zero-util-gpu-hours-1:
 ####################################
 too-many-cores-per-gpu-1:
   cluster: della
-  cluster_name: "Della (PLI)"
   partitions:
     - pli
     - pli-c
     - pli-p
+  cluster_name: "Della (PLI)"
+  cores_per_node: 96
+  gpus_per_node: 8
+  cores_per_gpu_target: 12
+  cores_per_gpu_limit: 24
+  min_run_time: 30 # minutes
+  email_file: "email/too_many_cores_per_gpu.txt"
   excluded_users:
     - aturing
     - einstein
-  cores_per_gpu_target: 12
-  cores_per_gpu_limit: 24
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -220,14 +224,14 @@ low-gpu-efficiency-3:
 ## EXCESS CPU MEMORY ##
 #######################
 excess-cpu-memory-1:
-  clusters:
+  cluster:
     - della
   partition:
     - cpu
   combine_partitions: False
-  min_run_time: 0 # minutes
+  min_run_time: 30 # minutes
   cores_per_node: 28
-  tb_hours_per_day: 0
+  tb_hours_per_day: 10
   ratio_threshold: 0.35
   mean_ratio_threshold: 0.35
   median_ratio_threshold: 0.35
@@ -241,7 +245,7 @@ excess-cpu-memory-1:
     - halverson@princeton.edu
 
 excess-cpu-memory-2:
-  clusters:
+  cluster:
     - della
   partition:
     - datasci
@@ -261,7 +265,7 @@ excess-cpu-memory-2:
     - halverson@princeton.edu
 
 excess-cpu-memory-3:
-  clusters:
+  cluster:
     - stellar
   partition:
     - all

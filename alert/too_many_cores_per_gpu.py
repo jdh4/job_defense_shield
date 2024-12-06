@@ -1,8 +1,9 @@
-import textwrap
 from base import Alert
 from utils import send_email
 from utils import add_dividers
+from utils import MINUTES_PER_HOUR as mph
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class TooManyCoresPerGpu(Alert):
@@ -15,16 +16,17 @@ class TooManyCoresPerGpu(Alert):
     def _filter_and_add_new_fields(self):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
-                          self.df.partition.isin(self.partitions) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.gpus > 0) &
                           (self.df.cores > self.cores_per_gpu_limit * self.df.gpus) &
-                          (self.df["elapsed-hours"] >= 1)].copy()
+                          (~self.df.user.isin(self.excluded_users)) &
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         self.df.rename(columns={"user":"User"}, inplace=True)
         # add new fields
         if not self.df.empty:
             self.df["Cores-per-GPU"] = self.df.cores / self.df.gpus
             self.df["Cores-per-GPU"] = self.df["Cores-per-GPU"].apply(lambda x:
-                                                                      str(round(x, 1)).replace(".0", ""))
+                                       str(round(x, 1)).replace(".0", ""))
             self.df["Cores-per-GPU-Target"] = self.cores_per_gpu_target
             cols = ["jobid",
                     "User",
@@ -47,29 +49,22 @@ class TooManyCoresPerGpu(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                s = f"{g.greeting(user)}"
-                s += f"Your {self.cluster_name} jobs may be using more CPU-cores per GPU than necessary:\n\n"
-                usr_str = usr.to_string(index=False, justify="center").split("\n")
-                s += "\n".join([3 * " " + row for row in usr_str])
-                s += "\n"
-                s += textwrap.dedent("""
-                Each PLI node on Della has 96 CPU-cores and 8 GPUs. If possible please try
-                to use only up to 12 CPU-cores per GPU. This will prevent the situation
-                where there are free GPUs on a node but not enough CPU-cores to accept new
-                jobs. For instance, three jobs that each allocate 32 CPU-cores and 1 GPU
-                will cause the remaining 5 GPUs on the node to be unavailable.
+                indent = 3 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<NAME>"] = self.cluster_name
+                tags["<TARGET>"] = str(self.cores_per_gpu_target)
+                tags["<CORES>"] = str(self.cores_per_node)
+                tags["<GPUS>"] = str(self.gpus_per_node)
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
+                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                translator = EmailTranslator(self.email_file, tags)
+                s = translator.replace_tags()
 
-                For more information about the PLI nodes on Della:
-
-                   https://researchcomputing.princeton.edu/systems/della#pli
-
-                Consider attending an in-person Research Computing help session for assistance:
-
-                   https://researchcomputing.princeton.edu/support/help-sessions
-
-                Replying to this automated email will open a support ticket with Research
-                Computing. Let us know if we can be of help.
-                """)
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
                 for email in self.admin_emails:
                     send_email(s, f"{email}", subject=f"{self.subject}")

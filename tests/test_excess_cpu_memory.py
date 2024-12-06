@@ -67,7 +67,7 @@ def test_excess_cpu_memory():
                            median_ratio_threshold=0.2,
                            cores_per_node=14,
                            combine_partitions=False,
-                           clusters=["della"],
+                           cluster="della",
                            partition=["cpu"],
                            min_run_time=0,
                            excluded_users=["aturing"])

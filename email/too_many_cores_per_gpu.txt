@@ -1,0 +1,19 @@
+<GREETING>Your <NAME> jobs may be using more CPU-cores per GPU than necessary:
+
+<TABLE>
+
+Each node on <NAME> has <CORES> CPU-cores and <GPUS> GPUs. If possible please try
+to use only up to <TARGET> CPU-cores per GPU. This will prevent the situation
+where there are free GPUs on a node but not enough CPU-cores to accept new
+jobs.
+
+For more information about the PLI nodes on Della:
+
+https://researchcomputing.princeton.edu/systems/della#pli
+
+Consider attending an in-person Research Computing help session for assistance:
+
+https://researchcomputing.princeton.edu/support/help-sessions
+
+Replying to this automated email will open a support ticket with Research
+Computing.

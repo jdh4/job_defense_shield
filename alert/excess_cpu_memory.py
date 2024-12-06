@@ -22,7 +22,7 @@ class ExcessCPUMemory(Alert):
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster.isin(self.clusters)) &
+        self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partition)) &
                           (self.df.admincomment != {}) &
                           (self.df.state != "OUT_OF_MEMORY") &
@@ -149,7 +149,7 @@ class ExcessCPUMemory(Alert):
                 jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
                 s = f"{g.greeting(user)}"
-                s += f"Below are {case} that ran on Della (cpu) in the past {edays} days:\n\n"
+                s += f"Below are {case} that ran on {self.cluster} ({','.join(self.partitions)}) in the past {edays} days:\n\n"
                 jobs_str = jobs.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])
                 s += "\n"

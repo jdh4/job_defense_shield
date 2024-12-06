@@ -330,7 +330,7 @@ if __name__ == "__main__":
                                    days_between_emails=args.days,
                                    violation="zero_util_gpu_hours",
                                    vpath=violation_logs_path,
-                                   subject="GPU-hours at 0% utilization",
+                                   subject="GPU-hours at 0% Utilization",
                                    **cfg[alert])
             if args.email and is_workday:
                 zero_gpu_hours.send_emails_to_users(greeting_method)
@@ -484,7 +484,9 @@ if __name__ == "__main__":
                                      **cfg[alert])
             if args.email and is_workday:
                 cpg.send_emails_to_users(greeting_method)
-            s += cpg.generate_report_for_admins("Too Many Cores Per GPU")
+            title = "Too Many Cores Per GPU"
+            s += cpg.generate_report_for_admins(title)
+
 
     ####################################
     ## JOBS THAT SHOULD HAVE USED MIG ##

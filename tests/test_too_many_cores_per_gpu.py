@@ -20,8 +20,12 @@ def test_too_many_cores_per_gpu():
                              "Subject",
                              cluster="della",
                              partitions=["pli"],
+                             cluster_name="Della (PLI)",
+                             cores_per_node=96,
+                             gpus_per_node=8,
                              cores_per_gpu_target=target,
                              cores_per_gpu_limit=16,
+                             min_run_time=30,
                              excluded_users=["aturing", "einstein"])
     actual = cpg.df[["User",
                      "Cores-per-GPU",
