@@ -10,11 +10,12 @@ workday-method: usa
 jobstats-module-path: /usr/local/bin/jobstats
 admin-reports:
   - halverson@princeton.edu
-external-emails:
-  u12345: first.last@gmail.com
-  u98765: last.first@gmail.com
+email_suffix: "@princeton.edu"
 partition_renamings:
   datascience: datasci
+external-emails: # overrides
+  u12345: first.last@gmail.com
+  u98765: last.first@gmail.com
 
 
 #################################
@@ -69,10 +70,13 @@ zero-util-gpu-hours-1:
     - pli-p
     - pli
   min_run_time: 10              # minutes
-  gpu_hours_threshold_user:  72 # hours
+  gpu_hours_threshold_user: 100 # hours
   gpu_hours_threshold_admin: 24 # hours
-  max_num_jobid: 2              # count
-
+  max_num_jobid_admin: 2        # count
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+    - kl5675@princeton.edu
 
 ####################################
 ## TOO MANY CORES PER GPU (ALERT) ##
@@ -224,8 +228,7 @@ low-gpu-efficiency-3:
 ## EXCESS CPU MEMORY ##
 #######################
 excess-cpu-memory-1:
-  cluster:
-    - della
+  cluster: della
   partition:
     - cpu
   combine_partitions: False
@@ -245,8 +248,7 @@ excess-cpu-memory-1:
     - halverson@princeton.edu
 
 excess-cpu-memory-2:
-  cluster:
-    - della
+  cluster: della
   partition:
     - datasci
   combine_partitions: False
@@ -265,8 +267,7 @@ excess-cpu-memory-2:
     - halverson@princeton.edu
 
 excess-cpu-memory-3:
-  cluster:
-    - stellar
+  cluster: stellar
   partition:
     - all
     - pppl

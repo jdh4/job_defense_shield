@@ -41,6 +41,7 @@ class TooManyCoresPerGpu(Alert):
                          "gpus":"GPUs",
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
+            self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -48,7 +49,6 @@ class TooManyCoresPerGpu(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
-                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 indent = 3 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}

@@ -1,9 +1,8 @@
 from datetime import datetime
-import textwrap
 import numpy as np
 import pandas as pd
 from base import Alert
-from utils import send_email_cses
+from utils import send_email
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from efficiency import num_gpus_with_zero_util
@@ -54,8 +53,8 @@ class ZeroUtilGPUHours(Alert):
             renamings = {"jobid":"JobID", "user":"User", "gpus":"GPUs"}
             self.df = self.df.rename(columns=renamings)
             def jobid_list(series):
-                ellipsis = "+" if len(series) > self.max_num_jobid else ""
-                return ",".join(series[:self.max_num_jobid]) + ellipsis
+                ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
+                return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
             # for each user sum the number of GPU-hours with zero GPU utilization
             self.gp = self.df.groupby("User").agg({"Zero-Util-GPU-Hours":"sum",
                                                    "User":"size",

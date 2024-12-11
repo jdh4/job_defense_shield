@@ -164,7 +164,7 @@ class MultinodeCPUFragmentation(Alert):
                 s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
                 s += "than necessary:"
                 s += "\n\n"
-                usr = usr.drop(columns=["User", "partition", "cores"])
+                usr = usr.drop(columns=["user", "partition", "cores"])
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 usr_str = usr.to_string(index=False, justify="center")
                 s += "\n".join([4 * " " + row for row in usr_str.split("\n")])

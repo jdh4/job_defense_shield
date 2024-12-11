@@ -10,12 +10,16 @@ class EmailTranslator:
         self._read_template_file()
 
     def _read_template_file(self) -> None:
-        if not os.path.isfile(self.template_file):
+        full_path = os.path.join(os.path.dirname(__file__), self.template_file)
+        print(full_path)
+        #if not os.path.isfile(self.template_file):
+        if not os.path.isfile(full_path):
             print(f"ERROR: Did not find {self.template_file}.")
             # raise
             return None
         else:
-            with open(self.template_file, "r", encoding="utf-8") as fp:
+            with open(full_path, "r", encoding="utf-8") as fp:
+            #with open(self.template_file, "r", encoding="utf-8") as fp:
                 self.lines = fp.readlines()
 
     def replace_tags(self) -> str:
