@@ -1,11 +1,12 @@
-import textwrap
 import pandas as pd
 from base import Alert
 from utils import SECONDS_PER_MINUTE
+from utils import MINUTES_PER_HOUR as mph
 from utils import seconds_to_slurm_time_format
 from utils import send_email
 from utils import add_dividers
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class ExcessiveTimeLimits(Alert):
@@ -13,14 +14,19 @@ class ExcessiveTimeLimits(Alert):
     """Over-allocating run time."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.num_top_users = 0
+        self.num_jobs_display = 10
+        self.excluded_users = []
+        self.admin_emails = []
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
-                          (self.df.partition == self.partition) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.state == "COMPLETED") &
-                          (self.df["elapsed-hours"] >= 1)].copy()
+                          (~self.df.user.isin(self.excluded_users)) &
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         self.gp = pd.DataFrame({"User":[]})
         # add new fields
         if not self.df.empty:
@@ -36,16 +42,19 @@ class ExcessiveTimeLimits(Alert):
             self.gp = self.gp.sort_values(by=f"{xpu}-hours", ascending=False).reset_index(drop=False)
             self.gp["rank"] = self.gp.index + 1
             self.gp = self.gp.sort_values(by=f"{xpu}-waste-hours", ascending=False).reset_index(drop=False)
-            self.gp = self.gp.head(5)
             self.gp.index += 1
             self.gp[f"{xpu}-hours"] = self.gp[f"{xpu}-hours"].apply(round).astype("int64")
+            self.gp[f"{xpu}-waste-hours"] = self.gp[f"{xpu}-waste-hours"].apply(round)
+            self.gp[f"{xpu}-alloc-hours"] = self.gp[f"{xpu}-alloc-hours"].apply(round)
             self.gp["mean(%)"] = 100 * self.gp[f"{xpu}-hours"] / self.gp[f"{xpu}-alloc-hours"]
             self.gp["mean(%)"] = self.gp["mean(%)"].apply(round).astype("int64")
             self.gp["median(%)"] = self.gp["median(%)"].apply(round).astype("int64")
-            self.gp = self.gp[(self.gp[f"{xpu}-waste-hours"] > 10000) &
-                              (self.gp["mean(%)"] < 20) &
-                              (self.gp["median(%)"] < 20) &
-                              (self.gp["rank"] < 10)]
+            self.gp = self.gp[(self.gp[f"{xpu}-waste-hours"] > self.absolute_thres_hours) &
+                              (self.gp["mean(%)"] < self.mean_ratio_threshold) &
+                              (self.gp["median(%)"] < self.median_ratio_threshold)]
+            # DEFAULT set init
+            if self.num_top_users:
+                self.gp = self.gp[self.gp["rank"] <= self.num_top_users]
             cols = ["user",
                     f"{xpu}-waste-hours",
                     f"{xpu}-hours",
@@ -69,57 +78,37 @@ class ExcessiveTimeLimits(Alert):
                 usr = self.gp[self.gp.User == user].copy()
                 jobs = self.df[self.df.user == user].copy()
                 xpu = "cpu"
-                num_disp = 10
+                num_disp = self.num_jobs_display
                 total_jobs = jobs.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
                 jobs = jobs.sort_values(by=f"{xpu}-waste-hours", ascending=False).head(num_disp)
                 jobs["Time-Used"] = jobs["elapsedraw"].apply(seconds_to_slurm_time_format)
                 jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x: seconds_to_slurm_time_format(SECONDS_PER_MINUTE * x))
                 jobs["Percent-Used"] = jobs["ratio"].apply(lambda x: f"{round(x)}%")
-                jobs = jobs[["jobid", "user", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]].sort_values(by="jobid")
+                cols = ["jobid", "user", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]
+                jobs = jobs[cols].sort_values(by="jobid")
                 renamings = {"jobid":"JobID", "user":"User", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
-                edays = self.days_between_emails
-                s = f"{g.greeting(user)}"
-                s += f"Below are {case} that ran on Della ({xpu.upper()}) in the past {edays} days:\n\n"
-                s +=  "\n".join([4 * " " + row for row in jobs.to_string(index=False, justify="center").split("\n")])
-                s += "\n"
-                unused_hours = str(round(usr[f"{xpu.upper()}-Hours-Unused"].values[0]))
-                s += textwrap.dedent(f"""
-                It appears that you are requesting too much time for your jobs since you are
-                only using on average {usr['mean(%)'].values[0]}% of the allocated time (for the {total_jobs} jobs). This has
-                resulted in {unused_hours} {xpu.upper()}-hours that you scheduled but did not use (it was made
-                available to other users, however).
 
-                Please request less time by modifying the --time Slurm directive. This will
-                lower your queue times and allow the Slurm job scheduler to work more
-                effectively for all users. For instance, if your job requires 8 hours then use:
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<CASE>"] = case
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
+                tags["<AVERAGE>"] = str(usr["mean(%)"].values[0])
+                tags["<NUM-JOBS>"] = str(total_jobs)
+                tags["<NUM-JOBS-DISPLAY>"] = str(total_jobs)
+                indent = 4 * " "
+                table = jobs.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<UNUSED-HOURS>"] = str(round(usr[f"{xpu.upper()}-Hours-Unused"].values[0]))
+                translator = EmailTranslator("email/excessive_time.txt", tags)
+                s = translator.replace_tags()
 
-                    #SBATCH --time=10:00:00
-
-                The value above includes an extra 20% for safety. This is important because jobs
-                that exceed the run time limit are automatically canceled. A good target for
-                Percent-Used is 80%.
-
-                Time-Used is the time (wallclock) that the job needed. The total time allocated
-                for the job is Time-Allocated. The format is DD-HH:MM:SS where DD is days,
-                HH is hours, MM is minutes and SS is seconds. Percent-Used is Time-Used
-                divided by Time-Allocated.
-
-                For more information on allocating time via Slurm:
-
-                    https://researchcomputing.princeton.edu/support/knowledge-base/slurm
-
-                Consider attending an in-person Research Computing help session for assistance:
-
-                    https://researchcomputing.princeton.edu/support/help-sessions
-
-                Replying to this automated email will open a support ticket with Research
-                Computing. Let us know if we can be of help.
-                """)
-                send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}")
-                send_email(s, "halverson@princeton.edu", subject=f"{self.subject}")
-                send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}")
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
+                for email in self.admin_emails:
+                    send_email(s, f"{email}", subject=f"{self.subject}")
                 print(s)
 
                 # append the new violations to the log file

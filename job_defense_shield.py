@@ -408,22 +408,6 @@ if __name__ == "__main__":
             s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
 
-    ###########################
-    ## EXCESSIVE TIME LIMITS ##
-    ###########################
-    if args.excessive_time:
-        low_time = ExcessiveTimeLimits(df,
-                               days_between_emails=args.days,
-                               violation="excessive_time_limits",
-                               vpath=violation_logs_path,
-                               subject="Requesting Too Much Time for Jobs on Della",
-                               cluster="della",
-                               partition="cpu")
-        if args.email and is_workday:
-            low_time.send_emails_to_users(greeting_method)
-        title = "Excessive time limits (all jobs, 1+ hours)"
-        s += low_time.generate_report_for_admins(title)
-
     ######################################
     ## SERIAL CODE USING MULTIPLE CORES ##
     ######################################
@@ -486,6 +470,24 @@ if __name__ == "__main__":
                 cpg.send_emails_to_users(greeting_method)
             title = "Too Many Cores Per GPU"
             s += cpg.generate_report_for_admins(title)
+
+
+    ###########################
+    ## EXCESSIVE TIME LIMITS ##
+    ###########################
+    if args.excessive_time:
+        alerts = [alert for alert in cfg.keys() if "excessive-time" in alert]
+        for alert in alerts:
+            time_limits = ExcessiveTimeLimits(df,
+                                              days_between_emails=args.days,
+                                              violation="excessive_time_limits",
+                                              vpath=violation_logs_path,
+                                              subject="Requesting Too Much Time for Jobs",
+                                              **cfg[alert])
+            if args.email and is_workday:
+                time_limits.send_emails_to_users(greeting_method)
+            title = "Excessive Time Limits"
+            s += time_limits.generate_report_for_admins(title)
 
 
     ####################################

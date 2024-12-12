@@ -193,7 +193,7 @@ low-gpu-efficiency-2:
   eff_thres_pct: 40
   eff_target_pct: 75
   proportion_thres_pct: 2
-  absolute_thres_hours: 50
+  absolute_thres_hours: 168
   num_top_users: 5
   excluded_users:
     - aturing
@@ -212,8 +212,8 @@ low-gpu-efficiency-3:
   eff_thres_pct: 40
   eff_target_pct: 75
   proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 5
+  absolute_thres_hours: 168
+  num_top_users: 3
   excluded_users:
     - aturing
     - einstein
@@ -222,6 +222,28 @@ low-gpu-efficiency-3:
     - halverson@princeton.edu
     - kl5675@princeton.edu
     - msbc@princeton.edu
+
+
+########################
+## EXCESS TIME LIMITS ##
+########################
+excessive-time-1:
+  cluster: della
+  partitions:
+    - cpu
+  min_run_time: 30             # minutes
+  absolute_thres_hours: 10000  # cpu-hours
+  mean_ratio_threshold: 25     # [0%, 100%]
+  median_ratio_threshold: 25   # [0%, 100%]
+  num_top_users: 5
+  num_jobs_display: 10
+  email_file: "email/excessive_time.txt"
+  excluded_users:
+    - aturing
+    - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
 
 
 #######################

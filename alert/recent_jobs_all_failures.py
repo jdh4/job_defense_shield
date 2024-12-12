@@ -1,6 +1,5 @@
 import time
 from datetiime import datetime
-import numpy as np
 
 def recent_jobs_all_failures(df):
     """All jobs failed on the last day that the user ran."""
@@ -13,7 +12,7 @@ def recent_jobs_all_failures(df):
         dt = datetime.fromtimestamp(x)
         return (datetime(dt.year, dt.month, dt.day) - datetime(1970, 1, 1)).days
     f["day-since-epoch"] = f["end"].apply(day_since)
-    d = {"user":np.size, "state":lambda series: sum([s == "FAILED" for s in series])}
+    d = {"user":"size", "state":lambda series: sum([s == "FAILED" for s in series])}
     cols = ["user", "cluster", "day-since-epoch"]
     renamings = {"user":"jobs", "state":"num-failed"}
     f = f.groupby(cols).agg(d).rename(columns=renamings).reset_index()

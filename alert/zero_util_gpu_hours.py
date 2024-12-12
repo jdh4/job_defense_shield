@@ -1,5 +1,4 @@
 from datetime import datetime
-import numpy as np
 import pandas as pd
 from base import Alert
 from utils import send_email
@@ -79,7 +78,7 @@ class ZeroUtilGPUHours(Alert):
                 tags["<GPU-HOURS>"] = str(zero_hours)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(np.sort(usr.partition.unique()))
+                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
                 usr.drop(columns=["partition"], inplace=True)
                 tags["<NUM-JOBS>"] = str(len(usr))
                 indent = 2 * " "
