@@ -1,161 +1,145 @@
-import textwrap
+import pandas as pd
 from base import Alert
 from utils import add_dividers
 from utils import send_email
+from utils import MINUTES_PER_HOUR as mph
 from efficiency import cpu_efficiency
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class SerialCodeUsingMultipleCores(Alert):
 
     """Find serial codes that are using multiple CPU-cores."""
 
-    cpu_hours_threshold = 100
-
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.excluded_users = []
+        self.num_top_users = 0
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
-        self.df = self.df[(self.df.cluster == "della") &
-                          (self.df.partition == "cpu") &
-                          (~self.df.user.isin(["vonholdt"])) &
+        self.df = self.df[(self.df.cluster == self.cluster) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.nodes == 1) &
                           (self.df.cores > 1) &
                           (self.df.admincomment != {}) &
-                          (self.df["elapsed-hours"] >= 1)].copy()
-        # add new fields
-        self.df["cpu-eff-tpl"] = self.df.apply(lambda row:
-                                               cpu_efficiency(row["admincomment"],
-                                                              row["elapsedraw"],
-                                                              row["jobid"],
-                                                              row["cluster"],
-                                                              single=True,
-                                                              precision=1),
-                                                              axis="columns")
-        self.df["error-code"] = self.df["cpu-eff-tpl"].apply(lambda tpl: tpl[1]) 
-        # drop jobs with non-zero error codes
-        self.df = self.df[self.df["error-code"] == 0]
-        self.df["cpu-eff"] = self.df["cpu-eff-tpl"].apply(lambda tpl: tpl[0])
-        # ignore jobs at 0% CPU-eff (also avoids division by zero later)
-        self.df = self.df[self.df["cpu-eff"] >= 1]
-        # max efficiency if serial is 100% / cores
-        self.df["inverse-cores"] = 100 / self.df["cores"]
-        self.df["inverse-cores"] = self.df["inverse-cores"].apply(lambda x: round(x, 1))
-        self.df["ratio"] = self.df["cpu-eff"] / self.df["inverse-cores"]
-        self.df = self.df[(self.df["ratio"] <= 1) & (self.df["ratio"] > 0.85)]
-        renamings = {"elapsed-hours":"Hours",
-                     "jobid":"JobID",
-                     "user":"User",
-                     "partition":"Partition",
-                     "cores":"CPU-cores",
-                     "cpu-eff":"CPU-Util",
-                     "inverse-cores":"100%/CPU-cores"}
-        self.df = self.df.rename(columns=renamings)
-        self.df = self.df[["JobID",
-                           "User",
-                           "Partition",
-                           "CPU-cores",
-                           "CPU-Util",
-                           "100%/CPU-cores",
-                           "Hours"]]
-        self.df = self.df.sort_values(by=["User", "JobID"])
-        self.df["100%/CPU-cores"] = self.df["100%/CPU-cores"].apply(lambda x: f"{x}%")
-        self.df["CPU-Util"] = self.df["CPU-Util"].apply(lambda x: f"{x}%")
-        self.df["cores-minus-1"] = self.df["CPU-cores"] - 1
-        self.df["CPU-Hours-Wasted"] = self.df["Hours"] * self.df["cores-minus-1"]
+                          (~self.df.user.isin(self.excluded_users)) &
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        self.gp = pd.DataFrame({"User":[]})
+        if not self.df.empty:
+            # add new fields
+            self.df["cpu-eff-tpl"] = self.df.apply(lambda row:
+                                                   cpu_efficiency(row["admincomment"],
+                                                                  row["elapsedraw"],
+                                                                  row["jobid"],
+                                                                  row["cluster"],
+                                                                  single=True,
+                                                                  precision=1),
+                                                                  axis="columns")
+            self.df["error-code"] = self.df["cpu-eff-tpl"].apply(lambda tpl: tpl[1])
+            # drop jobs with non-zero error codes
+            self.df = self.df[self.df["error-code"] == 0]
+            self.df["cpu-eff"] = self.df["cpu-eff-tpl"].apply(lambda tpl: tpl[0])
+            # ignore jobs at 0% CPU-eff (also avoids division by zero later)
+            self.df = self.df[self.df["cpu-eff"] >= 1]
+            # max efficiency if serial is 100% / cores
+            self.df["inverse-cores"] = 100 / self.df["cores"]
+            self.df["inverse-cores"] = self.df["inverse-cores"].apply(lambda x: round(x, 1))
+            self.df["ratio"] = self.df["cpu-eff"] / self.df["inverse-cores"]
+            self.df = self.df[(self.df["ratio"] <= 1) &
+                              (self.df["ratio"] > self.lower_ratio)]
+            renamings = {"elapsed-hours":"Hours",
+                         "jobid":"JobID",
+                         "user":"User",
+                         "partition":"Partition",
+                         "cores":"CPU-cores",
+                         "cpu-eff":"CPU-Util",
+                         "inverse-cores":"100%/CPU-cores"}
+            self.df = self.df.rename(columns=renamings)
+            self.df = self.df[["JobID",
+                               "User",
+                               "Partition",
+                               "CPU-cores",
+                               "CPU-Util",
+                               "100%/CPU-cores",
+                               "Hours"]]
+            self.df = self.df.sort_values(by=["User", "JobID"])
+            self.df["100%/CPU-cores"] = self.df["100%/CPU-cores"].apply(lambda x: f"{x}%")
+            self.df["CPU-Util"] = self.df["CPU-Util"].apply(lambda x: f"{x}%")
+            self.df["cores-minus-1"] = self.df["CPU-cores"] - 1
+            self.df["CPU-Hours-Wasted"] = self.df["Hours"] * self.df["cores-minus-1"]
+            def jobid_list(series):
+                ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
+                return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
+            d = {"CPU-Hours-Wasted":"sum",
+                 "User":"size",
+                 "CPU-cores":"mean",
+                 "JobID":jobid_list}
+            self.gp = self.df.groupby("User").agg(d).rename(columns={"User":"Jobs"})
+            self.gp.reset_index(drop=False, inplace=True)
+            self.gp = self.gp[self.gp["CPU-Hours-Wasted"] > self.cpu_hours_threshold]
+            if self.num_top_users:
+                self.gp = self.gp.head(self.num_top_users)
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
-        for user in self.df.User.unique():
+        for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 cpu_hours_wasted = usr["CPU-Hours-Wasted"].sum()
+                #cpu_hours_wasted = self.gp[self.gp.User == user]["CPU-Hours-Wasted"].values[0]
                 usr = usr.drop(columns=["User", "cores-minus-1", "CPU-Hours-Wasted"])
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
-                prev_emails = self.get_emails_sent_count(user, self.violation, days=90)
-                num_disp = 15
+                num_disp = self.num_jobs_display
                 total_jobs = usr.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
-                cores_per_node = 32
+                # CHANGE NEXT
                 hours_per_week = 24 * 7
-                num_wasted_nodes = round(cpu_hours_wasted / cores_per_node / hours_per_week)
-                if cpu_hours_wasted >= SerialCodeUsingMultipleCores.cpu_hours_threshold:
-                    s = f"{g.greeting(user)}"
-                    s += f"Below are {case} that ran on Della (cpu) in the past {self.days_between_emails} days:"
-                    s +=  "\n\n"
-                    usr_str = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
-                    s +=  "\n".join([4 * " " + row for row in usr_str])
-                    s +=  "\n"
-                    s += textwrap.dedent("""
-                    The CPU utilization (CPU-Util) of each job above is approximately equal to
-                    100% divided by the number of allocated CPU-cores (100%/CPU-cores). This
-                    suggests that you may be running a code that can only use 1 CPU-core. If this is
-                    true then allocating more than 1 CPU-core is wasteful. A good target value for
-                    CPU utilization is 90% and above.
-                    """)
+                num_wasted_nodes = round(cpu_hours_wasted / self.cores_per_node / hours_per_week)
+                # create new tag which is two sentences
+                # if cores_per_node:
+                #Your jobs allocated <CPU-HOURS> CPU-hours that were never used. This is equivalent to
+                #making <NUM-NODES> nodes unavailable to all users (including yourself) for 1 week!
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<CASE>"] = case
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
+                tags["<DAYS>"] = str(self.days_between_emails)
+                indent = 4 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
+                tags["<CPU-HOURS>"] = str(cpu_hours_wasted)
+                tags["<NUM-NODES>"] = str(num_wasted_nodes)
+                translator = EmailTranslator(self.email_file, tags)
+                s = translator.replace_tags()
 
-                    if num_wasted_nodes > 1:
-                        s += f"\nYour jobs allocated {round(cpu_hours_wasted)} CPU-hours that were never used. This is equivalent to\n"
-                        s += f"making {num_wasted_nodes} nodes unavailable to all users (including yourself) for 1 week!\n"
+                send_email(s,f"{user}@princeton.edu", subject=f"{self.subject}")
+                for email in self.admin_emails:
+                    send_email(s, f"{email}", subject=f"{self.subject}")
+                print(s)
 
-                    s += textwrap.dedent(f"""
-                    Please consult the documentation of the software to see if it is parallelized.
-                    For a general overview of parallel computing:
-        
-                        https://researchcomputing.princeton.edu/support/knowledge-base/parallel-code
-
-                    If the code cannot run in parallel then please use the following Slurm
-                    directives:
-
-                        #SBATCH --nodes=1
-                        #SBATCH --ntasks=1
-                        #SBATCH --cpus-per-task=1
-
-                    You will experience shorter queue times by allocating only 1 CPU-core per job.
-                    In some cases this will also allow you run more jobs simultaneously.
-
-                    If you believe that the code is capable of using more than 1 CPU-core then
-                    consider attending an in-person Research Computing help session for assistance:
-
-                        https://researchcomputing.princeton.edu/support/help-sessions
-
-                    You can check the CPU utilization of completed and actively running jobs by using
-                    the "jobstats" command. For example:
-
-                        $ jobstats {usr['JobID'].values[0]}
-
-                    Replying to this automated email will open a support ticket with Research
-                    Computing. Let us know if we can be of help.
-                    """)
-                    send_email(s,   f"{user}@princeton.edu", subject=f"{self.subject}")
-                    send_email(s, "halverson@princeton.edu", subject=f"{self.subject}")
-                    send_email(s, "alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com", subject=f"{self.subject}")
-                    print(s)
-
-                    # append the new violations to the log file
-                    Alert.update_violation_log(usr, vfile)
-   
+                # append the new violations to the log file
+                Alert.update_violation_log(usr, vfile)
+ 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-        if self.df.empty:
+        if self.gp.empty:
             return ""
         else:
-            d = {"CPU-Hours-Wasted":"sum", "User":"size", "CPU-cores":"mean"}
-            self.gp = self.df.groupby("User").agg(d)
-            self.gp = self.gp.rename(columns={"User":"Jobs"})
-            self.gp = self.gp[self.gp["CPU-Hours-Wasted"] >= SerialCodeUsingMultipleCores.cpu_hours_threshold]
-            if self.gp.empty:
-                return ""
             self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
-            self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x: round(x, 1))
+            self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x:
+                                                        str(round(x, 1)).replace(".0", ""))
             self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
             self.gp.reset_index(drop=False, inplace=True)
             self.gp["email90"] = self.gp.User.apply(lambda user:
-                                               self.get_emails_sent_count(user,
-                                                                          self.violation,
-                                                                          days=90))
-            self.gp = self.gp[["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "email90"]]
+                                              self.get_emails_sent_count(user,
+                                                                         self.violation,
+                                                                         days=90))
+            cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "email90"]
+            self.gp = self.gp[cols]
             self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1

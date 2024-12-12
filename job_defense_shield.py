@@ -408,19 +408,23 @@ if __name__ == "__main__":
             s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
 
-    ######################################
-    ## SERIAL CODE USING MULTIPLE CORES ##
-    ######################################
+    ###########################################
+    ## SERIAL CODE ALLOCATING MULTIPLE CORES ##
+    ###########################################
     if args.serial_using_multiple:
-        serial = SerialCodeUsingMultipleCores(df,
-                                          days_between_emails=args.days,
-                                          violation="serial_using_multiple",
-                                          vpath=violation_logs_path,
-                                          subject="Serial Jobs Using Multiple CPU-cores")
-        if args.email and is_workday:
-            serial.send_emails_to_users(greeting_method)
-        title = "Potential serial codes using multiple CPU-cores (Della cpu)"
-        s += serial.generate_report_for_admins(title, keep_index=True)
+        alerts = [alert for alert in cfg.keys() if "serial-using-multiple" in alert]
+        for alert in alerts:
+            serial = SerialCodeUsingMultipleCores(df,
+                                              days_between_emails=args.days,
+                                              violation="serial_using_multiple",
+                                              vpath=violation_logs_path,
+                                              subject="Serial Jobs Allocating Multiple CPU-cores",
+                                              **cfg[alert])
+            if args.email and is_workday:
+                serial.send_emails_to_users(greeting_method)
+            title = "Potential Serial Jobs Allocating Multiple CPU-cores"
+            s += serial.generate_report_for_admins(title, keep_index=True)
+
 
     ##########################
     ## ZERO CPU UTILIZATION ##
