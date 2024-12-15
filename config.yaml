@@ -25,7 +25,10 @@ external-emails: # overrides
 should-be-using-mig-1:
   cluster: della
   partition: gpu
+  min_run_time: 61 # minutes
+  num_cores_threshold: 1
   gpu_util_target: "50%"
+  max_num_jobid_admin: 3
   excluded_users:
     - aturing
     - jzp

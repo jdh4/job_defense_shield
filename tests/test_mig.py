@@ -82,6 +82,8 @@ def test_mig():
                            "Subject",
                            cluster="della",
                            partition="gpu",
+                           min_run_time=0,
+                           num_cores_threshold=1,
                            excluded_users=["aturing"])
     actual = mig.df[["User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
     expected = pd.DataFrame({"User":["user1", "user2", "user1"],

@@ -2,6 +2,7 @@ import pandas as pd
 from base import Alert
 from utils import add_dividers
 from utils import send_email
+from utils import MINUTES_PER_HOUR as mph
 from efficiency import cpu_memory_usage
 from efficiency import gpu_memory_usage_eff_tuples
 from greeting import GreetingFactory
@@ -19,12 +20,12 @@ class MultiInstanceGPU(Alert):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition == self.partition) &
-                          (self.df.cores == 1) &
+                          (self.df.cores == self.num_cores_threshold) &
                           (self.df.gpus == 1) &
                           (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df.state != "OUT_OF_MEMORY") &
-                          (self.df["elapsed-hours"] >= 1)].copy()
+                          (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         # add new fields
         self.df["gpu-tuple"] = self.df.apply(lambda row:
                                gpu_memory_usage_eff_tuples(row["admincomment"],
@@ -59,6 +60,7 @@ class MultiInstanceGPU(Alert):
         renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "user":"User"}
         self.df = self.df.rename(columns=renamings)
         self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
+        # where is groupby and then compare to abs threshold
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -93,10 +95,15 @@ class MultiInstanceGPU(Alert):
         if self.df.empty:
             return ""
         else:
-            self.admin = self.df.groupby("User").agg({"Hours":"sum", "User":"size"})
+            def jobid_list(series):
+                ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
+                return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
+            d = {"Hours":"sum", "User":"size", "JobID":jobid_list}
+            self.admin = self.df.groupby("User").agg(d)
             self.admin["Hours"] = self.admin["Hours"].apply(lambda hrs: round(hrs, 1))
-            self.admin = self.admin.rename(columns={"User":"Jobs", "Hours":"Full-A100-GPU-Hours"})
-            self.admin = self.admin.sort_values(by="Full-A100-GPU-Hours", ascending=False)
+            renamings = {"User":"Jobs", "Hours":"GPU-Hours"}
+            self.admin = self.admin.rename(columns=renamings)
+            self.admin = self.admin.sort_values(by="GPU-Hours", ascending=False)
             self.admin.reset_index(drop=False, inplace=True)
             self.admin.index += 1
             self.admin["email90"] = self.admin["User"].apply(lambda user:
