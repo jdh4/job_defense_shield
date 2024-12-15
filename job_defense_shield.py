@@ -21,7 +21,6 @@ from cleaner import SacctCleaner
 from alert.zero_gpu_utilization import ZeroGpuUtilization
 from alert.gpu_model_too_powerful import GpuModelTooPowerful
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
-from alert.gpu_fragmentation import MultinodeGPUFragmentation
 from alert.excess_cpu_memory import ExcessCPUMemory
 from alert.zero_cpu_utilization import ZeroCPU
 from alert.most_gpus import MostGPUs
@@ -33,6 +32,7 @@ from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_allocating_multiple_cores import SerialAllocatingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
+from alert.multinode_gpu_fragmentation import MultinodeGpuFragmentation
 from alert.compute_efficiency import LowEfficiencyCPU
 from alert.compute_efficiency import LowEfficiencyGPU
 from alert.too_many_cores_per_gpu import TooManyCoresPerGpu
@@ -86,7 +86,7 @@ if __name__ == "__main__":
                         help='Identify jobs that should use less powerful GPUs')
     parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
                         help='Identify CPU jobs that are split across too many nodes')
-    parser.add_argument('--gpu-fragmentation', action='store_true', default=False,
+    parser.add_argument('--multinode-gpu-fragmentation', action='store_true', default=False,
                         help='Identify GPU jobs that are split across too many nodes')
     parser.add_argument('--excessive-time', action='store_true', default=False,
                         help='Identify users with excessive run time limits')
@@ -192,9 +192,9 @@ if __name__ == "__main__":
                                         "zero_util_gpu_hours",
                                         "ZERO UTILIZATION GPU-HOURS",
                                         args.days)
-        if args.gpu_fragmentation:
+        if args.multinode_gpu_fragmentation:
             show_history_of_emails_sent(violation_logs_path,
-                                        "gpu_fragmentation",
+                                        "multinode_gpu_fragmentation",
                                         "1 GPU PER NODE",
                                         args.days)
         if args.excess_cpu_memory:
@@ -342,18 +342,19 @@ if __name__ == "__main__":
     #######################
     ## GPU FRAGMENTATION ##
     #######################
-    if args.gpu_fragmentation:
-        gpu_frag = MultinodeGPUFragmentation(df,
-                               days_between_emails=args.days,
-                               violation="gpu_fragmentation",
-                               vpath=violation_logs_path,
-                               subject="Fragmented GPU Jobs on Della",
-                               cluster="della",
-                               partition="gpu")
-        if args.email and is_workday:
-            gpu_frag.send_emails_to_users(greeting_method)
-        title = "Multinode GPU jobs with fragmentation (all jobs, 1+ hours)"
-        s += gpu_frag.generate_report_for_admins(title)
+    if args.multinode_gpu_fragmentation:
+        alerts = [alert for alert in cfg.keys() if "multinode-gpu-fragmentation" in alert]
+        for alert in alerts:
+            gpu_frag = MultinodeGpuFragmentation(df,
+                                   days_between_emails=args.days,
+                                   violation="multinode_gpu_fragmentation",
+                                   vpath=violation_logs_path,
+                                   subject="Multinode GPU Jobs with Fragmentation",
+                                   **cfg[alert])
+            if args.email and is_workday:
+                gpu_frag.send_emails_to_users(greeting_method)
+            title = "Multinode GPU Jobs with Fragmentation"
+            s += gpu_frag.generate_report_for_admins(title)
 
     ########################
     ## LOW CPU EFFICIENCY ##

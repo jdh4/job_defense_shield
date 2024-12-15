@@ -108,7 +108,7 @@ class ExcessiveTimeLimits(Alert):
 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
                 for email in self.admin_emails:
-                    send_email(s, f"{email}", subject=f"{self.subject}")
+                    send_email(s, email, subject=f"{self.subject}")
                 print(s)
 
                 # append the new violations to the log file

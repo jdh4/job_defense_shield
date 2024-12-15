@@ -6,7 +6,8 @@
 violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
 reply-to: rcsystems@princeton.edu
 greeting-method: getent
-workday-method: usa
+workday-method: always
+holidays-file: /path/to/holidays.txt
 jobstats-module-path: /usr/local/bin/jobstats
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
 admin-reports:
@@ -86,6 +87,7 @@ zero-util-gpu-hours-1:
     - halverson@princeton.edu
     - kl5675@princeton.edu
 
+
 ####################################
 ## TOO MANY CORES PER GPU (ALERT) ##
 ####################################
@@ -102,6 +104,27 @@ too-many-cores-per-gpu-1:
   cores_per_gpu_limit: 24
   min_run_time: 30 # minutes
   email_file: "email/too_many_cores_per_gpu.txt"
+  excluded_users:
+    - aturing
+    - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+    - kl5675@princeton.edu
+
+
+#########################################
+## MULTINODE GPU FRAGMENTATION (ALERT) ##
+#########################################
+multinode-gpu-fragmentation-1:
+  cluster: della
+  partitions:
+    - pli
+    - pli-c
+    - pli-p
+  gpus_per_node: 8  # count
+  min_run_time: 30  # minutes
+  email_file: "email/multinode_gpu_fragmentation.txt"
   excluded_users:
     - aturing
     - einstein
