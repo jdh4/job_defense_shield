@@ -19,7 +19,7 @@ from raw_job_data import SlurmSacct
 from cleaner import SacctCleaner
 
 from alert.zero_gpu_utilization import ZeroGpuUtilization
-from alert.mig import MultiInstanceGPU
+from alert.gpu_model_too_powerful import GpuModelTooPowerful
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.gpu_fragmentation import MultinodeGPUFragmentation
 from alert.excess_cpu_memory import ExcessCPUMemory
@@ -82,8 +82,8 @@ if __name__ == "__main__":
                         help='Identify users with low GPU efficiency')
     parser.add_argument('--excess-cpu-memory', action='store_true', default=False,
                         help='Identify users that are allocating too much CPU memory')
-    parser.add_argument('--mig', action='store_true', default=False,
-                        help='Identify jobs that should use MIG')
+    parser.add_argument('--gpu-model-too-powerful', action='store_true', default=False,
+                        help='Identify jobs that should use less powerful GPUs')
     parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
                         help='Identify CPU jobs that are split across too many nodes')
     parser.add_argument('--gpu-fragmentation', action='store_true', default=False,
@@ -172,10 +172,10 @@ if __name__ == "__main__":
                                         "zero_cpu_utilization",
                                         "ZERO CPU UTILIZATION OF A RUNNING JOB",
                                         args.days)
-        if args.mig:
+        if args.gpu_model_too_powerful:
             show_history_of_emails_sent(violation_logs_path,
-                                        "should_be_using_mig",
-                                        "SHOULD HAVE USED MIG",
+                                        "gpu_model_too_powerful",
+                                        "GPU MODEL TOO POWERFUL",
                                         args.days)
         if args.low_cpu_efficiency:
             show_history_of_emails_sent(violation_logs_path,
@@ -494,21 +494,21 @@ if __name__ == "__main__":
             s += time_limits.generate_report_for_admins(title)
 
 
-    ####################################
-    ## JOBS THAT SHOULD HAVE USED MIG ##
-    ####################################
-    if args.mig:
-        alerts = [alert for alert in cfg.keys() if "should-be-using-mig" in alert]
+    ############################
+    ## GPU MODEL TOO POWERFUL ##
+    ############################
+    if args.gpu_model_too_powerful:
+        alerts = [alert for alert in cfg.keys() if "gpu-model-too-powerful" in alert]
         for alert in alerts:
-            mig = MultiInstanceGPU(df,
-                                   days_between_emails=args.days,
-                                   violation="should_be_using_mig",
-                                   vpath=violation_logs_path,
-                                   subject="Consider Using the MIG GPUs on Della",
-                                   **cfg[alert])
+            too_power = GpuModelTooPowerful(df,
+                                            days_between_emails=args.days,
+                                            violation="gpu_model_too_powerful",
+                                            vpath=violation_logs_path,
+                                            subject="Jobs with GPU Model Too Powerful",
+                                            **cfg[alert])
             if args.email and is_workday:
-                mig.send_emails_to_users(greeting_method)
-            s += mig.generate_report_for_admins("Could Have Been MIG Jobs")
+                too_power.send_emails_to_users(greeting_method)
+            s += too_power.generate_report_for_admins("GPU Model Too Powerful")
 
 
     ################################

@@ -9,9 +9,9 @@ from greeting import GreetingFactory
 from email_translator import EmailTranslator
 
 
-class MultiInstanceGPU(Alert):
+class GpuModelTooPowerful(Alert):
 
-    """Find jobs that could have used the MIG GPUs."""
+    """Find jobs that could have used a less powerful GPU model."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
@@ -46,7 +46,7 @@ class MultiInstanceGPU(Alert):
         cols = ["CPU-Mem-Used", "mem-alloc", "error_code"]
         self.df[cols] = pd.DataFrame(self.df["memory-tuple"].tolist(), index=self.df.index)
         self.df = self.df[self.df["error_code"] == 0]
-        # find jobs that could have used mig
+        # find jobs that could have used less powerful gpus
         gpu_eff_threshold = 15 # percent
         gpu_mem_threshold = 10 # GB
         cpu_mem_threshold = 32 # GB
@@ -80,7 +80,7 @@ class MultiInstanceGPU(Alert):
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
-                translator = EmailTranslator("email/mig.txt", tags)
+                translator = EmailTranslator(self.email_file, tags)
                 s = translator.replace_tags()
 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")

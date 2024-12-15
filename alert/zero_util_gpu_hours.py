@@ -85,7 +85,7 @@ class ZeroUtilGPUHours(Alert):
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
-                translator = EmailTranslator("email/zero_util_gpu_hours.txt", tags)
+                translator = EmailTranslator(self.email_file, tags)
                 s = translator.replace_tags()
 
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")

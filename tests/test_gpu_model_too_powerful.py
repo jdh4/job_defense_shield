@@ -1,7 +1,7 @@
 import pandas as pd
-from alert.mig import MultiInstanceGPU 
+from alert.gpu_model_too_powerful import GpuModelTooPowerful
 
-def test_mig():
+def test_gpu_model_too_powerful():
     n_jobs = 5
     job1 = {
         "gpus": 1,
@@ -75,17 +75,17 @@ def test_mig():
                        "state":["COMPLETED"] * n_jobs,
                        "partition":["gpu"] * n_jobs,
                        "elapsed-hours":[10] * n_jobs})
-    mig = MultiInstanceGPU(df,
-                           0,
-                           "",
-                           "",
-                           "Subject",
-                           cluster="della",
-                           partition="gpu",
-                           min_run_time=0,
-                           num_cores_threshold=1,
-                           excluded_users=["aturing"])
-    actual = mig.df[["User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
+    too_power = GpuModelTooPowerful(df,
+                                    0,
+                                    "",
+                                    "",
+                                    "Subject",
+                                    cluster="della",
+                                    partition="gpu",
+                                    min_run_time=0,
+                                    num_cores_threshold=1,
+                                    excluded_users=["aturing"])
+    actual = too_power.df[["User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
     expected = pd.DataFrame({"User":["user1", "user2", "user1"],
                              "GPU-Util":["9%", "6%", "9%"],
                              "GPU-Mem-Used":["7 GB", "5 GB", "7 GB"],

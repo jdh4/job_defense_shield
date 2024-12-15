@@ -19,16 +19,17 @@ external-emails: # overrides
   u98765: last.first@gmail.com
 
 
-#################################
-## SHOULD BE USING MIG (ALERT) ##
-#################################
-should-be-using-mig-1:
+####################################
+## GPU MODEL TOO POWERFUL (ALERT) ##
+####################################
+gpu-model-too-powerful-1:
   cluster: della
   partition: gpu
   min_run_time: 61 # minutes
   num_cores_threshold: 1
   gpu_util_target: "50%"
   max_num_jobid_admin: 3
+  email_file: "email/gpu_model_too_powerful.txt"
   excluded_users:
     - aturing
     - jzp
@@ -48,6 +49,7 @@ zero-cpu-utilization-1:
     - pppl
     - pu
   min_run_time: 60 # minutes
+  email_file: "email/zero_cpu_utilization.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -58,6 +60,7 @@ zero-cpu-utilization-2:
     - cpu
     - physics
   min_run_time: 60 # minutes
+  email_file: "email/zero_cpu_utilization.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -77,6 +80,7 @@ zero-util-gpu-hours-1:
   gpu_hours_threshold_user: 100 # hours
   gpu_hours_threshold_admin: 24 # hours
   max_num_jobid_admin: 2        # count
+  email_file: "email/zero_util_gpu_hours.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
