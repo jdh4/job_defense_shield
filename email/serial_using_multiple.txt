@@ -1,4 +1,6 @@
-<GREETING>Below are <CASE> that ran on <CLUSTER> (<PARTITIONS>) in the past <DAYS> days:
+<GREETING>
+
+Below are <CASE> that ran on <CLUSTER> (<PARTITIONS>) in the past <DAYS> days:
 
 <TABLE>
 

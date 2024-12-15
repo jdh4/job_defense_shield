@@ -1,4 +1,6 @@
-<GREETING>Below are jobs that ran on an A100 GPU on Della in the past <DAYS> days:
+<GREETING>
+
+Below are jobs that ran on an A100 GPU on Della in the past <DAYS> days:
 
 <TABLE>
 

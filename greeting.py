@@ -21,7 +21,7 @@ class GreetingBasic(Greeting):
 
     def greeting(self, user: str) -> str:
         """Return the greeting or first line for user emails."""
-        return f"Hello {user},\n\n"
+        return f"Hello {user},"
 
 
 class GreetingGetent:
@@ -33,10 +33,10 @@ class GreetingGetent:
         try:
             user_info = pwd.getpwnam(user)
         except KeyError:
-            return f"Hello {user},\n\n"
+            return f"Hello {user},"
         full_name = user_info.pw_gecos
         first_name = full_name.split()[0]
-        return f"Hello {first_name} ({user}),\n\n"
+        return f"Hello {first_name} ({user}),"
 
 
 class GreetingLDAP(Greeting):
@@ -61,8 +61,8 @@ class GreetingLDAP(Greeting):
                 if ": " in full_name:
                     full_name = b64decode(full_name).decode("utf-8")
                 if full_name.translate(trans_table).replace(" ", "").isalpha():
-                    return f"Hi {full_name.split()[0]},\n\n"
-        return f"Hello {user},\n\n"
+                    return f"Hi {full_name.split()[0]},"
+        return f"Hello {user},"
 
 
 class GreetingCustom(Greeting):

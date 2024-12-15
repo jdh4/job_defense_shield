@@ -160,7 +160,7 @@ class MultinodeCPUFragmentation(Alert):
                 all_not_physics = bool(della[della.partition != "physics"].shape[0] == della.shape[0])
                 max_cores = usr["cores"].max()
                 edays = self.days_between_emails
-                s = f"{g.greeting(user)}"
+                s = f"{g.greeting(user)}\n\n"
                 s += f"Below are your jobs over the past {edays} days which appear to be using more nodes\n"
                 s += "than necessary:"
                 s += "\n\n"

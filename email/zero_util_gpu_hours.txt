@@ -1,4 +1,6 @@
-<GREETING>You have consumed <GPU-HOURS> GPU-hours at 0% GPU utilization in the past <DAYS> days
+<GREETING>
+
+You have consumed <GPU-HOURS> GPU-hours at 0% GPU utilization in the past <DAYS> days
 on the <PARTITIONS> partition(s) of <CLUSTER>.
 
 See this webpage for three common reasons why a user may encounter 0% GPU

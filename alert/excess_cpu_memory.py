@@ -148,7 +148,7 @@ class ExcessCPUMemory(Alert):
                 jobs = jobs.rename(columns=renamings)
                 jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
                 edays = self.days_between_emails
-                s = f"{g.greeting(user)}"
+                s = f"{g.greeting(user)}\n\n"
                 s += f"Below are {case} that ran on {self.cluster} ({','.join(self.partitions)}) in the past {edays} days:\n\n"
                 jobs_str = jobs.to_string(index=False, justify="center")
                 s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])

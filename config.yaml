@@ -112,7 +112,6 @@ too-many-cores-per-gpu-1:
 ########################
 low-cpu-efficiency-1:
   cluster: della
-  cluster_name: "Della (cpu)"
   partitions:
     - cpu
   eff_thres_pct: 60         # percent
@@ -120,6 +119,8 @@ low-cpu-efficiency-1:
   proportion_thres_pct: 2   # percent
   absolute_thres_hours: 50  # cpu-hours
   num_top_users: 15         # count
+  min_run_time: 30          # minutes
+  email_file: "email/low_cpu_efficiency.txt"
   excluded_users:
     - aturing
     - einstein
@@ -130,14 +131,15 @@ low-cpu-efficiency-1:
 
 low-cpu-efficiency-2:
   cluster: della
-  cluster_name: "Della (physics)"
   partitions:
     - physics
-  eff_thres_pct: 60
-  eff_target_pct: 90
-  proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 3
+  eff_thres_pct: 60         # percent
+  eff_target_pct: 90        # percent
+  proportion_thres_pct: 2   # percent
+  absolute_thres_hours: 50  # cpu-hours
+  num_top_users: 3          # count
+  min_run_time: 30          # minutes
+  email_file: "email/low_cpu_efficiency.txt"
   excluded_users:
     - aturing
     - einstein
@@ -148,17 +150,18 @@ low-cpu-efficiency-2:
 
 low-cpu-efficiency-3:
   cluster: stellar
-  cluster_name: "Stellar (Intel)"
   partitions:
     - all
     - pppl
     - pu
     - serial
-  eff_thres_pct: 60
-  eff_target_pct: 90
-  proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 15
+  eff_thres_pct: 60         # percent
+  eff_target_pct: 90        # percent
+  proportion_thres_pct: 2   # percent
+  absolute_thres_hours: 50  # cpu-hours
+  num_top_users: 15         # count
+  min_run_time: 30          # minutes
+  email_file: "email/low_cpu_efficiency.txt"
   excluded_users:
     - aturing
     - einstein
@@ -173,14 +176,15 @@ low-cpu-efficiency-3:
 ########################
 low-gpu-efficiency-1:
   cluster: della
-  cluster_name: "Della (gpu)"
   partitions:
     - gpu
-  eff_thres_pct: 15
-  eff_target_pct: 50
-  proportion_thres_pct: 2
-  absolute_thres_hours: 50
-  num_top_users: 15
+  eff_thres_pct: 15         # percent
+  eff_target_pct: 50        # percent
+  proportion_thres_pct: 2   # percent
+  absolute_thres_hours: 50  # gpu-hours
+  num_top_users: 15         # count
+  min_run_time: 30          # minutes
+  email_file: "email/low_gpu_efficiency.txt"
   excluded_users:
     - aturing
     - einstein
@@ -191,14 +195,15 @@ low-gpu-efficiency-1:
 
 low-gpu-efficiency-2:
   cluster: della
-  cluster_name: "Della (pli-c)"
   partitions:
     - pli-c
-  eff_thres_pct: 40
-  eff_target_pct: 75
-  proportion_thres_pct: 2
-  absolute_thres_hours: 168
-  num_top_users: 5
+  eff_thres_pct: 40         # percent
+  eff_target_pct: 75        # percent
+  proportion_thres_pct: 2   # percent
+  absolute_thres_hours: 168 # gpu-hours
+  num_top_users: 5          # count
+  min_run_time: 30          # minutes
+  email_file: "email/low_gpu_efficiency.txt"
   excluded_users:
     - aturing
     - einstein
@@ -210,14 +215,15 @@ low-gpu-efficiency-2:
 
 low-gpu-efficiency-3:
   cluster: della
-  cluster_name: "Della (pli)"
   partitions:
     - pli
-  eff_thres_pct: 40
-  eff_target_pct: 75
-  proportion_thres_pct: 2
-  absolute_thres_hours: 168
-  num_top_users: 3
+  eff_thres_pct: 40         # percent
+  eff_target_pct: 75        # percent
+  proportion_thres_pct: 2   # percent
+  absolute_thres_hours: 168 # gpu-hours
+  num_top_users: 3          # count
+  min_run_time: 30          # minutes
+  email_file: "email/low_gpu_efficiency.txt"
   excluded_users:
     - aturing
     - einstein

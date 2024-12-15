@@ -86,7 +86,7 @@ class ZeroGpuUtilization(Alert):
             usr = self.jb[(self.jb.elapsedraw < upper) &
                           (self.jb.User == user)].copy()
             if not usr.empty:
-                s = f"{g.greeting(user)}"
+                s = f"{g.greeting(user)}\n\n"
                 text = (
                 'You have GPU job(s) that have been running for more than 1 hour but appear to not be using the GPU(s):'
                 )

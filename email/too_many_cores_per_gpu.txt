@@ -1,4 +1,6 @@
-<GREETING>Your <NAME> jobs may be using more CPU-cores per GPU than necessary:
+<GREETING>
+
+Your <NAME> jobs may be using more CPU-cores per GPU than necessary:
 
 <TABLE>
 

@@ -1,0 +1,25 @@
+<GREETING>
+
+Over the last <DAYS> days you have used <RANK> GPU-hours on <CLUSTER> (<PARTITIONS>) but
+your mean GPU efficiency is only <EFFICIENCY>:
+
+<TABLE>
+
+A good target value for "Efficiency" is <TARGET> and above. Please investigate the reason
+for the low efficiency. Common reasons for low GPU efficiency are discussed here:
+
+    https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#low-util
+
+Consult the documentation or write to the mailing list of the software that you
+are using for additional reasons for low GPU efficiency. You may also consider
+attending an in-person Research Computing help session:
+
+    https://researchcomputing.princeton.edu/support/help-sessions
+
+You can check the efficiency of completed and actively running jobs by using the
+"jobstats" command on a given JobID:
+
+<JOBSTATS>
+
+Replying to this automated email will open a support ticket with Research
+Computing. Let us know if we can be of help.

@@ -1,25 +1,26 @@
-import textwrap
 import pandas as pd
 from base import Alert
 from efficiency import cpu_efficiency
 from efficiency import gpu_efficiency
-from utils import SECONDS_PER_HOUR
+from utils import SECONDS_PER_HOUR as sph
+from utils import MINUTES_PER_HOUR as mph
 from utils import send_email
 from utils import add_dividers
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class LowEfficiency(Alert):
 
     """Low CPU or GPU utilization. The first part computes the proportion
-       of CPU/GPU hours for each user. How to turn the filters on or off
-       for admin reports."""
+       of CPU/GPU hours for each user."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
-        # compute proportion (self.pr) using as much data as possible
+        # compute proportion (self.pr) using as much data as possible; we do not
+        # exclude any users for this part
         self.pr = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           pd.notna(self.df[f"{self.xpu}-seconds"])].copy()
@@ -35,7 +36,7 @@ class LowEfficiency(Alert):
         self.ce = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (~self.df.user.isin(self.excluded_users)) &
-                          (self.df["elapsedraw"] >= 0.5 * SECONDS_PER_HOUR) &
+                          (self.df["elapsedraw"] >= self.min_run_time / mph) &
                           (self.df.admincomment != {})].copy()
         # next line prevents (unlikely) failure when creating "{self.xpu}-tuples"
         if self.ce.empty:
@@ -80,7 +81,7 @@ class LowEfficiency(Alert):
         if self.ce.empty:
             return pd.DataFrame()
         self.ce[f"{self.xpu}-hours"] = self.ce.apply(lambda row:
-                                                     round(row[f"{self.xpu}-seconds-total"] / SECONDS_PER_HOUR),
+                                                     round(row[f"{self.xpu}-seconds-total"] / sph),
                                                      axis="columns")
         # next line prevents (unlikely) division by zero when calculating "coverage"
         self.ce = self.ce[self.ce[f"{self.xpu}-seconds-all"] > 0]
@@ -88,8 +89,8 @@ class LowEfficiency(Alert):
                                             row[f"{self.xpu}-seconds-total"] / row[f"{self.xpu}-seconds-all"],
                                             axis="columns")
         self.ce["coverage"] = self.ce["coverage"].apply(lambda x: round(x, 2))
-        self.ce["eff(%)"]   =   self.ce["eff(%)"].apply(lambda x: round(x))
-        self.ce["cores"]    =    self.ce["cores"].apply(lambda x: round(x, 1))
+        self.ce["eff(%)"] = self.ce["eff(%)"].apply(lambda x: round(x))
+        self.ce["cores"] = self.ce["cores"].apply(lambda x: round(x, 1))
         self.ce.index += 1
         filters = (self.ce["eff(%)"] <= self.eff_thres_pct) & \
                   (self.ce["proportion(%)"] >= self.proportion_thres_pct) & \
@@ -116,6 +117,8 @@ class LowEfficiency(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.ce[self.ce.user == user].copy()
                 rank = self.ce.index[self.ce.user == user].tolist()[0]
+                myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
+                jobid = self.df[self.df.user == user].jobid.values[0]
                 usr[f"{self.xpu.upper()}-rank"] = f"{rank}/{self.pr.shape[0]}"
                 usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%")
                 usr["cores"] = usr["cores"].apply(lambda x: str(x).replace(".0", ""))
@@ -137,47 +140,23 @@ class LowEfficiency(Alert):
                              "eff(%)":"Efficiency",
                              "cores":"AvgCores"}
                 usr = usr[cols].rename(columns=renamings)
-                myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
-                edays = self.days_between_emails
-                s = f"{g.greeting(user)}"
-                s +=f"Over the last {edays} days you have used {myrank} {self.xpu.upper()}-hours on {self.cluster_name} but\n"
-                s +=f"your mean {self.xpu.upper()} efficiency is only {usr['Efficiency'].values[0]}:\n\n"
-                usr_str = usr.drop(columns=["Cluster"]).to_string(index=False, justify="center")
-                s += "\n".join([5 * " " + row for row in usr_str.split("\n")])
-                s += "\n"
-                target = self.eff_target_pct
-                if self.xpu == "cpu":
-                    s += textwrap.dedent(f"""
-                    A good target value for "Efficiency" is {target}% and above. Please investigate the reason
-                    for the low efficiency. Common reasons for low CPU efficiency are discussed here:
+                usr = usr.drop(columns=["Cluster"])
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITIONS>"] = ",".join(sorted(set(usr["Partition(s)"])))
+                tags["<RANK>"] = myrank
+                tags["<EFFICIENCY>"] = usr['Efficiency'].values[0]
+                tags["<TARGET>"] = str(self.eff_target_pct)
+                indent = 4 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobid}"
+                translator = EmailTranslator(self.email_file, tags)
+                s = translator.replace_tags()
 
-                         https://researchcomputing.princeton.edu/get-started/cpu-utilization
-                    """)
-                elif self.xpu == "gpu":
-                    s += textwrap.dedent(f"""
-                    A good target value for "Efficiency" is {target}% and above. Please investigate the reason
-                    for the low efficiency. Common reasons for low GPU efficiency are discussed here:
-
-                         https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing#low-util
-                    """)
-                s += textwrap.dedent(f"""
-                Consult the documentation or write to the mailing list of the software that you
-                are using for additional reasons for low {self.xpu.upper()} efficiency. You may also consider
-                attending an in-person Research Computing help session:
-
-                     https://researchcomputing.princeton.edu/support/help-sessions
-                """)
-                s += textwrap.dedent(f"""
-                You can check the efficiency of completed and actively running jobs by using the
-                \"jobstats\" command on a given JobID:
-
-                     $ jobstats {self.df[self.df.user == user].jobid.values[0]}
-
-                Replying to this automated email will open a support ticket with Research
-                Computing. Let us know if we can be of help.
-                """)
-                subject = f"Jobs with Low Efficiency on {self.cluster_name}"
-                send_email(s, f"{user}@princeton.edu", subject=subject)
+                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
                 for email in self.admin_emails:
                     send_email(s, f"{email}", subject=f"{self.subject}")
                 print(s)

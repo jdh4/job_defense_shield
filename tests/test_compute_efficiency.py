@@ -68,13 +68,13 @@ def test_low_efficiency():
                                vpath="",
                                subject="",
                                cluster="della",
-                               cluster_name="Della (cpu)",
                                partitions=["cpu"],
                                eff_thres_pct=60,
                                eff_target_pct=90,
                                proportion_thres_pct=2,
                                absolute_thres_hours=1,
                                num_top_users=15,
+                               min_run_time=0,
                                excluded_users=["aturing"])
     actual = low_eff.ce[["user", "partition", "cpu-hours", "proportion(%)", "eff(%)", "jobs"]]
     expected = pd.DataFrame({"user":["user1"],

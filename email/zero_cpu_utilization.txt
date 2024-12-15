@@ -1,4 +1,6 @@
-<GREETING>Below are your recent jobs that did not use all of the allocated nodes:
+<GREETING>
+
+Below are your recent jobs that did not use all of the allocated nodes:
 
 <TABLE>
 
