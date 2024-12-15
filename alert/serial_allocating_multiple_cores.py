@@ -8,7 +8,7 @@ from greeting import GreetingFactory
 from email_translator import EmailTranslator
 
 
-class SerialCodeUsingMultipleCores(Alert):
+class SerialAllocatingMultipleCores(Alert):
 
     """Find serial codes that are using multiple CPU-cores."""
 

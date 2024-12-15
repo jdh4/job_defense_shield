@@ -31,7 +31,7 @@ from alert.utilization_by_slurm_account import UtilizationBySlurmAccount
 from alert.longest_queued import LongestQueuedJobs
 from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
-from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
+from alert.serial_allocating_multiple_cores import SerialAllocatingMultipleCores
 from alert.fragmentation import MultinodeCPUFragmentation
 from alert.compute_efficiency import LowEfficiencyCPU
 from alert.compute_efficiency import LowEfficiencyGPU
@@ -90,8 +90,8 @@ if __name__ == "__main__":
                         help='Identify GPU jobs that are split across too many nodes')
     parser.add_argument('--excessive-time', action='store_true', default=False,
                         help='Identify users with excessive run time limits')
-    parser.add_argument('--serial-using-multiple', action='store_true', default=False,
-                        help='Indentify serial codes using multiple CPU-cores')
+    parser.add_argument('--serial-allocating-multiple', action='store_true', default=False,
+                        help='Indentify serial codes allocating multiple CPU-cores')
     parser.add_argument('--too-many-cores-per-gpu', action='store_true', default=False,
                         help='Indentify jobs using too many CPU-cores per GPU')
     parser.add_argument('--utilization-overview', action='store_true', default=False,
@@ -212,10 +212,10 @@ if __name__ == "__main__":
                                         "cpu_fragmentation",
                                         "CPU FRAGMENTATION PER NODE",
                                         args.days)
-        if args.serial_using_multiple:
+        if args.serial_allocating_multiple:
             show_history_of_emails_sent(violation_logs_path,
-                                        "serial_using_multiple",
-                                        "SERIAL CODE USING MULTIPLE CPU-CORES",
+                                        "serial_allocating_multiple",
+                                        "SERIAL CODE ALLOCATING MULTIPLE CPU-CORES",
                                         args.days)
         if args.too_many_cores_per_gpu:
             show_history_of_emails_sent(violation_logs_path,
@@ -411,18 +411,18 @@ if __name__ == "__main__":
     ###########################################
     ## SERIAL CODE ALLOCATING MULTIPLE CORES ##
     ###########################################
-    if args.serial_using_multiple:
-        alerts = [alert for alert in cfg.keys() if "serial-using-multiple" in alert]
+    if args.serial_allocating_multiple:
+        alerts = [alert for alert in cfg.keys() if "serial-allocating-multiple" in alert]
         for alert in alerts:
-            serial = SerialCodeUsingMultipleCores(df,
-                                              days_between_emails=args.days,
-                                              violation="serial_using_multiple",
-                                              vpath=violation_logs_path,
-                                              subject="Serial Jobs Allocating Multiple CPU-cores",
-                                              **cfg[alert])
+            serial = SerialAllocatingMultipleCores(df,
+                                     days_between_emails=args.days,
+                                     violation="serial_allocating_multiple",
+                                     vpath=violation_logs_path,
+                                     subject="Serial Jobs Allocating Multiple CPU-cores",
+                                     **cfg[alert])
             if args.email and is_workday:
                 serial.send_emails_to_users(greeting_method)
-            title = "Potential Serial Jobs Allocating Multiple CPU-cores"
+            title = "Serial Jobs Allocating Multiple CPU-cores"
             s += serial.generate_report_for_admins(title, keep_index=True)
 
 

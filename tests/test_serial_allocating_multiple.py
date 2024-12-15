@@ -1,8 +1,8 @@
 import pytest
 import pandas as pd
-from alert.serial_code_using_multiple_cores import SerialCodeUsingMultipleCores
+from alert.serial_allocating_multiple_cores import SerialAllocatingMultipleCores
 
-def test_serial_using_multiple_cores():
+def test_serial_allocating_multiple_cores():
     n_jobs = 5
     wallclock_secs = 100000
     wallclock_hrs = wallclock_secs / 3600
@@ -62,21 +62,21 @@ def test_serial_using_multiple_cores():
                                      8 * wallclock_hrs,
                                     16 * wallclock_hrs,
                                     32 * wallclock_hrs]})
-    serial = SerialCodeUsingMultipleCores(df,
-                                          0,
-                                          "",
-                                          "",
-                                          "Subject",
-                                          cluster="della",
-                                          partitions=["cpu"],
-                                          cores_per_node=32,
-                                          min_run_time=0,
-                                          cpu_hours_threshold=0,
-                                          lower_ratio=0.85,
-                                          num_top_users=0,
-                                          num_jobs_display=3,
-                                          email_file="",
-                                          max_num_jobid_admin=3)
+    serial = SerialAllocatingMultipleCores(df,
+                                           0,
+                                           "",
+                                           "",
+                                           "Subject",
+                                           cluster="della",
+                                           partitions=["cpu"],
+                                           cores_per_node=32,
+                                           min_run_time=0,
+                                           cpu_hours_threshold=0,
+                                           lower_ratio=0.85,
+                                           num_top_users=0,
+                                           num_jobs_display=3,
+                                           email_file="",
+                                           max_num_jobid_admin=3)
     actual = serial.df[["User", "CPU-cores", "100%/CPU-cores", "CPU-Util", "Hours"]]
     expected = pd.DataFrame({"User":["user1", "user1", "user1", "user2"],
                              "CPU-cores":[32, 16, 16, 32],

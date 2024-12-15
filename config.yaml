@@ -241,7 +241,7 @@ low-gpu-efficiency-3:
 ###################################################
 ## SERIAL CODE ALLOCATING MULTIPLE CORES (ALERT) ##
 ###################################################
-serial-using-multiple-1:
+serial-allocating-multiple-1:
   cluster: della
   partitions:
     - cpu
@@ -251,7 +251,7 @@ serial-using-multiple-1:
   lower_ratio: 0.85        # [0, 1]
   num_top_users: 5
   num_jobs_display: 10
-  email_file: "email/serial_using_multiple.txt"
+  email_file: "email/serial_allocating_multiple.txt"
   max_num_jobid_admin: 3
   excluded_users:
     - aturing

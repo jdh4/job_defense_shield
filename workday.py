@@ -41,6 +41,14 @@ class WorkdayAlways(Workday):
         return True
 
 
+class WorkdayFile(Workday):
+
+    """Determine holidays by reading a file."""
+
+    def is_workday(self) -> bool:
+        pass
+
+
 class WorkdayCustom(Workday):
 
     """Write custom code for your institution."""
