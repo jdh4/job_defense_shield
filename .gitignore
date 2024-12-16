@@ -5,6 +5,7 @@ log/
 .pytest_cache/
 cron.backup
 .coverage
+email/multinode_gpu_fragmentation_2.txt
 
 ##################################################################
 # Everything below is taken from                                 #

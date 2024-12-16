@@ -76,7 +76,7 @@ class GpuModelTooPowerful(Alert):
                 tags["<PARTITION>"] = self.partition  # multiple partitions?
                 tags["<TARGET>"] = self.gpu_util_target
                 tags["<NUM-JOBS>"] = str(len(usr))
-                indent = 2 * " "
+                indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"

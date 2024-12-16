@@ -4,17 +4,22 @@
 ## GLOBAL SETTINGS ##
 #####################
 violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
+sender: cses@princeton.edu
 reply-to: rcsystems@princeton.edu
 greeting-method: getent
-workday-method: always
-holidays-file: /path/to/holidays.txt
+workday-method: usa
+holidays-file: /path/to/job_defense_shield/holidays.txt
 jobstats-module-path: /usr/local/bin/jobstats
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
 admin-reports:
   - halverson@princeton.edu
 email_suffix: "@princeton.edu"
+
+# rename partitions (use the new names below in this file)
 partition_renamings:
   datascience: datasci
+
+# override institutional emails
 external-emails: # overrides
   u12345: first.last@gmail.com
   u98765: last.first@gmail.com
@@ -123,15 +128,23 @@ multinode-gpu-fragmentation-1:
     - pli-c
     - pli-p
   gpus_per_node: 8  # count
-  min_run_time: 30  # minutes
+  min_run_time: 61  # minutes
   email_file: "email/multinode_gpu_fragmentation.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
     - kl5675@princeton.edu
+
+multinode-gpu-fragmentation-2:
+  cluster: della
+  partitions:
+    - gpu
+  gpus_per_node: 2  # count
+  min_run_time: 61  # minutes
+  email_file: "email/multinode_gpu_fragmentation_2.txt"
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
 
 
 ########################
@@ -163,7 +176,7 @@ low-cpu-efficiency-2:
   eff_thres_pct: 60         # percent
   eff_target_pct: 90        # percent
   proportion_thres_pct: 2   # percent
-  absolute_thres_hours: 50  # cpu-hours
+  absolute_thres_hours: 100 # cpu-hours
   num_top_users: 3          # count
   min_run_time: 30          # minutes
   email_file: "email/low_cpu_efficiency.txt"
