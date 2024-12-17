@@ -1,14 +1,13 @@
 <GREETING>
 
-Below are jobs that ran on <CLUSTER> (<PARTITONS>) in the past <DAYS> days:
+Below are jobs that ran on <CLUSTER> (<PARTITIONS>) in the past <DAYS> days:
 
 <TABLE>
 
-The GPU nodes on <CLUSTER> (<PARTITONS>) have <GPUS-PER-NODE> GPUs per node. For future jobs,
-please try to use as few nodes as possible by allocating more GPUs per node.
-That is, please allocate all of the GPUs within a node before splitting your
-job across multiple nodes. This is done by modifying the --nodes and --gres
-Slurm directives as explained here:
+The GPU nodes on <CLUSTER> (<PARTITIONS>) have <GPUS-PER-NODE> GPUs per node. For future jobs,
+please allocate all of the GPUs within a node before splitting your
+job across multiple nodes. This is done by decreasing the value of the
+--nodes Slurm directive and increasing the value of --gres, as explained here:
 
     https://researchcomputing.princeton.edu/support/knowledge-base/slurm#gpus
 

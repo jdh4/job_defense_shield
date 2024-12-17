@@ -1,5 +1,5 @@
 import pandas as pd
-from alert.fragmentation import MultinodeCPUFragmentation
+from alert.multinode_cpu_fragmentation import MultinodeCpuFragmentation
 
 def test_zero_cpu_utilization():
     n_jobs = 5
@@ -123,27 +123,27 @@ def test_zero_cpu_utilization():
     job3 = {
     "gpus": 0,
     "nodes": {
-        "stellar-k07n1": {
-            "cpus": 64,
-            "total_memory": 503316480000,
+        "della-k07n1": {
+            "cpus": 15,
+            "total_memory": 188316480000,
             "total_time": 102891.8,
             "used_memory": 16010821632
         },
-        "stellar-k08n13": {
-            "cpus": 64,
-            "total_memory": 503316480000,
+        "della-k08n13": {
+            "cpus": 15,
+            "total_memory": 188316480000,
             "total_time": 103767.0,
             "used_memory": 15985602560
         },
-        "stellar-k08n15": {
-            "cpus": 64,
-            "total_memory": 503316480000,
+        "della-k08n15": {
+            "cpus": 15,
+            "total_memory": 188316480000,
             "total_time": 102738.4,
             "used_memory": 15996280832
         },
-        "stellar-k08n16": {
-            "cpus": 64,
-            "total_memory": 503316480000,
+        "della-k08n16": {
+            "cpus": 15,
+            "total_memory": 188316480000,
             "total_time": 102978.1,
             "used_memory": 15978323968
         }
@@ -201,19 +201,29 @@ def test_zero_cpu_utilization():
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
                        "user":["user1", "user1", "user2", "user3", "user2"],
                        "admincomment":[job1, job2, job3, job4, job5],
-                       "cluster":["della", "della", "stellar", "stellar", "della"],
+                       "cluster":["della"] * n_jobs,
                        "jobname":["myjob"] * n_jobs,
                        "nodes":[12, 5, 4, 2, 4],
-                       "cores":[96, 50, 256, 60, 64],
-                       "qos":["myqos"] * n_jobs,
+                       "cores":[96, 50, 60, 60, 64],
                        "state":["COMPLETED"] * n_jobs,
                        "gpu-job":[0] * n_jobs,
-                       "partition":["cpu", "cpu", "pu", "pppl", "cpu"],
+                       "partition":["cpu"] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
-    cpu_frag = MultinodeCPUFragmentation(df, 0, "", "", "Subject")
+    cpu_frag = MultinodeCpuFragmentation(df,
+                                         0,
+                                         "",
+                                         "",
+                                         "Subject",
+                                         cluster="della",
+                                         partitions=["cpu"],
+                                         min_run_time=0,
+                                         cores_per_node=32,
+                                         cores_fraction=0.8,
+                                         mem_per_node=190,
+                                         safety_fraction=0.2)
     actual = cpu_frag.df[["user", "cluster", "nodes", "min-nodes"]]
     expected = pd.DataFrame({"user":["user1", "user1", "user2"],
-                             "cluster":["della", "della", "stellar"],
+                             "cluster":["della", "della", "della"],
                              "nodes":[12, 5, 4],
-                             "min-nodes":[3, 2, 3]})
+                             "min-nodes":[3, 2, 2]})
     pd.testing.assert_frame_equal(actual.reset_index(drop=True), expected)

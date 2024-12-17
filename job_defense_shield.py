@@ -31,7 +31,7 @@ from alert.longest_queued import LongestQueuedJobs
 from alert.jobs_overview import JobsOverview
 from alert.excessive_time_limits import ExcessiveTimeLimits
 from alert.serial_allocating_multiple_cores import SerialAllocatingMultipleCores
-from alert.fragmentation import MultinodeCPUFragmentation
+from alert.multinode_cpu_fragmentation import MultinodeCpuFragmentation
 from alert.multinode_gpu_fragmentation import MultinodeGpuFragmentation
 from alert.compute_efficiency import LowEfficiencyCPU
 from alert.compute_efficiency import LowEfficiencyGPU
@@ -84,7 +84,7 @@ if __name__ == "__main__":
                         help='Identify users that are allocating too much CPU memory')
     parser.add_argument('--gpu-model-too-powerful', action='store_true', default=False,
                         help='Identify jobs that should use less powerful GPUs')
-    parser.add_argument('--cpu-fragmentation', action='store_true', default=False,
+    parser.add_argument('--multinode-cpu-fragmentation', action='store_true', default=False,
                         help='Identify CPU jobs that are split across too many nodes')
     parser.add_argument('--multinode-gpu-fragmentation', action='store_true', default=False,
                         help='Identify GPU jobs that are split across too many nodes')
@@ -192,10 +192,15 @@ if __name__ == "__main__":
                                         "zero_util_gpu_hours",
                                         "ZERO UTILIZATION GPU-HOURS",
                                         args.days)
+        if args.multinode_cpu_fragmentation:
+            show_history_of_emails_sent(violation_logs_path,
+                                        "multinode_cpu_fragmentation",
+                                        "MULTINODE CPU FRAGMENTATION",
+                                        args.days)
         if args.multinode_gpu_fragmentation:
             show_history_of_emails_sent(violation_logs_path,
                                         "multinode_gpu_fragmentation",
-                                        "1 GPU PER NODE",
+                                        "MULTINODE GPU FRAGMENTATION",
                                         args.days)
         if args.excess_cpu_memory:
             show_history_of_emails_sent(violation_logs_path,
@@ -206,11 +211,6 @@ if __name__ == "__main__":
             show_history_of_emails_sent(violation_logs_path,
                                         "hard_warning_cpu_memory",
                                         "HARD WARNING CPU MEMORY",
-                                        args.days)
-        if args.cpu_fragmentation:
-            show_history_of_emails_sent(violation_logs_path,
-                                        "cpu_fragmentation",
-                                        "CPU FRAGMENTATION PER NODE",
                                         args.days)
         if args.serial_allocating_multiple:
             show_history_of_emails_sent(violation_logs_path,
@@ -339,9 +339,28 @@ if __name__ == "__main__":
                                                            start_date,
                                                            keep_index=True)
 
-    #######################
-    ## GPU FRAGMENTATION ##
-    #######################
+
+    #################################
+    ## MULTINODE CPU FRAGMENTATION ##
+    #################################
+    if args.multinode_cpu_fragmentation:
+        alerts = [alert for alert in cfg.keys() if "multinode-cpu-fragmentation" in alert]
+        for alert in alerts:
+            cpu_frag = MultinodeCpuFragmentation(df,
+                                   days_between_emails=args.days,
+                                   violation="multinode_cpu_fragmentation",
+                                   vpath=violation_logs_path,
+                                   subject="Multinode CPU Jobs with Fragmentation",
+                                   **cfg[alert])
+            if args.email and is_workday:
+                cpu_frag.send_emails_to_users(greeting_method)
+            title = "Multinode CPU Jobs with Fragmentation"
+            s += cpu_frag.generate_report_for_admins(title, keep_index=False)
+
+
+    #################################
+    ## MULTINODE GPU FRAGMENTATION ##
+    #################################
     if args.multinode_gpu_fragmentation:
         alerts = [alert for alert in cfg.keys() if "multinode-gpu-fragmentation" in alert]
         for alert in alerts:
@@ -355,6 +374,7 @@ if __name__ == "__main__":
                 gpu_frag.send_emails_to_users(greeting_method)
             title = "Multinode GPU Jobs with Fragmentation"
             s += gpu_frag.generate_report_for_admins(title)
+
 
     ########################
     ## LOW CPU EFFICIENCY ##
@@ -443,20 +463,6 @@ if __name__ == "__main__":
                 zero_cpu.send_emails_to_users(greeting_method)
             title = "Jobs with Zero CPU Utilization"
             s += zero_cpu.generate_report_for_admins(title, keep_index=False)
-
-    ######################
-    ## CPU FRAGMENTATION #
-    ######################
-    if args.cpu_fragmentation:
-        cpu_frag = MultinodeCPUFragmentation(df,
-                                            days_between_emails=args.days,
-                                            violation="cpu_fragmentation",
-                                            vpath=violation_logs_path,
-                                            subject="Jobs Using Too Many Nodes")
-        if args.email and is_workday:
-            cpu_frag.send_emails_to_users(greeting_method)
-        title = "CPU fragmentation (1+ hours)"
-        s += cpu_frag.generate_report_for_admins(title, keep_index=False)
 
 
     ############################

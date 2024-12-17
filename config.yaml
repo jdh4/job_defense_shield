@@ -119,6 +119,56 @@ too-many-cores-per-gpu-1:
 
 
 #########################################
+## MULTINODE CPU FRAGMENTATION (ALERT) ##
+#########################################
+multinode-cpu-fragmentation-1:
+  cluster: della
+  partitions:
+    - cpu
+  min_run_time: 61     # minutes
+  cores_per_node: 32   # count
+  cores_fraction: 0.8  # [0, 1]
+  mem_per_node: 190    # GB
+  safety_fraction: 0.2 # [0, 1]
+  email_file: "email/multinode_cpu_fragmentation.txt"
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+
+#m
+ultinode-cpu-fragmentation-2:
+  cluster: della
+  partitions:
+    - physics
+  min_run_time: 61     # minutes
+  cores_per_node: 40   # count
+  cores_fraction: 0.8  # [0, 1]
+  mem_per_node: 380    # GB
+  safety_fraction: 0.2 # [0, 1]
+  email_file: "email/multinode_cpu_fragmentation.txt"
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+
+#m
+ultinode-cpu-fragmentation-3:
+  cluster: stellar
+  partitions:
+    - all
+    - pppl
+    - pu
+  min_run_time: 61     # minutes
+  cores_per_node: 96   # count
+  cores_fraction: 0.8  # [0, 1]
+  mem_per_node: 768    # GB
+  safety_fraction: 0.2 # [0, 1]
+  email_file: "email/multinode_cpu_fragmentation.txt"
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+
+
+#########################################
 ## MULTINODE GPU FRAGMENTATION (ALERT) ##
 #########################################
 multinode-gpu-fragmentation-1:
