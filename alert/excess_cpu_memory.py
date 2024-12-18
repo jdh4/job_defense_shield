@@ -1,4 +1,3 @@
-import textwrap
 import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
@@ -6,36 +5,36 @@ from utils import send_email
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from greeting import GreetingFactory
+from email_translator import EmailTranslator
 
 
 class ExcessCPUMemory(Alert):
 
-    """Cumulative memory use per user. Note that df is referenced in the
-       send email method. If using this alert for multiple clusters then
-       will need to prune df for each cluster. Similarly for proportion.
-
-       Filter out jobs where used is greater than allocated?
-       Should jobs that use the default CPU memory be ignored?"""
-
+    """Cumulative memory use per user."""
+ 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+        self.combine_partitions = False
+        self.excluded_users = []
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
-                          (self.df.partition.isin(self.partition)) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.admincomment != {}) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         if self.combine_partitions:
-            self.df["partition"] = ",".join(sorted(self.partition))
+            self.df["partition"] = ",".join(sorted(set(self.partitions)))
+        # only consider jobs that do not use (approximately) full nodes
+        thres = self.cores_fraction * self.cores_per_node
+        self.df = self.df[self.df["cores"] / self.df["nodes"] <= thres]
+        # initialize gp and admin in case df is empty
         self.gp = pd.DataFrame({"User":[]})
         self.admin = pd.DataFrame()
         # add new fields
         if not self.df.empty:
-            # only consider jobs that do not use (approximately) full nodes
-            self.df = self.df[self.df["cores"] / self.df["nodes"] < self.cores_per_node]
             self.df["memory-tuple"] = self.df.apply(lambda row:
                                                     cpu_memory_usage(row["admincomment"],
                                                                      row["jobid"],
@@ -46,8 +45,10 @@ class ExcessCPUMemory(Alert):
             self.df["mem-unused"] = self.df["mem-alloc"] - self.df["mem-used"]
             # filter out jobs using approximately default memory
             self.df["GB-per-core"] = self.df["mem-alloc"] / self.df["cores"]
-            self.df = self.df[self.df["GB-per-core"] > 5]
             # ignore jobs using default memory or less?
+            thres = self.mem_per_node / self.cores_per_node
+            self.df = self.df[self.df["GB-per-core"] > thres]
+            # IF STATEMENT
             GB_per_TB = 1000
             self.df["mem-hrs-used"]   = self.df["mem-used"] * self.df["elapsed-hours"] / GB_per_TB
             self.df["mem-hrs-alloc"]  = self.df["mem-alloc"] * self.df["elapsed-hours"] / GB_per_TB
@@ -108,7 +109,7 @@ class ExcessCPUMemory(Alert):
             self.gp.index += 1
             self.gp = self.gp.head(self.num_top_users)
             self.admin = self.gp.copy()
-            self.gp = self.gp[(self.gp["mem-hrs-unused"] > self.tb_hours_per_day * self.days_between_emails) &
+            self.gp = self.gp[(self.gp["mem-hrs-unused"] > self.tb_hours_threshold) &
                               (self.gp["ratio"] < self.ratio_threshold) &
                               (self.gp["mean-ratio"] < self.mean_ratio_threshold) &
                               (self.gp["median-ratio"] < self.median_ratio_threshold)]
@@ -120,13 +121,13 @@ class ExcessCPUMemory(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.gp[self.gp.User == user].copy()
                 jobs = self.df[self.df.user == user].copy()
-                num_disp = 10
+                num_disp = self.num_jobs_display
                 total_jobs = jobs.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
                 pct = round(100 * usr["mean-ratio"].values[0])
                 unused = usr["mem-hrs-unused"].values[0]
                 hours_per_week = 7 * 24
-                tb_mem_per_node = 190 / 1e3
+                tb_mem_per_node = self.mem_per_node / 1e3
                 num_wasted_nodes = round(unused / hours_per_week / tb_mem_per_node)
                 jobs = jobs.sort_values(by="mem-hrs-unused", ascending=False).head(num_disp)
                 jobs = jobs[["jobid",
@@ -147,53 +148,27 @@ class ExcessCPUMemory(Alert):
                              "elapsed-hours":"Hours"}
                 jobs = jobs.rename(columns=renamings)
                 jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
-                edays = self.days_between_emails
-                s = f"{g.greeting(user)}\n\n"
-                s += f"Below are {case} that ran on {self.cluster} ({','.join(self.partitions)}) in the past {edays} days:\n\n"
-                jobs_str = jobs.to_string(index=False, justify="center")
-                s +=  "\n".join([4 * " " + row for row in jobs_str.split("\n")])
-                s += "\n"
-                s += textwrap.dedent(f"""
-                It appears that you are requesting too much CPU memory for your jobs since you
-                are only using on average {pct}% of the allocated memory (for the {total_jobs} jobs). This
-                has resulted in {unused} TB-hours of unused memory which is equivalent to making
-                {num_wasted_nodes} nodes unavailable to all users (including yourself) for one week! A TB-hour is
-                the allocation of 1 terabyte of memory for 1 hour.
+                tags = {}
+                tags["<GREETING>"] = g.greeting(user)
+                tags["<CASE>"] = case
+                tags["<DAYS>"] = str(self.days_between_emails)
+                tags["<CLUSTER>"] = self.cluster
+                tags["<PARTITIONS>"] = ','.join(sorted(set(usr.partition)))
+                tags["<PERCENT>"] = f"{pct}%"
+                tags["<NUM-JOBS>"] = str(total_jobs)
+                # is next line optional based on config params?
+                tags["<NUM-WASTED-NODES>"] = str(num_wasted_nodes)
+                tags["<UNUSED>"] = str(usr["mem-hrs-unused"].values[0])
+                indent = 4 * " "
+                table = jobs.to_string(index=False, justify="center").split("\n")
+                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobs.JobID.values[0]}"
+                translator = EmailTranslator(self.email_file, tags)
+                s = translator.replace_tags()
 
-                AS PER THE RESEARCH COMPUTING ADVISORY GROUP, IN THE COMING WEEKS, EXCESSIVE
-                CPU MEMORY ALLOCATION WILL RESULT IN YOUR ADVISOR BEING CONTACTED. AFTER THAT
-                IF THE MATTER IS NOT RESOLVED WITHIN 7 DAYS THEN YOUR ACCOUNT WILL BE
-                SUSPENDED.
-
-                Please request less memory by modifying the --mem-per-cpu or --mem Slurm
-                directive. This will lower your queue times and increase the overall throughput
-                of your jobs. For instance, if your job requires 8 GB per node then use:
-
-                    #SBATCH --mem=10G
-
-                The value above includes an extra 20% for safety. A good target value for
-                Percent-Used is 80%. For more on allocating CPU memory with Slurm:
-
-                    https://researchcomputing.princeton.edu/support/knowledge-base/memory
-
-                You can check the CPU memory utilization of completed and actively running jobs
-                by using the \"jobstats\" command. For example:
-
-                    $ jobstats {jobs['JobID'].values[0]}
-
-                The command above can also be used to see suggested values for the --mem-per-cpu
-                and --mem Slurm directives.
-
-                Consider attending an in-person Research Computing help session for assistance:
-
-                    https://researchcomputing.princeton.edu/support/help-sessions
-
-                Replying to this automated email will open a support ticket with Research
-                Computing. Let us know if we can be of help.
-                """)
                 send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
                 for email in self.admin_emails:
-                    send_email(s, f"{email}", subject=f"{self.subject}")
+                    send_email(s, email, subject=f"{self.subject}")
                 print(s)
 
                 # append the new violations to the log file

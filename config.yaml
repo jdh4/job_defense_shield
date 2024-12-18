@@ -127,7 +127,7 @@ multinode-cpu-fragmentation-1:
     - cpu
   min_run_time: 61     # minutes
   cores_per_node: 32   # count
-  cores_fraction: 0.8  # [0, 1]
+  cores_fraction: 0.5  # [0, 1]
   mem_per_node: 190    # GB
   safety_fraction: 0.2 # [0, 1]
   email_file: "email/multinode_cpu_fragmentation.txt"
@@ -135,8 +135,7 @@ multinode-cpu-fragmentation-1:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
-#m
-ultinode-cpu-fragmentation-2:
+multinode-cpu-fragmentation-2:
   cluster: della
   partitions:
     - physics
@@ -150,8 +149,7 @@ ultinode-cpu-fragmentation-2:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
-#m
-ultinode-cpu-fragmentation-3:
+multinode-cpu-fragmentation-3:
   cluster: stellar
   partitions:
     - all
@@ -374,16 +372,19 @@ excessive-time-1:
 #######################
 excess-cpu-memory-1:
   cluster: della
-  partition:
+  partitions:
     - cpu
-  combine_partitions: False
-  min_run_time: 30 # minutes
-  cores_per_node: 28
-  tb_hours_per_day: 10
+  min_run_time: 30        # minutes
+  cores_per_node: 32      # count
+  cores_fraction: 0.8     # [0, 1]
+  mem_per_node: 190       # GB
+  tb_hours_threshold: 65  # TB-hours
   ratio_threshold: 0.35
   mean_ratio_threshold: 0.35
   median_ratio_threshold: 0.35
   num_top_users: 10
+  num_jobs_display: 10
+  email_file: "email/excess_cpu_memory.txt"
   excluded_users:
     - aturing
     - einstein
@@ -392,18 +393,21 @@ excess-cpu-memory-1:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
-excess-cpu-memory-2:
+#e
+xcess-cpu-memory-2:
   cluster: della
-  partition:
+  partitions:
     - datasci
-  combine_partitions: False
-  min_run_time: 60 # minutes
+  min_run_time: 61 # minutes
   cores_per_node: 10000
+  mem_per_core_default: 5.0
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
   median_ratio_threshold: 0.25
   num_top_users: 10
+  num_jobs_display: 10
+  email_file: "email/excess_cpu_memory.txt"
   excluded_users:
     - aturing
     - einstein
@@ -411,21 +415,24 @@ excess-cpu-memory-2:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
-excess-cpu-memory-3:
+#e
+xcess-cpu-memory-3:
   cluster: stellar
-  partition:
+  partitions:
     - all
     - pppl
     - pu
     - serial
-  combine_partitions: False
-  min_run_time: 60 # minutes
-  cores_per_node: 76.8
+  min_run_time: 61  # minutes
+  cores_per_node: 76.8  # 0.8 * 96
+  mem_per_core_default: 8.0  # 768.0 / 96
   tb_hours_per_day: 10000
   ratio_threshold: 0.25
   mean_ratio_threshold: 0.25
   median_ratio_threshold: 0.25
   num_top_users: 5
+  num_jobs_display: 10
+  email_file: "email/excess_cpu_memory.txt"
   excluded_users:
     - aturing
     - einstein

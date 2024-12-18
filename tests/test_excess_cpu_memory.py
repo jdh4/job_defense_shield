@@ -54,23 +54,23 @@ def test_excess_cpu_memory():
                        "state":["COMPLETED"] * n_jobs,
                        "partition":["cpu"] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
-    # create object using days=4
     xmem = ExcessCPUMemory(df,
-                           4,
+                           0,
                            "",
                            "",
                            "Subject",
-                           num_top_users=5,
-                           tb_hours_per_day=15,
+                           cluster="della",
+                           partitions=["cpu"],
+                           min_run_time=0,
+                           cores_per_node=32,
+                           cores_fraction=0.8,
+                           mem_per_node=190,
+                           tb_hours_threshold=65,
                            ratio_threshold=0.2,
                            mean_ratio_threshold=0.2,
                            median_ratio_threshold=0.2,
-                           cores_per_node=14,
-                           combine_partitions=False,
-                           cluster="della",
-                           partition=["cpu"],
-                           min_run_time=0,
-                           excluded_users=["aturing"])
+                           num_top_users=10,
+                           num_jobs_display=10)
     actual = xmem.gp[["User", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]
     expected = pd.DataFrame({"User":["user1", "user2"],
                              "ratio":[(1+5+10)/(3*100), (10+1)/(2*100)],

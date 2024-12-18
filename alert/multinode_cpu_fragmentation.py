@@ -76,28 +76,29 @@ class MultinodeCpuFragmentation(Alert):
                                             self.is_fragmented(row["cores-per-node"],
                                                                row["memory-per-node-used"]),
                                                                axis="columns")]
-            self.df["min-nodes"] = self.df.apply(lambda row:
-                                                 self.min_nodes_needed(row["nodes"],
-                                                                       row["cores"],
-                                                                       row["memory-per-node-used"]),
-                                                                       axis="columns")
-            self.df = self.df.sort_values(["cluster", "user"], ascending=[True, True])
-            self.df = self.df[self.df["min-nodes"] < self.df["nodes"]]
-            self.df["memory-per-node-used"] = self.df["memory-per-node-used"].apply(lambda x: f"{x} GB")
-            self.df["cores-per-node"] = self.df["cores-per-node"].apply(lambda x: str(x).replace(".0", ""))
-            self.df = self.df.rename(columns={"elapsed-hours":"hours",
-                                              "memory-per-node-used":"mem-per-node-used"})
-            cols = ["jobid",
-                    "user",
-                    "cluster",
-                    "partition",
-                    "nodes",
-                    "cores",
-                    "mem-per-node-used",
-                    "cores-per-node",
-                    "hours",
-                    "min-nodes"]
-            self.df = self.df[cols]
+            if not self.df.empty:
+                self.df["min-nodes"] = self.df.apply(lambda row:
+                                                     self.min_nodes_needed(row["nodes"],
+                                                                           row["cores"],
+                                                                           row["memory-per-node-used"]),
+                                                                           axis="columns")
+                self.df = self.df.sort_values(["cluster", "user"], ascending=[True, True])
+                self.df = self.df[self.df["min-nodes"] < self.df["nodes"]]
+                self.df["memory-per-node-used"] = self.df["memory-per-node-used"].apply(lambda x: f"{x} GB")
+                self.df["cores-per-node"] = self.df["cores-per-node"].apply(lambda x: str(x).replace(".0", ""))
+                self.df = self.df.rename(columns={"elapsed-hours":"hours",
+                                                  "memory-per-node-used":"mem-per-node-used"})
+                cols = ["jobid",
+                        "user",
+                        "cluster",
+                        "partition",
+                        "nodes",
+                        "cores",
+                        "mem-per-node-used",
+                        "cores-per-node",
+                        "hours",
+                        "min-nodes"]
+                self.df = self.df[cols]
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)

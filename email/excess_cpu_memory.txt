@@ -1,0 +1,42 @@
+<GREETING>
+
+Below are <CASE> that ran on <CLUSTER> (<PARTITIONS>) in the past <DAYS> days:
+
+<TABLE>
+
+It appears that you are requesting too much CPU memory for your jobs since you
+are only using on average <PERCENT> of the allocated memory (for the <NUM-JOBS> jobs). This
+has resulted in <UNUSED> TB-hours of unused memory which is equivalent to making
+<NUM-WASTED-NODES> nodes unavailable to all users (including yourself) for one week! A TB-hour is
+the allocation of 1 terabyte of memory for 1 hour.
+
+AS PER THE RESEARCH COMPUTING ADVISORY GROUP, IN THE COMING WEEKS, EXCESSIVE
+CPU MEMORY ALLOCATION WILL RESULT IN YOUR ADVISOR BEING CONTACTED. AFTER THAT
+IF THE MATTER IS NOT RESOLVED WITHIN 7 DAYS THEN YOUR ACCOUNT WILL BE
+SUSPENDED.
+
+Please request less memory by modifying the --mem-per-cpu or --mem Slurm
+directive. This will lower your queue times and increase the overall throughput
+of your jobs. For instance, if your job requires 8 GB per node then use:
+
+    #SBATCH --mem=10G
+
+The value above includes an extra 20% for safety. A good target value for
+Percent-Used is 80%. For more on allocating CPU memory with Slurm:
+
+    https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+You can check the CPU memory utilization of completed and actively running jobs
+by using the "jobstats" command. For example:
+
+<JOBSTATS>
+
+The command above can also be used to see suggested values for the --mem-per-cpu
+and --mem Slurm directives.
+
+Consider attending an in-person Research Computing help session for assistance:
+
+    https://researchcomputing.princeton.edu/support/help-sessions
+
+Replying to this automated email will open a support ticket with Research
+Computing. Let us know if we can be of help.

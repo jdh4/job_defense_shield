@@ -162,6 +162,8 @@ if __name__ == "__main__":
     ## CHECK EMAILS SENT ##
     #######################
     if args.check:
+        if args.days == 7:
+            print("\n\nRunning with --days=7, which is the default. Consider using a larger value.")
         if args.zero_gpu_utilization:
             show_history_of_emails_sent(violation_logs_path,
                                         "zero_gpu_utilization",
@@ -206,11 +208,6 @@ if __name__ == "__main__":
             show_history_of_emails_sent(violation_logs_path,
                                         "excess_cpu_memory",
                                         "EXCESS CPU MEMORY",
-                                        args.days)
-        if args.hard_warning_cpu_memory:
-            show_history_of_emails_sent(violation_logs_path,
-                                        "hard_warning_cpu_memory",
-                                        "HARD WARNING CPU MEMORY",
                                         args.days)
         if args.serial_allocating_multiple:
             show_history_of_emails_sent(violation_logs_path,
@@ -421,7 +418,7 @@ if __name__ == "__main__":
                                         days_between_emails=args.days,
                                         violation="excess_cpu_memory",
                                         vpath=violation_logs_path,
-                                        subject="Requesting Too Much CPU Memory",
+                                        subject="Jobs Requesting Too Much CPU Memory",
                                         **cfg[alert])
             if args.email and is_workday:
                 mem_hours.send_emails_to_users(greeting_method)

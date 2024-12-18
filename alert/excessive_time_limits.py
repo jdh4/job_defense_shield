@@ -1,6 +1,6 @@
 import pandas as pd
 from base import Alert
-from utils import SECONDS_PER_MINUTE
+from utils import SECONDS_PER_MINUTE as spm
 from utils import MINUTES_PER_HOUR as mph
 from utils import seconds_to_slurm_time_format
 from utils import send_email
@@ -83,7 +83,8 @@ class ExcessiveTimeLimits(Alert):
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
                 jobs = jobs.sort_values(by=f"{xpu}-waste-hours", ascending=False).head(num_disp)
                 jobs["Time-Used"] = jobs["elapsedraw"].apply(seconds_to_slurm_time_format)
-                jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x: seconds_to_slurm_time_format(SECONDS_PER_MINUTE * x))
+                jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x:
+                                                                     seconds_to_slurm_time_format(spm * x))
                 jobs["Percent-Used"] = jobs["ratio"].apply(lambda x: f"{round(x)}%")
                 cols = ["jobid", "user", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]
                 jobs = jobs[cols].sort_values(by="jobid")
