@@ -60,7 +60,8 @@ class GpuModelTooPowerful(Alert):
         renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "user":"User"}
         self.df = self.df.rename(columns=renamings)
         self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
-        # where is groupby and then compare to abs threshold
+        # where is groupby and then compare to abs threshold?
+        # self.gpu_hours_threshold
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)

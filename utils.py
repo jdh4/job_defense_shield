@@ -1,5 +1,4 @@
 import re
-import math
 import glob
 import smtplib
 from datetime import datetime
@@ -55,47 +54,50 @@ def add_dividers(df_str: str, title: str="", pre: str="\n\n\n", post: str="") ->
         rows.append(divider)
     return pre + "\n".join(rows) + "\n" + post
 
-def show_history_of_emails_sent(vpath, mydir, title, day_ticks=30):
-  files = sorted(glob.glob(f"{vpath}/{mydir}/*.csv"))
-  if len(files) == 0:
-    print(f"No underutilization files found in {vpath}/{mydir}")
+def show_history_of_emails_sent(vpath, mydir, title, day_ticks):
+    """Display the history of emails sent to users."""
+    files = sorted(glob.glob(f"{vpath}/{mydir}/*.csv"))
+    if len(files) == 0:
+        print(f"No underutilization files found in {vpath}/{mydir}")
+        return None
+    max_netid = max([len(f.split("/")[-1].split(".")[0]) for f in files])
+    title += " (EMAILS SENT)"
+    width = max(len(title), max_netid + day_ticks + 1)
+    print("=" * width)
+    print(title.center(width))
+    print("=" * width)
+    print(" " * (max_netid + day_ticks - 2) + "today")
+    print(" " * (max_netid + day_ticks - 0) + "|")
+    print(" " * (max_netid + day_ticks - 0) + "V")
+    X = 0
+    num_users = 0
+    today = datetime.now().date()
+    for f in files:
+        netid = f.split("/")[-1].split(".")[0]
+        df = pd.read_csv(f, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
+        df["when"] = df.email_sent.apply(lambda x: x.date())
+        hits = df.when.unique()
+        row = []
+        for i in range(day_ticks):
+            dt = today - timedelta(days=i)
+            day_of_week = dt.weekday()
+            char = "_"
+            if day_of_week >= 5:
+                char = " "
+            if dt in hits:
+                char = "X"
+            row.append(char)
+        s = " " * (max_netid - len(netid)) + netid + " "
+        s += ''.join(row)[::-1]
+        if "X" in s:
+            print(s)
+            X += s.count("X")
+            num_users += 1
+    print("\n" + "=" * width)
+    print(f"Number of X: {X}")
+    print(f"Number of users: {num_users}")
+    print(f"Violation files: {vpath}/{mydir}/\n")
     return None
-  max_netid = max([len(f.split("/")[-1].split(".")[0]) for f in files])
-  title += " (EMAILS SENT)"
-  width = max(len(title), max_netid + len("@princeton.edu") + day_ticks + 1)
-  padding = " " * max(1, math.ceil((width - len(title)) / 2))
-  print("=" * width)
-  print(f"{padding}{title}")
-  print("=" * width)
-  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 2) + "today")
-  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "|")
-  print(" " * (max_netid + len("@princeton.edu") + day_ticks - 0) + "V")
-  X = 0
-  num_users = 0
-  today = datetime.now().date()
-  for f in files:
-    netid = f.split("/")[-1].split(".")[0]
-    df = pd.read_csv(f, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
-    df["when"] = df.email_sent.apply(lambda x: x.date())
-    hits = df.when.unique()
-    row = []
-    for i in range(day_ticks):
-        dt = today - timedelta(days=i)
-        day_of_week = dt.weekday()
-        char = "_"
-        if day_of_week >= 5: char = " "
-        if dt in hits: char = "X"
-        row.append(char)
-    s = " " * (max_netid - len(netid)) + netid + "@princeton.edu "
-    s += ''.join(row)[::-1]
-    if "X" in s:
-      print(s)
-      X += s.count("X")
-      num_users += 1
-  print("\n" + "=" * width)
-  print(f"Number of X: {X}")
-  print(f"Number of users: {num_users}")
-  return None
 
 def seconds_to_slurm_time_format(seconds: int) -> str:
     """Convert the number of seconds to DD-HH:MM:SS"""

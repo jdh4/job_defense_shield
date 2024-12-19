@@ -126,7 +126,7 @@ class SacctCleaner(BaseCleaner):
         return self.raw
 
     def clean(self):
-        print(self.raw.info())
+        #print(self.raw.info())
         self.raw = self.rename_columns()
         self.raw = self.raw[pd.notna(self.raw.state) &
                             pd.notna(self.raw.partition)]
@@ -138,5 +138,5 @@ class SacctCleaner(BaseCleaner):
         self.raw = self.remove_nulls()
         self.raw = self.clean_time_columns()
         self.raw = self.limit_minutes_final()
-        print(self.raw.info())
+        #print(self.raw.info())
         return self.raw

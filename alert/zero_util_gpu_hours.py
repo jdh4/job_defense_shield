@@ -102,7 +102,7 @@ class ZeroUtilGPUHours(Alert):
         else:
             self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
             self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
-            self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"0%-GPU-Hours"})
+            self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})
             self.admin.reset_index(drop=True, inplace=True)
             self.admin.index += 1
             post  = f"   Cluster: {self.cluster}\n" 

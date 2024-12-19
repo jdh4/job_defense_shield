@@ -163,7 +163,8 @@ if __name__ == "__main__":
     #######################
     if args.check:
         if args.days == 7:
-            print("\n\nRunning with --days=7, which is the default. Consider using a larger value.")
+            print("\n\nINFO: Checking with --days=60, instead of the default of 7.\n")
+            args.days = 60
         if args.zero_gpu_utilization:
             show_history_of_emails_sent(violation_logs_path,
                                         "zero_gpu_utilization",

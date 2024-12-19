@@ -148,7 +148,7 @@ class LowEfficiency(Alert):
                 tags["<PARTITIONS>"] = ",".join(sorted(set(usr["Partition(s)"])))
                 tags["<RANK>"] = myrank
                 tags["<EFFICIENCY>"] = usr['Efficiency'].values[0]
-                tags["<TARGET>"] = str(self.eff_target_pct)
+                tags["<TARGET>"] = f"{str(self.eff_target_pct)}%"
                 indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
