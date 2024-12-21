@@ -7,7 +7,7 @@ system administrators.
 Here is an example report:
 
 ```
-$ job_defense_shield --zero-util-gpu-hours --days=7
+$ job_defense_shield --zero-util-gpu-hours
 
                            Zero Utilization GPU-Hours
 -------------------------------------------------------------------------------
@@ -125,7 +125,7 @@ Please investigate the reason for the GPUs not being used.
 
 ## Usage
 
-Emails users about GPU-hours at 0% utilization: 
+Email users about GPU-hours at 0% utilization: 
 
 ```
 $ job_defense_shield --zero-util-gpu-hours --days=7 --email

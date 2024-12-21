@@ -1,14 +1,18 @@
-# Low GPU Utilization
+# Low CPU Utilization
 
-This alert finds jobs with low GPU utilization. It ignores jobs with GPUs at
-0% utilization since the zero GPU utiliation alert catching those cases.
+This option lists the users with the most CPU-hours along with their mean CPU efficiencies.
+The CPU efficiency is weighted by the number of CPU-cores per job. Jobs with
+0% utilization on a node are ignored since they are captured by another alert.
 
-This alert is important because it enables system administrators to identify users on the cluster that are using a large amounts of GPU-hours at low utilization.
+This alert is important because it enables system administrators to identify users
+that are using the most resources in an inefficient way.
+
+## Report for System Administrators
 
 Here is an example of the report:
 
 ```
-$ python job_defense_shield.py --low-gpu-efficiencies
+$ python job_defense_shield.py --low-cpu-efficiency
 
                                        Low GPU Efficiencies                                      
 -------------------------------------------------------------------------------------------------
@@ -19,9 +23,16 @@ $ python job_defense_shield.py --low-gpu-efficiencies
 4  u13301   della     gpu      2281          12          43     35        0        8.0      1.0  
 ```
 
-
 The table lists users from the most GPU-hours to the least. The GPU efficiency is
 listed.
+
+To receive the report by email:
+
+```
+$ python job_defense_shield --low-cpu-efficency --emain-admin
+```
+
+Specify your email in the `admin_emails` in the configuration file entry for this alert.
 
 ## Configuration File
 
@@ -30,7 +41,7 @@ Below is an example entry for `config.yaml`:
 Minimal configuration for generating reports only (not sending emails to users):
 
 ```yaml
-low-gpu-efficiency-1:
+low-cpu-efficiency-1:
   cluster: della
   partitions:
     - gpu
@@ -127,28 +138,28 @@ You can modified the file as you like. The tags that can be used in the email me
 
 ## Usage
 
-Generate a report of the top users are their GPU efficiencies:
+Generate a report of the top users are their CPU efficiencies:
 
 ```
-$ python job_defense_shield.py --low-gpu-efficiencies
+$ python job_defense_shield.py --low-cpu-efficiency
 ```
 
 Same as above but over the past month:
 
 ```
-$ python job_defense_shield.py --low-gpu-efficiencies --days=30
+$ python job_defense_shield.py --low-cpu-efficiency --days=30
 ```
 
 Send emails to users with low GPU efficiencies over the past 7 days:
 
 ```
-$ python job_defense_shield.py --low-gpu-efficiencies --email
+$ python job_defense_shield.py --low-cpu-efficiency --email
 ```
 
 Same as above but only pull data for a specific cluster and partition:
 
 ```
-$ python job_defense_shield.py --low-gpu-efficiencies --email -M traverse -r gpu
+$ python job_defense_shield.py --low-cpu-efficiency --email -M traverse -r gpu
 ```
 
 
@@ -161,12 +172,12 @@ PY=/home/sysadmin/.conda/envs/jds-env/bin
 JDS=/homem/sysadmin/bin/job_defense_shield
 MYLOG=${JDS}/log
 
-0 9 * * * ${PY}/python ${JDS}/job_defense_shield.py --low-gpu-efficiencices --email > ${MYLOG}/low_gpu_efficiencies.log 2>&1
+0 9 * * * ${PY}/python ${JDS}/job_defense_shield.py --low-cpu-efficiency --email > ${MYLOG}/low_cpu_efficiency.log 2>&1
 ```
 
 ## Troubleshooting
 
-You must have a `low-gpu-efficiencies` entry in `config.yaml` for this alert to work.
+You must have a `low-cpu-efficiency` entry in `config.yaml` for this alert to work.
 
 ## Related Alerts
 

@@ -6,14 +6,16 @@ nav:
   - Overview: index.md
   - Installation: setup.md
   - Alerts:
-    - Overview:             alert/overview.md
-    - Zero GPU Utilization: alert/zero_gpu_util.md
-    - Cancel 0% GPU Jobs:   alert/cancel_gpu_jobs.md
-    - Low GPU Utilization:  alert/low_gpu_util.md
-    - MIG:                  alert/mig.md
-    - Too Many CPU Nodes:   alert/cpu_fragmentation.md
-    - Excess CPU Memory:    alert/excess_cpu_memory.md
-    - Custom:               alert/custom.md
+    - Overview:                    alert/overview.md
+    - Zero GPU Utilization:        alert/zero_gpu_util.md
+    - Cancel 0% GPU Jobs:          alert/cancel_gpu_jobs.md
+    - Low CPU Utilization:         alert/low_cpu_util.md
+    - Low GPU Utilization:         alert/low_gpu_util.md
+    - GPU Model Too Powerful:      alert/gpu_model_too_powerful.md
+    - Multinode CPU Fragmentation: alert/cpu_fragmentation.md
+    - Multinode GPU Fragmentation: alert/gpu_fragmentation.md
+    - Excess CPU Memory:           alert/excess_cpu_memory.md
+    - Custom:                      alert/custom.md
   - Reports:
     - Overview:             reports/overview.md
     - Usage By Slurm Account: reports/account.md
@@ -24,7 +26,7 @@ theme:
   name: material
   features:
     - navigation.footer
-    - content.code.copy
+    #- content.code.copy
   palette:
     # light mode
     - scheme: default
