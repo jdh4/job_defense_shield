@@ -5,14 +5,14 @@ Below are jobs that ran on <CLUSTER> (<PARTITIONS>) in the past <DAYS> days:
 <TABLE>
 
 The GPU nodes on <CLUSTER> (<PARTITIONS>) have <GPUS-PER-NODE> GPUs per node. For future jobs,
-please allocate all of the GPUs within a node before splitting your
-job across multiple nodes. This is done by decreasing the value of the
+please allocate all of the GPUs within a node before splitting your job
+across multiple nodes. This is done by decreasing the value of the
 --nodes Slurm directive and increasing the value of --gres, as explained here:
 
     https://researchcomputing.princeton.edu/support/knowledge-base/slurm#gpus
 
-In any of your jobs have a low GPU utilization then please consider using only
-a single GPU per job to improve efficiency.
+If any of your jobs have a low GPU utilization then please consider using a
+smaller number of GPUs per job to improve efficiency.
 
 For more information about the Della GPU nodes:
 
@@ -23,4 +23,4 @@ Consider attending an in-person Research Computing help session for assistance:
     https://researchcomputing.princeton.edu/support/help-sessions
 
 Replying to this automated email will open a support ticket with Research
-Computing. Let us know if we can be of help.
+Computing.

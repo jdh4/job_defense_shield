@@ -67,7 +67,7 @@ class Alert:
         seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR
         return seconds_since_last_email >= seconds_threshold
 
-    def get_emails_sent_count(self, user: str, violation: str, days: int=30) -> int:
+    def get_emails_sent_count(self, user: str, violation: str) -> str:
         """Return the number of emails sent to a user for a given violation in the
            last N days."""
         root_violations = f"{self.vpath}/{violation}"
@@ -76,9 +76,11 @@ class Alert:
         user_violations = f"{root_violations}/{user}.email.csv"
         if os.path.exists(user_violations):
             d = pd.read_csv(user_violations, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
-            start_date = datetime.now() - timedelta(days=days)
-            return d[d["email_sent"] >= start_date]["email_sent"].unique().size
-        return 0
+            num_emails_sent = d["email_sent"].unique().size
+            dt = datetime.now() - d["email_sent"].unique().max()
+            days_ago_last_email_sent = dt.days
+            return f"{num_emails_sent} ({days_ago_last_email_sent})"
+        return "0 (--)"
 
     @staticmethod
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
@@ -90,6 +92,17 @@ class Alert:
             curr.to_csv(vfile, index=False, header=True)
         else:
             usr.to_csv(vfile, index=False, header=True)
+
+    def format_email_counts(self, counts: pd.Series) -> pd.Series:
+        """Return the email sent counts with proper alignment of the two
+           different quantities."""
+        if counts.empty:
+            return counts
+        max_len = max([len(count.split()[1]) for count in counts.tolist()])
+        def fix_spacing(x):
+            num_sent, days_ago = x.split()
+            return f"{num_sent}{(max_len - len(days_ago)) * ' '} {days_ago}"
+        return counts.apply(fix_spacing)
 
     def __len__(self) -> int:
         """Returns the number of rows in the df dataframe."""

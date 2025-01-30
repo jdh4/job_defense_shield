@@ -97,4 +97,6 @@ class ZeroCPU(Alert):
         else:
             self.df = self.df.sort_values(["User", "JobID"])
             self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
+            self.df["email"] = self.df.User.apply(lambda user:
+                                            self.get_emails_sent_count(user, self.violation))
             return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

@@ -149,9 +149,14 @@ if __name__ == "__main__":
     else:
         print("Configuration file not found. Exiting ...")
         sys.exit()
+
     for key in cfg.keys():
         if any([c.isnumeric() for c in key]):
             print(4 * " " + key)
+    for key in cfg.keys():
+        if "serial-allocating-multiple" in key:
+            print("serial-allocating-multiple", cfg[key]["cluster"], cfg[key]["partitions"])
+      
 
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
@@ -234,7 +239,13 @@ if __name__ == "__main__":
     pd.set_option("display.max_columns", None)
     pd.set_option("display.width", 1000)
 
-    start_date = datetime.now() - timedelta(days=args.days)
+    if args.starttime is None or args.endtime is None:
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=args.days)
+    else:
+        # check format
+        pass
+
     fields = ["jobid",
               "user",
               "cluster",
@@ -301,7 +312,7 @@ if __name__ == "__main__":
     df.reset_index(drop=True, inplace=True)
 
     fmt = "%a %b %-d"
-    s = f"{start_date.strftime(fmt)} - {datetime.now().strftime(fmt)}"
+    s = f"{start_date.strftime(fmt)} - {end_date.strftime(fmt)}"
 
     ############################################
     ## RUNNING JOBS WITH ZERO GPU UTILIZATION ##
@@ -318,6 +329,7 @@ if __name__ == "__main__":
             if args.email:
                 zero_gpu.send_emails_to_users(greeting_method)
 
+
     ################################
     ## ZERO UTILIZATION GPU-HOURS ##
     ################################
@@ -332,9 +344,10 @@ if __name__ == "__main__":
                                    **cfg[alert])
             if args.email and is_workday:
                 zero_gpu_hours.send_emails_to_users(greeting_method)
-            title="Zero Utilization GPU-Hours"
+            title="GPU-Hours at 0% Utilization"
             s += zero_gpu_hours.generate_report_for_admins(title,
                                                            start_date,
+                                                           end_date,
                                                            keep_index=True)
 
 
@@ -390,6 +403,7 @@ if __name__ == "__main__":
                 low_cpu.send_emails_to_users(greeting_method)
             title = "Low CPU Efficiencies"
             s += low_cpu.generate_report_for_admins(title, keep_index=True)
+
 
     ########################
     ## LOW GPU EFFICIENCY ##

@@ -78,7 +78,7 @@ class ZeroGpuUtilization(Alert):
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.jb.User.unique():
-            emails_sent = self.get_emails_sent_count(user, "zero_gpu_utilization", days=10000)
+            emails_sent = int(self.get_emails_sent_count(user, "zero_gpu_utilization").split()[0])
             #################
             # first warning #
             #################

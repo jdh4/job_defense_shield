@@ -134,11 +134,9 @@ class SerialAllocatingMultipleCores(Alert):
                                                         str(round(x, 1)).replace(".0", ""))
             self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.gp["email90"] = self.gp.User.apply(lambda user:
-                                              self.get_emails_sent_count(user,
-                                                                         self.violation,
-                                                                         days=90))
-            cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "email90"]
+            self.gp["email"] = self.gp.User.apply(lambda user:
+                                            self.get_emails_sent_count(user, self.violation))
+            cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "email"]
             self.gp = self.gp[cols]
             self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
             self.gp.reset_index(drop=True, inplace=True)

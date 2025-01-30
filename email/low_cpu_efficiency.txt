@@ -5,7 +5,7 @@ your mean CPU efficiency is only <EFFICIENCY>:
 
 <TABLE>
 
-A good target value for "Efficiency" is <TARGET>% and above. Please investigate the reason
+A good target value for "Efficiency" is <TARGET> and above. Please investigate the reason
 for the low efficiency. Common reasons for low CPU efficiency are discussed here:
 
     https://researchcomputing.princeton.edu/get-started/cpu-utilization

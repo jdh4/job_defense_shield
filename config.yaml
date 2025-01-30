@@ -84,10 +84,11 @@ zero-util-gpu-hours-1:
     - pli-c
     - pli-p
     - pli
+    - pli-lc
   min_run_time: 10              # minutes
   gpu_hours_threshold_user: 100 # hours
   gpu_hours_threshold_admin: 24 # hours
-  max_num_jobid_admin: 2        # count
+  max_num_jobid_admin: 4        # count
   email_file: "email/zero_util_gpu_hours.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
@@ -104,6 +105,7 @@ too-many-cores-per-gpu-1:
     - pli
     - pli-c
     - pli-p
+    - pli-lc
   cluster_name: "Della (PLI)"
   cores_per_node: 96
   gpus_per_node: 8
@@ -177,6 +179,7 @@ multinode-gpu-fragmentation-1:
     - pli
     - pli-c
     - pli-p
+    - pli-lc
   gpus_per_node: 8  # count
   min_run_time: 61  # minutes
   email_file: "email/multinode_gpu_fragmentation.txt"
@@ -254,6 +257,7 @@ low-cpu-efficiency-3:
   email_file: "email/low_cpu_efficiency.txt"
   excluded_users:
     - aturing
+    - hejia
     - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
@@ -307,6 +311,8 @@ low-gpu-efficiency-3:
   cluster: della
   partitions:
     - pli
+    - pli-lc
+    - pli-p
   eff_thres_pct: 40         # percent
   eff_target_pct: 75        # percent
   proportion_thres_pct: 2   # percent

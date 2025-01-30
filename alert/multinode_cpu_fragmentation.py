@@ -99,6 +99,7 @@ class MultinodeCpuFragmentation(Alert):
                         "hours",
                         "min-nodes"]
                 self.df = self.df[cols]
+                self.df["hours"] = self.df["hours"].apply(lambda hrs: round(hrs, 1))
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -123,7 +124,6 @@ class MultinodeCpuFragmentation(Alert):
                 tags["<CPN>"] = str(self.cores_per_node)
                 tags["<MPN>"] = str(self.mem_per_node)
                 usr = usr.drop(columns=["user", "partition", "cores"])
-                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
@@ -147,5 +147,9 @@ class MultinodeCpuFragmentation(Alert):
         if self.df.empty:
             return ""
         else:
-            self.df["hours"] = self.df["hours"].apply(lambda hrs: round(hrs, 1))
-            return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+            self.df["email"] = self.df.user.apply(lambda user:
+                                            self.get_emails_sent_count(user, self.violation))
+            self.df = self.df.drop(columns=["cluster", "partition"])
+            post  = f"   Cluster: {self.cluster}\n" 
+            post += f"Partitions: {', '.join(self.partitions)}\n" 
+            return add_dividers(self.df.to_string(index=keep_index, justify="center"), title, post=post)

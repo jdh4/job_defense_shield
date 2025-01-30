@@ -169,6 +169,8 @@ class LowEfficiency(Alert):
         if self.admin.empty:
             return ""
         else:
+            self.admin["email"] = self.admin.user.apply(lambda user:
+                                       self.get_emails_sent_count(user, self.violation))
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
 
 

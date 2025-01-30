@@ -95,11 +95,9 @@ class ExcessCPUMemory(Alert):
                          "cores":"avg-cores",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
-            # should email90 be computed for a specific cluster and partition?
-            self.gp["email90"] = self.gp["User"].apply(lambda user:
-                                                 self.get_emails_sent_count(user,
-                                                                            self.violation,
-                                                                            days=90))
+            # should email be computed for a specific cluster and partition?
+            self.gp["emails"] = self.gp["User"].apply(lambda user:
+                                     self.get_emails_sent_count(user, self.violation))
             cols = ["mem-hrs-unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
             self.gp[cols] = self.gp[cols].apply(round).astype("int64")
             cols = ["proportion", "ratio", "mean-ratio", "median-ratio"]
@@ -190,8 +188,9 @@ class ExcessCPUMemory(Alert):
                     "median-ratio",
                     "cpu-hrs",
                     "jobs",
-                    "email90"]
+                    "emails"]
             self.admin = self.admin[cols]
+            self.admin.emails = self.format_email_counts(self.admin.emails)
             renamings = {"mem-hrs-unused":"unused",
                          "mem-hrs-used":"used",
                          "mean-ratio":"mean",

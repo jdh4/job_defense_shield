@@ -10,10 +10,11 @@ has resulted in <UNUSED> TB-hours of unused memory which is equivalent to making
 <NUM-WASTED-NODES> nodes unavailable to all users (including yourself) for one week! A TB-hour is
 the allocation of 1 terabyte of memory for 1 hour.
 
-AS PER THE RESEARCH COMPUTING ADVISORY GROUP, IN THE COMING WEEKS, EXCESSIVE
-CPU MEMORY ALLOCATION WILL RESULT IN YOUR ADVISOR BEING CONTACTED. AFTER THAT
-IF THE MATTER IS NOT RESOLVED WITHIN 7 DAYS THEN YOUR ACCOUNT WILL BE
-SUSPENDED.
+AS PER THE RESEARCH COMPUTING ADVISORY GROUP, EXCESSIVE CPU MEMORY ALLOCATION
+CAN RESULT IN YOUR ADVISOR BEING CONTACTED. AFTER THAT IF THE MATTER IS NOT
+RESOLVED WITHIN 7 DAYS THEN YOUR ACCOUNT WILL BE SUSPENDED. FOR MORE INFO:
+
+    https://researchcomputing.princeton.edu/get-started/utilization-policies
 
 Please request less memory by modifying the --mem-per-cpu or --mem Slurm
 directive. This will lower your queue times and increase the overall throughput

@@ -81,7 +81,7 @@ class ZeroUtilGPUHours(Alert):
                 tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
                 usr.drop(columns=["partition"], inplace=True)
                 tags["<NUM-JOBS>"] = str(len(usr))
-                indent = 2 * " "
+                indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
@@ -96,10 +96,16 @@ class ZeroUtilGPUHours(Alert):
                 # append the new violations to the log file
                 Alert.update_violation_log(usr, vfile)
 
-    def generate_report_for_admins(self, title: str, start_date, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self,
+                                   title: str,
+                                   start_date: datetime,
+                                   end_date: datetime,
+                                   keep_index: bool=False) -> str:
         if self.admin.empty:
             return ""
         else:
+            self.admin["email"] = self.admin.User.apply(lambda user:
+                                             self.get_emails_sent_count(user, self.violation))
             self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
             self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
             self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})
@@ -109,5 +115,5 @@ class ZeroUtilGPUHours(Alert):
             post += f"Partitions: {', '.join(self.partitions)}\n" 
             fmt = "%a %b %d, %Y at %I:%M %p"
             post += f"     Start: {start_date.strftime(fmt)}\n" 
-            post += f"       End: {datetime.now().strftime(fmt)}\n" 
+            post += f"       End: {end_date.strftime(fmt)}\n" 
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title, post=post)
