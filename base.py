@@ -78,7 +78,7 @@ class Alert:
             d = pd.read_csv(user_violations, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
             num_emails_sent = d["email_sent"].unique().size
             dt = datetime.now() - d["email_sent"].unique().max()
-            days_ago_last_email_sent = dt.days
+            days_ago_last_email_sent = round(dt.total_seconds() / 24 / 3600)
             return f"{num_emails_sent} ({days_ago_last_email_sent})"
         return "0 (--)"
 

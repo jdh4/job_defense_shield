@@ -104,8 +104,9 @@ class ZeroUtilGPUHours(Alert):
         if self.admin.empty:
             return ""
         else:
-            self.admin["email"] = self.admin.User.apply(lambda user:
-                                             self.get_emails_sent_count(user, self.violation))
+            self.admin["emails"] = self.admin.User.apply(lambda user:
+                                        self.get_emails_sent_count(user, self.violation))
+            self.admin.emails = self.format_email_counts(self.admin.emails)
             self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
             self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
             self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})

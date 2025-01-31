@@ -97,8 +97,9 @@ class MultinodeGpuFragmentation(Alert):
         if self.df.empty:
             return ""
         else:
-            self.df["email"] = self.df.User.apply(lambda user:
-                                            self.get_emails_sent_count(user, self.violation))
+            self.df["emails"] = self.df.User.apply(lambda user:
+                                     self.get_emails_sent_count(user, self.violation))
+            self.df.emails = self.format_email_counts(self.df.emails)
             self.df = self.df.drop(columns=["Partition"])
             post  = f"   Cluster: {self.cluster}\n" 
             post += f"Partitions: {', '.join(self.partitions)}\n" 
