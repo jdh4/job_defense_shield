@@ -109,7 +109,8 @@ class SerialAllocatingMultipleCores(Alert):
                 tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
                 tags["<DAYS>"] = str(self.days_between_emails)
                 indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
+                # ADDED num_disp but no sort before this
+                table = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 tags["<CPU-HOURS>"] = str(cpu_hours_wasted)

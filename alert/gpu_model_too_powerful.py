@@ -62,6 +62,9 @@ class GpuModelTooPowerful(Alert):
         self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
         # where is groupby and then compare to abs threshold?
         # self.gpu_hours_threshold
+        self.gp = self.df.groupby("User").agg({"Hours":"sum"}).reset_index()
+        self.gp = self.gp[self.gp["Hours"] > self.gpu_hours_threshold]
+        self.df = self.df[self.df.User.isin(self.gp.User)]
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -107,6 +110,7 @@ class GpuModelTooPowerful(Alert):
             self.admin = self.admin.sort_values(by="GPU-Hours", ascending=False)
             self.admin.reset_index(drop=False, inplace=True)
             self.admin.index += 1
-            self.admin["email"] = self.admin["User"].apply(lambda user:
-                                       self.get_emails_sent_count(user, self.violation))
+            self.admin["emails"] = self.admin["User"].apply(lambda user:
+                                        self.get_emails_sent_count(user, self.violation))
+            self.admin.emails = self.format_email_counts(self.admin.emails)
             return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

@@ -37,13 +37,9 @@ may not be optimal. For information on conducting a scaling analysis:
 
     https://researchcomputing.princeton.edu/support/knowledge-base/scaling-analysis
 
-See detailed information about each job by running the "jobstats" command:
-
-<JOBSTATS>
-
 Consider attending an in-person Research Computing help session for assistance:
 
     https://researchcomputing.princeton.edu/support/help-sessions
 
 Replying to this automated email will open a support ticket with Research
-Computing. Let us know if we can be of help.
+Computing.

@@ -32,12 +32,9 @@ by using the "jobstats" command. For example:
 
 <JOBSTATS>
 
-The command above can also be used to see suggested values for the --mem-per-cpu
-and --mem Slurm directives.
-
 Consider attending an in-person Research Computing help session for assistance:
 
     https://researchcomputing.princeton.edu/support/help-sessions
 
 Replying to this automated email will open a support ticket with Research
-Computing. Let us know if we can be of help.
+Computing.

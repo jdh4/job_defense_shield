@@ -80,7 +80,21 @@ class Alert:
             dt = datetime.now() - d["email_sent"].unique().max()
             days_ago_last_email_sent = round(dt.total_seconds() / 24 / 3600)
             return f"{num_emails_sent} ({days_ago_last_email_sent})"
-        return "0 (--)"
+        return "0 (-)"
+
+    def format_email_counts(self, counts: pd.Series) -> pd.Series:
+        """Return the email sent counts with proper alignment of the two
+           different quantities."""
+        if counts.empty:
+            return counts
+        if counts.tolist() == ["0 (-)"] * len(counts):
+            return pd.Series(["0"] * len(counts))
+        max_len = max([len(count.split()[1]) for count in counts.tolist()])
+        def fix_spacing(item: str):
+            num_sent, days_ago = item.split()
+            pair = f"{num_sent}{(max_len - len(days_ago)) * ' '} {days_ago}"
+            return pair.replace("(-)", "   ")
+        return counts.apply(fix_spacing)
 
     @staticmethod
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
@@ -92,17 +106,6 @@ class Alert:
             curr.to_csv(vfile, index=False, header=True)
         else:
             usr.to_csv(vfile, index=False, header=True)
-
-    def format_email_counts(self, counts: pd.Series) -> pd.Series:
-        """Return the email sent counts with proper alignment of the two
-           different quantities."""
-        if counts.empty:
-            return counts
-        max_len = max([len(count.split()[1]) for count in counts.tolist()])
-        def fix_spacing(x):
-            num_sent, days_ago = x.split()
-            return f"{num_sent}{(max_len - len(days_ago)) * ' '} {days_ago}"
-        return counts.apply(fix_spacing)
 
     def __len__(self) -> int:
         """Returns the number of rows in the df dataframe."""

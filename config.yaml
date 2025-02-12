@@ -35,7 +35,7 @@ gpu-model-too-powerful-1:
   min_run_time: 61 # minutes
   num_cores_threshold: 1
   gpu_util_target: "50%"
-  gpu_hours_threshold: 0
+  gpu_hours_threshold: 48 # gpu-hours
   max_num_jobid_admin: 3
   email_file: "email/gpu_model_too_powerful.txt"
   excluded_users:
@@ -129,7 +129,7 @@ multinode-cpu-fragmentation-1:
   cluster: della
   partitions:
     - cpu
-  min_run_time: 61     # minutes
+  min_run_time: 120    # minutes
   cores_per_node: 32   # count
   cores_fraction: 0.5  # [0, 1]
   mem_per_node: 190    # GB

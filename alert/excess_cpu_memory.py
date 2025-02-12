@@ -161,6 +161,8 @@ class ExcessCPUMemory(Alert):
                 table = jobs.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobs.JobID.values[0]}"
+                # need a way to send a stern message at times
+                # if x > self.some_threshold and os.path.exists(stern_version) then self.email_file += "_stern"
                 translator = EmailTranslator(self.email_file, tags)
                 s = translator.replace_tags()
 

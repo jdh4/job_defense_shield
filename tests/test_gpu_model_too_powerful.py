@@ -74,7 +74,7 @@ def test_gpu_model_too_powerful():
                        "gpus":[1] * n_jobs,
                        "state":["COMPLETED"] * n_jobs,
                        "partition":["gpu"] * n_jobs,
-                       "elapsed-hours":[10] * n_jobs})
+                       "elapsed-hours":[100] * n_jobs})
     too_power = GpuModelTooPowerful(df,
                                     0,
                                     "",
@@ -84,11 +84,12 @@ def test_gpu_model_too_powerful():
                                     partition="gpu",
                                     min_run_time=0,
                                     num_cores_threshold=1,
+                                    gpu_hours_threshold=24,
                                     excluded_users=["aturing"])
     actual = too_power.df[["User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
     expected = pd.DataFrame({"User":["user1", "user2", "user1"],
                              "GPU-Util":["9%", "6%", "9%"],
                              "GPU-Mem-Used":["7 GB", "5 GB", "7 GB"],
                              "CPU-Mem-Used":["4 GB", "4 GB", "4 GB"],
-                             "Hours":[10, 10, 10]})
+                             "Hours":[100, 100, 100]})
     pd.testing.assert_frame_equal(actual.reset_index(drop=True), expected)
