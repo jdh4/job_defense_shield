@@ -8,7 +8,7 @@ sender: cses@princeton.edu
 verbose: False
 reply-to: rcsystems@princeton.edu
 greeting-method: getent
-workday-method: usa
+workday-method: always
 holidays-file: /path/to/job_defense_shield/holidays.txt
 jobstats-module-path: /usr/local/bin/jobstats
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
@@ -120,6 +120,37 @@ too-many-cores-per-gpu-1:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
     - kl5675@princeton.edu
+
+
+#########################################
+## TOO MUCH CPU MEMORY PER GPU (ALERT) ##
+#########################################
+too-much-cpu-mem-per-gpu-1:
+  cluster: della
+  partitions:
+    - pli
+    - pli-c
+    - pli-p
+    - pli-lc
+  cluster_name: "Della (PLI)"
+  cores_per_node: 96
+  gpus_per_node: 8
+  cpu_mem_per_node: 1000       # GB
+  cpu_mem_per_gpu_target: 115  # GB
+  cpu_mem_per_gpu_limit: 192   # GB
+  mem_eff_thres: 0.8           # [0, 1]
+  min_run_time: 61             # minutes
+  email_file: "email/too_much_cpu_mem_per_gpu.txt"
+  excluded_users:
+    - aturing
+    - einstein
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
+    - kl5675@princeton.edu
+
+# della gpu partition
+#too-much-cpu-mem-per-gpu-2:
 
 
 #########################################
@@ -310,9 +341,9 @@ low-gpu-efficiency-2:
 low-gpu-efficiency-3:
   cluster: della
   partitions:
-    - pli
-    - pli-lc
-    - pli-p
+    - pli     # campus, low priority
+    - pli-p   # campus, higher priority than pli
+    - pli-lc  # large campus
   eff_thres_pct: 40         # percent
   eff_target_pct: 75        # percent
   proportion_thres_pct: 2   # percent

@@ -36,6 +36,7 @@ from alert.multinode_gpu_fragmentation import MultinodeGpuFragmentation
 from alert.compute_efficiency import LowEfficiencyCPU
 from alert.compute_efficiency import LowEfficiencyGPU
 from alert.too_many_cores_per_gpu import TooManyCoresPerGpu
+from alert.too_much_cpu_mem_per_gpu import TooMuchCpuMemPerGpu
 
 
 def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
@@ -93,7 +94,9 @@ if __name__ == "__main__":
     parser.add_argument('--serial-allocating-multiple', action='store_true', default=False,
                         help='Indentify serial codes allocating multiple CPU-cores')
     parser.add_argument('--too-many-cores-per-gpu', action='store_true', default=False,
-                        help='Indentify jobs using too many CPU-cores per GPU')
+                        help='Indentify jobs allocating too many CPU-cores per GPU')
+    parser.add_argument('--too-much-cpu-mem-per-gpu', action='store_true', default=False,
+                        help='Indentify jobs allocating too much CPU memory per GPU')
     parser.add_argument('--utilization-overview', action='store_true', default=False,
                         help='Generate a utilization report by cluster and partition')
     parser.add_argument('--utilization-by-slurm-account', action='store_true', default=False,
@@ -224,6 +227,11 @@ if __name__ == "__main__":
             show_history_of_emails_sent(violation_logs_path,
                                         "too_many_cores_per_gpu",
                                         "TOO MANY CPU-CORES PER GPU",
+                                        args.days)
+        if args.too_much_cpu_mem_per_gpu:
+            show_history_of_emails_sent(violation_logs_path,
+                                        "too_much_cpu_mem_per_gpu",
+                                        "TOO MUCH CPU MEMORY PER GPU",
                                         args.days)
         if args.excessive_time:
             show_history_of_emails_sent(violation_logs_path,
@@ -493,6 +501,24 @@ if __name__ == "__main__":
                 cpg.send_emails_to_users(greeting_method)
             title = "Too Many Cores Per GPU"
             s += cpg.generate_report_for_admins(title)
+
+
+    #################################
+    ## TOO MUCH CPU MEMORY PER GPU ##
+    #################################
+    if args.too_much_cpu_mem_per_gpu:
+        alerts = [alert for alert in cfg.keys() if "too-much-cpu-mem-per-gpu" in alert]
+        for alert in alerts:
+            mpg = TooMuchCpuMemPerGpu(df,
+                                      days_between_emails=args.days,
+                                      violation="too_much_cpu_mem_per_gpu",
+                                      vpath=violation_logs_path,
+                                      subject="Consider Allocating Less CPU Memory per GPU",
+                                      **cfg[alert])
+            if args.email and is_workday:
+                mpg.send_emails_to_users(greeting_method)
+            title = "Too Much CPU Memory Per GPU"
+            s += mpg.generate_report_for_admins(title)
 
 
     ###########################

@@ -1,0 +1,27 @@
+<GREETING>
+
+Your <NAME> jobs appear to be allocating more CPU memory than necessary:
+
+<TABLE>
+
+Each node on <NAME> has <MEMORY> GB of CPU memory and <GPUS> GPUs. If possible please
+allocate <TARGET> GB of CPU memory per GPU or less. This will prevent the situation
+where there are free GPUs on a node but not enough CPU memory to accept new jobs.
+
+"Mem-Eff" is the memory efficiency or the ratio of used to allocated CPU memory.
+A good target value for this quantity is 80% and above. Please use an accurate
+value for the --mem, --mem-per-cpu or --mem-per-gpu Slurm directive. For the
+job(s) above, one could have used:
+
+   #SBATCH --mem-per-gpu=<SLURM>G
+
+To learn more about allocating CPU memory, please see this page:
+
+   https://researchcomputing.princeton.edu/support/knowledge-base/memory
+
+Consider attending an in-person Research Computing help session for assistance:
+
+   https://researchcomputing.princeton.edu/support/help-sessions
+
+Replying to this automated email will open a support ticket with Research
+Computing.
