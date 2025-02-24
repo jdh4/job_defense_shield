@@ -90,6 +90,7 @@ zero-util-gpu-hours-1:
   gpu_hours_threshold_admin: 24 # hours
   max_num_jobid_admin: 4        # count
   email_file: "email/zero_util_gpu_hours.txt"
+  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -137,7 +138,7 @@ too-much-cpu-mem-per-gpu-1:
   gpus_per_node: 8
   cpu_mem_per_node: 1000       # GB
   cpu_mem_per_gpu_target: 115  # GB
-  cpu_mem_per_gpu_limit: 150   # GB
+  cpu_mem_per_gpu_limit: 125   # GB
   mem_eff_thres: 0.8           # [0, 1]
   min_run_time: 61             # minutes
   email_file: "email/too_much_cpu_mem_per_gpu.txt"

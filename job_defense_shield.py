@@ -106,31 +106,25 @@ if __name__ == "__main__":
     jds_path = os.path.join(os.path.dirname(__file__), "config.yaml")
     cwd_path = os.path.join(os.getcwd(), "config.yaml")
     if args.config_file and os.path.isfile(args.config_file):
-        print(f"Configuration file: {args.config_file}")
+        print(f"Configuration file:\n\t{args.config_file}")
         with open(args.config_file, "r", encoding="utf-8") as fp:
             cfg = yaml.safe_load(fp)
     elif args.config_file and not os.path.isfile(args.config_file):
-        print(f"Configuration file does not exist: {args.config_file}. Exiting ...")
+        print(f"Configuration file does not exist:\n\t{args.config_file}. Exiting ...")
         sys.exit()
     elif args.config_file is None and os.path.isfile(jds_path):
-        print(f"Configuration file: {jds_path}")
+        print(f"Configuration file:\n\t{jds_path}")
         with open(jds_path, "r", encoding="utf-8") as fp:
             cfg = yaml.safe_load(fp)
     elif args.config_file is None and os.path.isfile(cwd_path):
-        print(f"Configuration file: {cwd_path}")
+        print(f"Configuration file:\n\t{cwd_path}")
         with open(cwd_path, "r", encoding="utf-8") as fp:
             cfg = yaml.safe_load(fp)
     else:
         print("Configuration file not found. Exiting ...")
         sys.exit()
 
-    for key in cfg.keys():
-        if any([c.isnumeric() for c in key]):
-            print(4 * " " + key)
-    for key in cfg.keys():
-        if "serial-allocating-multiple" in key:
-            print("serial-allocating-multiple", cfg[key]["cluster"], cfg[key]["partitions"])
-      
+     
     sys_cfg = {"jobstats_path":cfg["jobstats-module-path"],
                "verbose":cfg["verbose"],
                "sender":cfg["sender"],
@@ -139,6 +133,14 @@ if __name__ == "__main__":
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]
     is_workday = WorkdayFactory().create_workday(workday_method).is_workday()
+
+    if cfg["verbose"]:
+        for key in cfg.keys():
+            if any([c.isnumeric() for c in key]):
+                print(4 * " " + key)
+        for key in cfg.keys():
+            if "serial-allocating-multiple" in key:
+                print("serial-allocating-multiple", cfg[key]["cluster"], cfg[key]["partitions"])
  
     #######################
     ## CHECK EMAILS SENT ##
@@ -320,12 +322,14 @@ if __name__ == "__main__":
     if args.zero_util_gpu_hours:
         alerts = [alert for alert in cfg.keys() if "zero-util-gpu-hours" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             zero_gpu_hours = ZeroUtilGPUHours(df,
                                    days_between_emails=args.days,
                                    violation="zero_util_gpu_hours",
                                    vpath=violation_logs_path,
                                    subject="GPU-hours at 0% Utilization",
-                                   **cfg[alert])
+                                   **params)
             if args.email and is_workday:
                 zero_gpu_hours.send_emails_to_users(greeting_method)
             title="GPU-Hours at 0% Utilization"

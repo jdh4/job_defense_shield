@@ -24,9 +24,11 @@ class ZeroUtilGPUHours(Alert):
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.gpus > 0) &
-                          (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        if self.include_running_jobs:
+            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        self.df = self.df[self.df.admincomment != {}]
         self.gp = pd.DataFrame({"User":[]})
         self.admin = pd.DataFrame()
         # add new fields
