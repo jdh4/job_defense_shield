@@ -1,4 +1,6 @@
 import os
+import sys
+import json
 from datetime import datetime
 from datetime import timedelta
 from utils import SECONDS_PER_HOUR
@@ -54,6 +56,25 @@ class Alert:
             A table of data as a string.
         """
 
+    def get_admincomment_for_running_jobs(self) -> pd.Series:
+        """Query the Prometheus server for the admincomment of
+        jobs in a RUNNING state."""
+        sys.path.append(self.jobstats_path)
+        from jobstats import Jobstats
+        from config import PROM_SERVER
+        num_jobs = len(self.df[self.df.state == "RUNNING"])
+        print(f"\nQuerying server for admincomment on {num_jobs} running jobs ... ",
+              end="",
+              flush=True)
+        adminc = self.df.apply(lambda row:
+                               json.loads(Jobstats(jobid=row["jobid"],
+                                                   cluster=row["cluster"],
+                                                   prom_server=PROM_SERVER).report_job_json(False))
+                               if row["state"] == "RUNNING"
+                               else row["admincomment"], axis="columns")
+        print("done.", flush=True)
+        return adminc
+
     def has_sufficient_time_passed_since_last_email(self, vfile: str) -> bool:
         """Return boolean specifying whether sufficient time has passed."""
         last_sent_email_date = datetime(1970, 1, 1)
@@ -75,7 +96,10 @@ class Alert:
             print(f"Warning: {root_violations} not found in get_emails_sent_count()")
         user_violations = f"{root_violations}/{user}.email.csv"
         if os.path.exists(user_violations):
-            d = pd.read_csv(user_violations, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
+            d = pd.read_csv(user_violations,
+                            parse_dates=["email_sent"],
+                            date_format="mixed",
+                            dayfirst=False)
             num_emails_sent = d["email_sent"].unique().size
             dt = datetime.now() - d["email_sent"].unique().max()
             days_ago_last_email_sent = round(dt.total_seconds() / 24 / 3600)

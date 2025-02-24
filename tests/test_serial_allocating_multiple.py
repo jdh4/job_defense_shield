@@ -75,6 +75,7 @@ def test_serial_allocating_multiple_cores():
                                            lower_ratio=0.85,
                                            num_top_users=0,
                                            num_jobs_display=3,
+                                           include_running_jobs=False,
                                            email_file="",
                                            max_num_jobid_admin=3)
     actual = serial.df[["User", "CPU-cores", "100%/CPU-cores", "CPU-Util", "Hours"]]

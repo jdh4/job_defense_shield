@@ -23,13 +23,11 @@ class SerialAllocatingMultipleCores(Alert):
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.nodes == 1) &
                           (self.df.cores > 1) &
-                          (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-
-        # if self.include_running_jobs:
-        #     self.df.admincomment = self.df.apply(lambda row: Jobstats(row["jobid"], row["cluster"]) if row["state"] == "RUNNING" else row["admincomment"]
-        # self.df = self.df[self.df.admincomment != {}]
+        if self.include_running_jobs:
+            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        self.df = self.df[self.df.admincomment != {}]
         self.gp = pd.DataFrame({"User":[]})
         if not self.df.empty:
             # add new fields

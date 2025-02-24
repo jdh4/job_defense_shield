@@ -193,7 +193,7 @@ class SacctCleaner(BaseCleaner):
     def clean(self) -> pd.DataFrame:
         """Return the cleaned dataframe by applying all
            of the cleaning functions."""
-        print("== Cleaning dataframe ==")
+        print("\nCleaning sacct data:")
         #print(self.raw.state.value_counts())
         #print(self.raw[self.raw.state == "PENDING"])
         self.raw = self.raw[pd.notna(self.raw.nnodes) &

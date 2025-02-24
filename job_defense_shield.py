@@ -131,10 +131,10 @@ if __name__ == "__main__":
         if "serial-allocating-multiple" in key:
             print("serial-allocating-multiple", cfg[key]["cluster"], cfg[key]["partitions"])
       
-    #if defined:
-    #    sys.path.append(cfg["jobstats-path"])
-    #    from jobstats import Jobstats
-
+    sys_cfg = {"jobstats_path":cfg["jobstats-module-path"],
+               "verbose":cfg["verbose"],
+               "sender":cfg["sender"],
+               "reply_to":cfg["reply-to"]}
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]
@@ -254,8 +254,6 @@ if __name__ == "__main__":
     use_cache = False if (args.email or args.report) else True
     raw = SlurmSacct(args.days, args.starttime, args.endtime, fields, args.clusters, args.partition)
     raw = raw.get_job_data()
-    #print(raw[raw.state == "RUNNING"][["start", "end"]])
-    #print(raw.state.value_counts())
 
     # clean the raw data
     field_renamings = {"cputimeraw":"cpu-seconds",
@@ -266,7 +264,6 @@ if __name__ == "__main__":
     df = SacctCleaner(raw, field_renamings, partition_renamings).clean()
     pending = df[df.state == "PENDING"].copy()
     df = df[(df.state != "PENDING") & (df.elapsedraw > 0)]
-    print(df.state.value_counts())
 
     num_nulls = df.isnull().sum().sum()
     if num_nulls:
@@ -434,12 +431,14 @@ if __name__ == "__main__":
     if args.serial_allocating_multiple:
         alerts = [alert for alert in cfg.keys() if "serial-allocating-multiple" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             serial = SerialAllocatingMultipleCores(df,
                                      days_between_emails=args.days,
                                      violation="serial_allocating_multiple",
                                      vpath=violation_logs_path,
                                      subject="Serial Jobs Allocating Multiple CPU-cores",
-                                     **cfg[alert])
+                                     **params)
             if args.email and is_workday:
                 serial.send_emails_to_users(greeting_method)
             title = "Serial Jobs Allocating Multiple CPU-cores"

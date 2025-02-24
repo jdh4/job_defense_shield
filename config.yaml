@@ -3,7 +3,7 @@
 #####################
 ## GLOBAL SETTINGS ##
 #####################
-jobstats-module-path: /home/jdh4/software/jobstats/jobstats
+jobstats-module-path: /home/jdh4/software/jobstats
 violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
 sender: cses@princeton.edu
 reply-to: rcsystems@princeton.edu
@@ -377,6 +377,7 @@ serial-allocating-multiple-1:
   num_jobs_display: 10
   email_file: "email/serial_allocating_multiple.txt"
   max_num_jobid_admin: 3
+  include_running_jobs: True
   excluded_users:
     - aturing
     - einstein
