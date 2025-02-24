@@ -3,14 +3,14 @@
 #####################
 ## GLOBAL SETTINGS ##
 #####################
+jobstats-module-path: /home/jdh4/software/jobstats/jobstats
 violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
 sender: cses@princeton.edu
-verbose: False
 reply-to: rcsystems@princeton.edu
+verbose: False
 greeting-method: getent
-workday-method: always
+workday-method: usa
 holidays-file: /path/to/job_defense_shield/holidays.txt
-jobstats-module-path: /usr/local/bin/jobstats
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
 admin-reports:
   - halverson@princeton.edu
@@ -110,8 +110,8 @@ too-many-cores-per-gpu-1:
   cores_per_node: 96
   gpus_per_node: 8
   cores_per_gpu_target: 12
-  cores_per_gpu_limit: 24
-  min_run_time: 30 # minutes
+  cores_per_gpu_limit: 18
+  min_run_time: 61 # minutes
   email_file: "email/too_many_cores_per_gpu.txt"
   excluded_users:
     - aturing
@@ -137,7 +137,7 @@ too-much-cpu-mem-per-gpu-1:
   gpus_per_node: 8
   cpu_mem_per_node: 1000       # GB
   cpu_mem_per_gpu_target: 115  # GB
-  cpu_mem_per_gpu_limit: 192   # GB
+  cpu_mem_per_gpu_limit: 150   # GB
   mem_eff_thres: 0.8           # [0, 1]
   min_run_time: 61             # minutes
   email_file: "email/too_much_cpu_mem_per_gpu.txt"
@@ -151,6 +151,7 @@ too-much-cpu-mem-per-gpu-1:
 
 # della gpu partition
 #too-much-cpu-mem-per-gpu-2:
+# 250 GB per GPU
 
 
 #########################################
@@ -257,7 +258,7 @@ low-cpu-efficiency-2:
   cluster: della
   partitions:
     - physics
-  eff_thres_pct: 60         # percent
+  eff_thres_pct: 50         # percent
   eff_target_pct: 90        # percent
   proportion_thres_pct: 2   # percent
   absolute_thres_hours: 100 # cpu-hours

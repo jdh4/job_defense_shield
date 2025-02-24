@@ -42,7 +42,7 @@ class TooMuchCpuMemPerGpu(Alert):
             self.df = self.df[self.df["Mem-Eff"] < self.mem_eff_thres]
             self.df["CPU-Mem-per-GPU"] = self.df["CPU-Mem-per-GPU"].apply(lambda x:
                                               str(round(x, 1)).replace(".0", "") + " GB")
-            self.df["CPU-Mem-per-GPU-Target"] = f"{self.cpu_mem_per_gpu_target} GB"
+            self.df["CPU-Mem-per-GPU-Limit"] = f"{self.cpu_mem_per_gpu_target} GB"
             self.df["mem-alloc"] = self.df["mem-alloc"].apply(round)
             cols = ["jobid",
                     "User",
@@ -51,7 +51,7 @@ class TooMuchCpuMemPerGpu(Alert):
                     "mem-alloc",
                     "gpus",
                     "CPU-Mem-per-GPU",
-                    "CPU-Mem-per-GPU-Target",
+                    "CPU-Mem-per-GPU-Limit",
                     "CPU-Mem-Used"]
             self.df = self.df[cols]
             renamings = {"jobid":"JobID",
@@ -71,9 +71,13 @@ class TooMuchCpuMemPerGpu(Alert):
                 usr = self.df[self.df.User == user].copy()
                 # use the rounded values since those will appear in the email
                 usr["Mem-Eff"] = usr["Mem-Eff"].apply(lambda x: round(100 * x))
-                usr["mem-per-gpu-safety"] = 1.2 * (usr["Mem-Eff"] / 100) * usr["CPU-Mem"] / usr.GPUs
-                mem_per_gpu = max(8, round(usr["mem-per-gpu-safety"].max()))
-                usr.drop(columns=["User", "mem-per-gpu-safety", "CPU-Mem-Used"], inplace=True)
+                # compute recommended memory for first job
+                jobid = usr.JobID.values[0]
+                mem_eff = usr["Mem-Eff"].values[0] / 100
+                cpu_mem_alloc = usr["CPU-Mem"].values[0]
+                num_gpus = usr["GPUs"].values[0]
+                mem_per_gpu = max(8, round(1.2 * mem_eff * cpu_mem_alloc / num_gpus))
+                usr.drop(columns=["User", "CPU-Mem-Used"], inplace=True)
                 usr["Mem-Eff"] = usr["Mem-Eff"].apply(lambda x: f"{x}%")
                 usr["CPU-Mem"] = usr["CPU-Mem"].apply(lambda x: f"{x} GB")
                 indent = 3 * " "
@@ -85,11 +89,12 @@ class TooMuchCpuMemPerGpu(Alert):
                 tags["<TARGET>"] = str(self.cpu_mem_per_gpu_target)
                 tags["<CORES>"] = str(self.cores_per_node)
                 tags["<MEMORY>"] = str(self.cpu_mem_per_node)
-                tags["<SLURM>"] = str(mem_per_gpu)
+                tags["<MEM-PER-GPU>"] = str(mem_per_gpu)
                 tags["<GPUS>"] = str(self.gpus_per_node)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
-                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobid}"
+                tags["<JOBID>"] = str(jobid)
                 tags["<PARTITIONS>"] = ",".join(self.partitions)
                 translator = EmailTranslator(self.email_file, tags)
                 s = translator.replace_tags()
@@ -105,4 +110,10 @@ class TooMuchCpuMemPerGpu(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
             return ""
+        self.df.drop(columns=["CPU-Mem-Used"], inplace=True)
+        self.df["CPU-Mem"] = self.df["CPU-Mem"].apply(lambda x: f"{x} GB")
+        self.df["Mem-Eff"] = self.df["Mem-Eff"].apply(lambda x: f"{round(100 * x)}%")
+        self.df["emails"] = self.df.User.apply(lambda user:
+                                 self.get_emails_sent_count(user, self.violation))
+        self.df.emails = self.format_email_counts(self.df.emails)
         return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

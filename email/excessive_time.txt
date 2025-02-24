@@ -37,4 +37,4 @@ Consider attending an in-person Research Computing help session for assistance:
     https://researchcomputing.princeton.edu/support/help-sessions
 
 Replying to this automated email will open a support ticket with Research
-Computing. Let us know if we can be of help.
+Computing.

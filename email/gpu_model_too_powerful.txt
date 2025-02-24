@@ -39,4 +39,4 @@ For general information about GPU computing at Princeton:
     https://researchcomputing.princeton.edu/support/knowledge-base/gpu-computing
 
 Replying to this automated email will open a support ticket with Research
-Computing. Let us know if we can be of help.
+Computing.

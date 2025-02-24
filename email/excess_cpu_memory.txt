@@ -17,8 +17,7 @@ RESOLVED WITHIN 7 DAYS THEN YOUR ACCOUNT WILL BE SUSPENDED. FOR MORE INFO:
     https://researchcomputing.princeton.edu/get-started/utilization-policies
 
 Please request less memory by modifying the --mem-per-cpu or --mem Slurm
-directive. This will lower your queue times and increase the overall throughput
-of your jobs. For instance, if your job requires 8 GB per node then use:
+directive. For instance, if your job requires 8 GB per node then use:
 
     #SBATCH --mem=10G
 

@@ -56,6 +56,8 @@ class ZeroCPU(Alert):
                          "cores":"Cores",
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
+            self.df["Hours"] = self.df["Hours"].apply(lambda x: str(round(x, 1))
+                                                      if x < 5 else str(round(x)))
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -68,7 +70,6 @@ class ZeroCPU(Alert):
                    usr.Cores.values[0] < 4:
                     continue
                 usr.drop(columns=["User"], inplace=True)
-                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
@@ -96,7 +97,6 @@ class ZeroCPU(Alert):
             return ""
         else:
             self.df = self.df.sort_values(["User", "JobID"])
-            self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
             self.df["emails"] = self.df.User.apply(lambda user:
                                      self.get_emails_sent_count(user, self.violation))
             self.df.emails = self.format_email_counts(self.df.emails)

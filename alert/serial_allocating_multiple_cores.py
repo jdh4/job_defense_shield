@@ -26,6 +26,10 @@ class SerialAllocatingMultipleCores(Alert):
                           (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+
+        # if self.include_running_jobs:
+        #     self.df.admincomment = self.df.apply(lambda row: Jobstats(row["jobid"], row["cluster"]) if row["state"] == "RUNNING" else row["admincomment"]
+        # self.df = self.df[self.df.admincomment != {}]
         self.gp = pd.DataFrame({"User":[]})
         if not self.df.empty:
             # add new fields
@@ -129,18 +133,17 @@ class SerialAllocatingMultipleCores(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.gp.empty:
             return ""
-        else:
-            self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
-            self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x:
-                                                        str(round(x, 1)).replace(".0", ""))
-            self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
-            self.gp.reset_index(drop=False, inplace=True)
-            self.gp["emails"] = self.gp.User.apply(lambda user:
-                                     self.get_emails_sent_count(user, self.violation))
-            self.gp.emails = self.format_email_counts(self.gp.emails)
-            cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "emails"]
-            self.gp = self.gp[cols]
-            self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
-            self.gp.reset_index(drop=True, inplace=True)
-            self.gp.index += 1
-            return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+        self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
+        self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x:
+                                                    str(round(x, 1)).replace(".0", ""))
+        self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
+        self.gp.reset_index(drop=False, inplace=True)
+        self.gp["emails"] = self.gp.User.apply(lambda user:
+                                 self.get_emails_sent_count(user, self.violation))
+        self.gp.emails = self.format_email_counts(self.gp.emails)
+        cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "emails"]
+        self.gp = self.gp[cols]
+        self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
+        self.gp.reset_index(drop=True, inplace=True)
+        self.gp.index += 1
+        return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

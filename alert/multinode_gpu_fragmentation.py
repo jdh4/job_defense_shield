@@ -62,7 +62,8 @@ class MultinodeGpuFragmentation(Alert):
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
             self.df["GPU-eff"] = self.df["GPU-eff"].apply(lambda x: f"{round(x)}%")
-            self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
+            self.df["Hours"] = self.df["Hours"].apply(lambda x: str(round(x, 1))
+                                                      if x < 5 else str(round(x)))
             self.df["GPUs-per-Node"] = self.df["GPUs-per-Node"].apply(lambda gpn:
                                                                 str(round(gpn, 1)).replace(".0", ""))
 

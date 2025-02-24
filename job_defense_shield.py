@@ -39,35 +39,6 @@ from alert.too_many_cores_per_gpu import TooManyCoresPerGpu
 from alert.too_much_cpu_mem_per_gpu import TooMuchCpuMemPerGpu
 
 
-def raw_dataframe_from_sacct(flags, start_date, fields, renamings=[], numeric_fields=[], use_cache=False):
-    fname = f"cache_sacct_{start_date.strftime('%Y%m%d')}.csv"
-    if use_cache and os.path.exists(fname):
-        print(f"\n### USING CACHE FILE: {fname} ###\n", flush=True)
-        rw = pd.read_csv(fname, low_memory=False)
-    else:
-        ymd = start_date.strftime('%Y-%m-%d')
-        hms = start_date.strftime('%H:%M:%S')
-        cmd = f"sacct {flags} -S {ymd}T{hms} -E now -o {fields}"
-        if use_cache:
-            print("\nCalling sacct (which may require several seconds) ... ", end="", flush=True)
-        output = subprocess.run(cmd, stdout=subprocess.PIPE, shell=True, timeout=120, text=True, check=True)
-        if use_cache:
-            print("done.", flush=True)
-        lines = output.stdout.split('\n')
-        if lines != [] and lines[-1] == "":
-            lines = lines[:-1]
-        cols = fields.split(",")
-        rw = pd.DataFrame([line.split("|")[:len(cols)] for line in lines])
-        rw.columns = cols
-        rw.rename(columns=renamings, inplace=True)
-        rw = rw[pd.notna(rw.elapsedraw)]
-        rw = rw[rw.elapsedraw.str.isnumeric()]
-        rw[numeric_fields] = rw[numeric_fields].apply(pd.to_numeric)
-        if use_cache:
-            rw.to_csv(fname, index=False)
-    return rw
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Job Defense Shield')
@@ -160,6 +131,9 @@ if __name__ == "__main__":
         if "serial-allocating-multiple" in key:
             print("serial-allocating-multiple", cfg[key]["cluster"], cfg[key]["partitions"])
       
+    #if defined:
+    #    sys.path.append(cfg["jobstats-path"])
+    #    from jobstats import Jobstats
 
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
@@ -280,6 +254,8 @@ if __name__ == "__main__":
     use_cache = False if (args.email or args.report) else True
     raw = SlurmSacct(args.days, args.starttime, args.endtime, fields, args.clusters, args.partition)
     raw = raw.get_job_data()
+    #print(raw[raw.state == "RUNNING"][["start", "end"]])
+    #print(raw.state.value_counts())
 
     # clean the raw data
     field_renamings = {"cputimeraw":"cpu-seconds",
@@ -287,8 +263,11 @@ if __name__ == "__main__":
                        "ncpus":"cores",
                        "timelimitraw":"limit-minutes"}
     partition_renamings = cfg["partition_renamings"]
-    raw = SacctCleaner(raw, field_renamings, partition_renamings).clean()
-    df = raw.copy()
+    df = SacctCleaner(raw, field_renamings, partition_renamings).clean()
+    pending = df[df.state == "PENDING"].copy()
+    df = df[(df.state != "PENDING") & (df.elapsedraw > 0)]
+    print(df.state.value_counts())
+
     num_nulls = df.isnull().sum().sum()
     if num_nulls:
         print(f"Number of null values in df: {num_nulls}")
@@ -318,7 +297,7 @@ if __name__ == "__main__":
 
     df = add_new_and_derived_fields(df)
     df.reset_index(drop=True, inplace=True)
-
+    
     fmt = "%a %b %-d"
     s = f"{start_date.strftime(fmt)} - {end_date.strftime(fmt)}"
 
@@ -584,7 +563,7 @@ if __name__ == "__main__":
     ## LONGEST QUEUED JOBS ##
     #########################
     if args.longest_queued:
-        queued = LongestQueuedJobs(raw,
+        queued = LongestQueuedJobs(pending,
                              days_between_emails=args.days,
                              violation="null",
                              vpath=violation_logs_path,

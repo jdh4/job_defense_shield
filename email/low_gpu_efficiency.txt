@@ -22,4 +22,4 @@ You can check the efficiency of completed and actively running jobs by using the
 <JOBSTATS>
 
 Replying to this automated email will open a support ticket with Research
-Computing. Let us know if we can be of help.
+Computing.

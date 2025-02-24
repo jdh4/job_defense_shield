@@ -41,7 +41,8 @@ class TooManyCoresPerGpu(Alert):
                          "gpus":"GPUs",
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
-            self.df["Hours"] = self.df["Hours"].apply(lambda hrs: round(hrs, 1))
+            self.df["Hours"] = self.df["Hours"].apply(lambda x: str(round(x, 1))
+                                                      if x < 5 else str(round(x)))
 
     def send_emails_to_users(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -76,4 +77,7 @@ class TooManyCoresPerGpu(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
             return ""
+        self.df["emails"] = self.df.User.apply(lambda user:
+                                 self.get_emails_sent_count(user, self.violation))
+        self.df.emails = self.format_email_counts(self.df.emails)
         return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
