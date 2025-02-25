@@ -34,7 +34,7 @@ class MostCores(Alert):
               "state", "partition", "hours", "CPU-eff"]
       self.gp = self.gp[cols]
 
-  def send_emails_to_users(self):
+  def create_emails(self):
       pass
 
   def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:

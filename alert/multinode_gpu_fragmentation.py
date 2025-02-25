@@ -1,6 +1,5 @@
 from base import Alert
 from efficiency import gpu_efficiency
-from utils import send_email
 from utils import add_dividers
 from utils import JOBSTATES
 from utils import MINUTES_PER_HOUR as mph
@@ -67,7 +66,7 @@ class MultinodeGpuFragmentation(Alert):
             self.df["GPUs-per-Node"] = self.df["GPUs-per-Node"].apply(lambda gpn:
                                                                 str(round(gpn, 1)).replace(".0", ""))
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
@@ -84,15 +83,8 @@ class MultinodeGpuFragmentation(Alert):
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 translator = EmailTranslator(self.email_file, tags)
-                s = translator.replace_tags()
-
-                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
-                for email in self.admin_emails:
-                    send_email(s, email, subject=f"{self.subject}")
-                print(s)
-
-                # append the new violations to the log file
-                Alert.update_violation_log(usr, vfile)
+                email = translator.replace_tags()
+                self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:

@@ -66,7 +66,7 @@ class JobsOverview(Alert):
                 "partitions"]
         self.gp = self.gp[cols]
 
-    def send_emails_to_users(self):
+    def create_emails(self):
         """There are no emails for this alert."""
         pass
 

@@ -1,7 +1,6 @@
 import pandas as pd
 from base import Alert
 from efficiency import cpu_memory_usage
-from utils import send_email
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from greeting import GreetingFactory
@@ -112,7 +111,7 @@ class ExcessCPUMemory(Alert):
                               (self.gp["mean-ratio"] < self.mean_ratio_threshold) &
                               (self.gp["median-ratio"] < self.median_ratio_threshold)]
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
@@ -164,15 +163,8 @@ class ExcessCPUMemory(Alert):
                 # need a way to send a stern message at times
                 # if x > self.some_threshold and os.path.exists(stern_version) then self.email_file += "_stern"
                 translator = EmailTranslator(self.email_file, tags)
-                s = translator.replace_tags()
-
-                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
-                for email in self.admin_emails:
-                    send_email(s, email, subject=f"{self.subject}")
-                print(s)
-
-                # append the new violations to the log file
-                Alert.update_violation_log(usr, vfile)
+                email = translator.replace_tags()
+                self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Drop and rename some of the columns."""

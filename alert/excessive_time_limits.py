@@ -3,7 +3,6 @@ from base import Alert
 from utils import SECONDS_PER_MINUTE as spm
 from utils import MINUTES_PER_HOUR as mph
 from utils import seconds_to_slurm_time_format
-from utils import send_email
 from utils import add_dividers
 from greeting import GreetingFactory
 from email_translator import EmailTranslator
@@ -70,7 +69,7 @@ class ExcessiveTimeLimits(Alert):
                          f"{xpu}-waste-hours":f"{xpu.upper()}-Hours-Unused"}
             self.gp = self.gp.rename(columns=renamings)
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
@@ -105,15 +104,8 @@ class ExcessiveTimeLimits(Alert):
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<UNUSED-HOURS>"] = str(round(usr[f"{xpu.upper()}-Hours-Unused"].values[0]))
                 translator = EmailTranslator("email/excessive_time.txt", tags)
-                s = translator.replace_tags()
-
-                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
-                for email in self.admin_emails:
-                    send_email(s, email, subject=f"{self.subject}")
-                print(s)
-
-                # append the new violations to the log file
-                Alert.update_violation_log(usr, vfile)
+                email = translator.replace_tags()
+                self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Rename some of the columns."""
@@ -124,4 +116,7 @@ class ExcessiveTimeLimits(Alert):
             renamings = {f"{xpu}-hours":"used",
                          f"{xpu}-alloc-hours":"total"}
             self.gp = self.gp.rename(columns=renamings)
+            self.gp["emails"] = self.gp.User.apply(lambda user:
+                                     self.get_emails_sent_count(user, self.violation))
+            self.gp.emails = self.format_email_counts(self.gp.emails)
             return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

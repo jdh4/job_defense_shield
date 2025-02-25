@@ -2,11 +2,11 @@ import os
 import sys
 import json
 from datetime import datetime
-from datetime import timedelta
-from utils import SECONDS_PER_HOUR
-from utils import HOURS_PER_DAY
 from abc import abstractmethod
 import pandas as pd
+from utils import send_email
+from utils import SECONDS_PER_HOUR
+from utils import HOURS_PER_DAY
 
 class Alert:
 
@@ -25,6 +25,7 @@ class Alert:
         self.vpath = vpath
         self.vbase = os.path.join(self.vpath, self.violation)
         self.subject = subject
+        self.emails = []
         for key in props:
             setattr(self, key, props[key])
         self._filter_and_add_new_fields()
@@ -41,12 +42,30 @@ class Alert:
         """
 
     @abstractmethod
-    def send_emails_to_users(self) -> None:
-        """Send emails to the users.
+    def create_emails(self) -> None:
+        """Create emails to the users.
 
         Returns:
             None
         """
+
+    def send_emails_to_users(self) -> None:
+        """Send emails to users."""
+        for user, email, usr in self.emails:
+            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            send_email(email,
+                       f"{user}@{self.email_domain}",
+                       subject=self.subject,
+                       sender=self.sender,
+                       reply_to=self.reply_to)
+            self.update_violation_log(usr, vfile)
+            for admin_email in self.admin_emails:
+                send_email(email,
+                           admin_email,
+                           subject=self.subject,
+                           sender=self.sender,
+                           reply_to=self.reply_to)
+            print(email)
 
     @abstractmethod
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:

@@ -107,7 +107,7 @@ class ActiveCPUMemory(Alert):
                                                                     round(x / MINUTES_PER_HOUR))
             self.admin = self.df.copy()
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.df.user.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"

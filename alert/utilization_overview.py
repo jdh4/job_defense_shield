@@ -76,7 +76,7 @@ class UtilizationOverview(Alert):
             tra = round(100 * tra / 184 / period_hours)
             self.special.at[("traverse", "all"), "Usage(%)"] = tra
 
-    def send_emails_to_users(self):
+    def create_emails(self):
         """There are no emails for this alert."""
         pass
 

@@ -75,7 +75,7 @@ class ZeroGpuUtilization(Alert):
             renamings = {"gpus":"GPUs-Allocated", "jobid":"JobID", "cluster":"Cluster", "partition":"Partition"}
             self.jb.rename(columns=renamings, inplace=True)
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.jb.User.unique():
             emails_sent = int(self.get_emails_sent_count(user, "zero_gpu_utilization").split()[0])

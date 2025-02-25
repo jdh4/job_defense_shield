@@ -1,7 +1,6 @@
 from datetime import datetime
 import pandas as pd
 from base import Alert
-from utils import send_email
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from efficiency import num_gpus_with_zero_util
@@ -67,7 +66,7 @@ class ZeroUtilGPUHours(Alert):
             self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_user]
             self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         # self.gp is not needed here (could use df)
         g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
@@ -88,15 +87,8 @@ class ZeroUtilGPUHours(Alert):
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 translator = EmailTranslator(self.email_file, tags)
-                s = translator.replace_tags()
-
-                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
-                for email in self.admin_emails:
-                   send_email(s, f"{email}", subject=f"{self.subject}")
-                print(s)
-
-                # append the new violations to the log file
-                Alert.update_violation_log(usr, vfile)
+                email = translator.replace_tags()
+                self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self,
                                    title: str,

@@ -13,17 +13,13 @@ workday-method: usa
 holidays-file: /path/to/job_defense_shield/holidays.txt
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
 admin-reports:
-  - halverson@princeton.edu
-email_suffix: "@princeton.edu"
-
-# rename partitions (use the new names below in this file)
-partition_renamings:
-  datascience: datasci
-
-# override institutional emails
-external-emails: # overrides
-  u12345: first.last@gmail.com
-  u98765: last.first@gmail.com
+    - halverson@princeton.edu
+email-domain-name: "princeton.edu"
+partition-renamings:
+    datascience: datasci
+external-emails:
+    u12345: first.last@gmail.com
+    u98765: last.first@gmail.com
 
 
 ####################################
@@ -35,7 +31,7 @@ gpu-model-too-powerful-1:
   min_run_time: 61 # minutes
   num_cores_threshold: 1
   gpu_util_target: "50%"
-  gpu_hours_threshold: 48 # gpu-hours
+  gpu_hours_threshold: 24 # gpu-hours
   max_num_jobid_admin: 3
   email_file: "email/gpu_model_too_powerful.txt"
   excluded_users:
@@ -378,7 +374,7 @@ serial-allocating-multiple-1:
   num_jobs_display: 10
   email_file: "email/serial_allocating_multiple.txt"
   max_num_jobid_admin: 3
-  include_running_jobs: True
+  include_running_jobs: False
   excluded_users:
     - aturing
     - einstein

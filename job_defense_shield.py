@@ -1,7 +1,6 @@
 import os
 import sys
 import argparse
-import subprocess
 from datetime import datetime
 from datetime import timedelta
 import numpy as np
@@ -124,11 +123,11 @@ if __name__ == "__main__":
         print("Configuration file not found. Exiting ...")
         sys.exit()
 
-     
     sys_cfg = {"jobstats_path":cfg["jobstats-module-path"],
-               "verbose":cfg["verbose"],
-               "sender":cfg["sender"],
-               "reply_to":cfg["reply-to"]}
+               "verbose":      cfg["verbose"],
+               "sender":       cfg["sender"],
+               "reply_to":     cfg["reply-to"],
+               "email_domain": cfg["email-domain-name"]}
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]
@@ -262,7 +261,7 @@ if __name__ == "__main__":
                        "nnodes":"nodes",
                        "ncpus":"cores",
                        "timelimitraw":"limit-minutes"}
-    partition_renamings = cfg["partition_renamings"]
+    partition_renamings = cfg["partition-renamings"]
     df = SacctCleaner(raw, field_renamings, partition_renamings).clean()
     pending = df[df.state == "PENDING"].copy()
     df = df[(df.state != "PENDING") & (df.elapsedraw > 0)]
@@ -306,14 +305,17 @@ if __name__ == "__main__":
     if args.zero_gpu_utilization:
         alerts = [alert for alert in cfg.keys() if "zero-gpu-utilization" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             zero_gpu = ZeroGpuUtilization(df,
                                           days_between_emails=args.days,
                                           violation="zero_gpu_utilization",
                                           vpath=violation_logs_path,
                                           subject="Jobs with Zero GPU Utilization",
-                                          **cfg[alert])
+                                          **params)
             if args.email:
-                zero_gpu.send_emails_to_users(greeting_method)
+                zero_gpu.create_emails(greeting_method)
+                zero_gpu.send_emails_to_users()
 
 
     ################################
@@ -331,7 +333,8 @@ if __name__ == "__main__":
                                    subject="GPU-hours at 0% Utilization",
                                    **params)
             if args.email and is_workday:
-                zero_gpu_hours.send_emails_to_users(greeting_method)
+                zero_gpu_hours.create_emails(greeting_method)
+                zero_gpu_hours.send_emails_to_users()
             title="GPU-Hours at 0% Utilization"
             s += zero_gpu_hours.generate_report_for_admins(title,
                                                            start_date,
@@ -345,14 +348,17 @@ if __name__ == "__main__":
     if args.multinode_cpu_fragmentation:
         alerts = [alert for alert in cfg.keys() if "multinode-cpu-fragmentation" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             cpu_frag = MultinodeCpuFragmentation(df,
                                    days_between_emails=args.days,
                                    violation="multinode_cpu_fragmentation",
                                    vpath=violation_logs_path,
                                    subject="Multinode CPU Jobs with Fragmentation",
-                                   **cfg[alert])
+                                   **params)
             if args.email and is_workday:
-                cpu_frag.send_emails_to_users(greeting_method)
+                cpu_frag.create_emails(greeting_method)
+                cpu_frag.send_emails_to_users()
             title = "Multinode CPU Jobs with Fragmentation"
             s += cpu_frag.generate_report_for_admins(title, keep_index=False)
 
@@ -363,14 +369,17 @@ if __name__ == "__main__":
     if args.multinode_gpu_fragmentation:
         alerts = [alert for alert in cfg.keys() if "multinode-gpu-fragmentation" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             gpu_frag = MultinodeGpuFragmentation(df,
                                    days_between_emails=args.days,
                                    violation="multinode_gpu_fragmentation",
                                    vpath=violation_logs_path,
                                    subject="Multinode GPU Jobs with Fragmentation",
-                                   **cfg[alert])
+                                   **params)
             if args.email and is_workday:
-                gpu_frag.send_emails_to_users(greeting_method)
+                gpu_frag.create_emails(greeting_method)
+                gpu_frag.send_emails_to_users()
             title = "Multinode GPU Jobs with Fragmentation"
             s += gpu_frag.generate_report_for_admins(title)
 
@@ -381,14 +390,17 @@ if __name__ == "__main__":
     if args.low_cpu_efficiency:
         alerts = [alert for alert in cfg.keys() if "low-cpu-efficiency" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             low_cpu = LowEfficiencyCPU(df,
                                        days_between_emails=args.days,
                                        violation="low_cpu_efficiency",
                                        vpath=violation_logs_path,
                                        subject="Jobs with Low CPU Efficiency",
-                                       **cfg[alert])
+                                       **params)
             if args.email and is_workday:
-                low_cpu.send_emails_to_users(greeting_method)
+                low_cpu.create_emails_to_users(greeting_method)
+                low_cpu.send_emails_to_users()
             title = "Low CPU Efficiencies"
             s += low_cpu.generate_report_for_admins(title, keep_index=True)
 
@@ -399,14 +411,17 @@ if __name__ == "__main__":
     if args.low_gpu_efficiency:
         alerts = [alert for alert in cfg.keys() if "low-gpu-efficiency" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             low_gpu = LowEfficiencyGPU(df,
                                        days_between_emails=args.days,
                                        violation="low_gpu_efficiency",
                                        vpath=violation_logs_path,
                                        subject="Jobs with Low GPU Efficiency",
-                                       **cfg[alert])
+                                       **params)
             if args.email and is_workday:
-                low_gpu.send_emails_to_users(greeting_method)
+                low_gpu.create_emails(greeting_method)
+                low_gpu.send_emails_to_users()
             title = "Low GPU Efficiencies"
             s += low_gpu.generate_report_for_admins(title, keep_index=True)
 
@@ -416,15 +431,18 @@ if __name__ == "__main__":
     #######################
     if args.excess_cpu_memory:
         alerts = [alert for alert in cfg.keys() if "excess-cpu-memory" in alert]
-        for alert in alerts: 
+        for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             mem_hours = ExcessCPUMemory(df,
                                         days_between_emails=args.days,
                                         violation="excess_cpu_memory",
                                         vpath=violation_logs_path,
                                         subject="Jobs Requesting Too Much CPU Memory",
-                                        **cfg[alert])
+                                        **params)
             if args.email and is_workday:
-                mem_hours.send_emails_to_users(greeting_method)
+                mem_hours.create_emails(greeting_method)
+                mem_hours.send_emails_to_users()
             title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
             s += mem_hours.generate_report_for_admins(title, keep_index=True)
 
@@ -444,7 +462,8 @@ if __name__ == "__main__":
                                      subject="Serial Jobs Allocating Multiple CPU-cores",
                                      **params)
             if args.email and is_workday:
-                serial.send_emails_to_users(greeting_method)
+                serial.create_emails(greeting_method)
+                serial.send_emails_to_users()
             title = "Serial Jobs Allocating Multiple CPU-cores"
             s += serial.generate_report_for_admins(title, keep_index=True)
 
@@ -455,14 +474,17 @@ if __name__ == "__main__":
     if args.zero_cpu_utilization:
         alerts = [alert for alert in cfg.keys() if "zero-cpu-utilization" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             zero_cpu = ZeroCPU(df,
                                days_between_emails=args.days,
                                violation="zero_cpu_utilization",
                                vpath=violation_logs_path,
                                subject="Jobs with Zero CPU Utilization",
-                               **cfg[alert])
+                               **params)
             if args.email and is_workday:
-                zero_cpu.send_emails_to_users(greeting_method)
+                zero_cpu.create_emails(greeting_method)
+                zero_cpu.send_emails_to_users()
             title = "Jobs with Zero CPU Utilization"
             s += zero_cpu.generate_report_for_admins(title, keep_index=False)
 
@@ -473,14 +495,17 @@ if __name__ == "__main__":
     if args.too_many_cores_per_gpu:
         alerts = [alert for alert in cfg.keys() if "too-many-cores-per-gpu" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             cpg = TooManyCoresPerGpu(df,
                                      days_between_emails=args.days,
                                      violation="too_many_cores_per_gpu",
                                      vpath=violation_logs_path,
                                      subject="Consider Using Fewer CPU-Cores per GPU",
-                                     **cfg[alert])
+                                     **params)
             if args.email and is_workday:
-                cpg.send_emails_to_users(greeting_method)
+                cpg.create_emails(greeting_method)
+                cpg.send_emails_to_users()
             title = "Too Many Cores Per GPU"
             s += cpg.generate_report_for_admins(title)
 
@@ -491,14 +516,17 @@ if __name__ == "__main__":
     if args.too_much_cpu_mem_per_gpu:
         alerts = [alert for alert in cfg.keys() if "too-much-cpu-mem-per-gpu" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             mpg = TooMuchCpuMemPerGpu(df,
                                       days_between_emails=args.days,
                                       violation="too_much_cpu_mem_per_gpu",
                                       vpath=violation_logs_path,
                                       subject="Consider Allocating Less CPU Memory per GPU",
-                                      **cfg[alert])
+                                      **params)
             if args.email and is_workday:
-                mpg.send_emails_to_users(greeting_method)
+                mpg.create_emails(greeting_method)
+                mpg.send_emails_to_users()
             title = "Too Much CPU Memory Per GPU"
             s += mpg.generate_report_for_admins(title)
 
@@ -509,14 +537,17 @@ if __name__ == "__main__":
     if args.excessive_time:
         alerts = [alert for alert in cfg.keys() if "excessive-time" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             time_limits = ExcessiveTimeLimits(df,
                                               days_between_emails=args.days,
                                               violation="excessive_time_limits",
                                               vpath=violation_logs_path,
                                               subject="Requesting Too Much Time for Jobs",
-                                              **cfg[alert])
+                                              **params)
             if args.email and is_workday:
-                time_limits.send_emails_to_users(greeting_method)
+                time_limits.create_emails(greeting_method)
+                time_limits.send_emails_to_users()
             title = "Excessive Time Limits"
             s += time_limits.generate_report_for_admins(title)
 
@@ -527,14 +558,17 @@ if __name__ == "__main__":
     if args.gpu_model_too_powerful:
         alerts = [alert for alert in cfg.keys() if "gpu-model-too-powerful" in alert]
         for alert in alerts:
+            params = cfg[alert]
+            params.update(sys_cfg)
             too_power = GpuModelTooPowerful(df,
                                             days_between_emails=args.days,
                                             violation="gpu_model_too_powerful",
                                             vpath=violation_logs_path,
                                             subject="Jobs with GPU Model Too Powerful",
-                                            **cfg[alert])
+                                            **params)
             if args.email and is_workday:
-                too_power.send_emails_to_users(greeting_method)
+                too_power.create_emails(greeting_method)
+                too_power.send_emails_to_users()
             s += too_power.generate_report_for_admins("GPU Model Too Powerful")
 
 
@@ -610,9 +644,9 @@ if __name__ == "__main__":
         title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
         s += most_gpus.generate_report_for_admins(title)
 
-    ########################## 
+    ##########################
     ## SEND EMAIL TO ADMINS ##
-    ########################## 
+    ##########################
     if args.report:
         send_email(s, "halverson@princeton.edu", subject="Cluster utilization report", sender="halverson@princeton.edu")
 

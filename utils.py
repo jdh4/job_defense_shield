@@ -117,13 +117,13 @@ def seconds_to_slurm_time_format(seconds: int) -> str:
     seconds %= 60
     return "%s%02d:%02d" % (hour, minutes, seconds)
 
-def send_email(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu"):
+def send_email(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu", reply_to="cses@princeton.edu"):
   """Send an email in HTML to the user."""
   msg = MIMEMultipart('alternative')
   msg['Subject'] = subject
   msg['From'] = sender
   msg['To'] = addressee
-  msg.add_header("reply-to", "cses@princeton.edu")
+  msg.add_header("reply-to", reply_to)
   text = "None"
   html = f'<html><head></head><body><font face="Courier New, Courier, monospace"><pre>{s}</pre></font></body></html>'
   part1 = MIMEText(text, 'plain'); msg.attach(part1)

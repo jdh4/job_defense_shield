@@ -1,5 +1,4 @@
 from base import Alert
-from utils import send_email
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from greeting import GreetingFactory
@@ -44,7 +43,7 @@ class TooManyCoresPerGpu(Alert):
             self.df["Hours"] = self.df["Hours"].apply(lambda x: str(round(x, 1))
                                                       if x < 5 else str(round(x)))
 
-    def send_emails_to_users(self, method):
+    def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
@@ -64,15 +63,8 @@ class TooManyCoresPerGpu(Alert):
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 tags["<PARTITIONS>"] = ",".join(self.partitions)
                 translator = EmailTranslator(self.email_file, tags)
-                s = translator.replace_tags()
-
-                send_email(s, f"{user}@princeton.edu", subject=f"{self.subject}")
-                for email in self.admin_emails:
-                    send_email(s, f"{email}", subject=f"{self.subject}")
-                print(s)
-
-                # append the new violations to the log file
-                Alert.update_violation_log(usr, vfile)
+                email = translator.replace_tags()
+                self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
