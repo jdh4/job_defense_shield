@@ -11,6 +11,7 @@ def test_too_many_cores_per_gpu():
                        "cores":[96, 20, 96, 8, 64],
                        "gpus":[3, 1, 3, 4, 2],
                        "partition":["pli"] * n_jobs,
+                       "state":["COMPLETED"] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
     target = 12
     cpg = TooManyCoresPerGpu(df,
@@ -26,6 +27,7 @@ def test_too_many_cores_per_gpu():
                              cores_per_gpu_target=target,
                              cores_per_gpu_limit=16,
                              min_run_time=30,
+                             include_running_jobs=False,
                              excluded_users=["aturing", "einstein"])
     actual = cpg.df[["User",
                      "Cores-per-GPU",

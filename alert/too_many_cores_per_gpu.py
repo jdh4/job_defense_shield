@@ -20,6 +20,8 @@ class TooManyCoresPerGpu(Alert):
                           (self.df.cores > self.cores_per_gpu_limit * self.df.gpus) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        if not self.include_running_jobs:
+            self.df = self.df[self.df.state != "RUNNING"]
         self.df.rename(columns={"user":"User"}, inplace=True)
         # add new fields
         if not self.df.empty:

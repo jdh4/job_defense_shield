@@ -19,9 +19,11 @@ class ZeroCPU(Alert):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
-                          (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        if self.include_running_jobs:
+            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        self.df = self.df[self.df.admincomment != {}]
         # add new fields
         if not self.df.empty:
             self.df["nodes-tuple"] = self.df.apply(lambda row:

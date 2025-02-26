@@ -1,12 +1,12 @@
 import os
 import sys
-import json
 from datetime import datetime
 from abc import abstractmethod
 import pandas as pd
 from utils import send_email
 from utils import SECONDS_PER_HOUR
 from utils import HOURS_PER_DAY
+
 
 class Alert:
 
@@ -86,7 +86,7 @@ class Alert:
               end="",
               flush=True)
         adminc = self.df.apply(lambda row:
-                               json.loads(Jobstats(jobid=row["jobid"],
+                               eval(Jobstats(jobid=row["jobid"],
                                                    cluster=row["cluster"],
                                                    prom_server=PROM_SERVER).report_job_json(False))
                                if row["state"] == "RUNNING"

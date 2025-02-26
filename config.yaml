@@ -54,6 +54,7 @@ zero-cpu-utilization-1:
     - pu
   min_run_time: 61 # minutes
   email_file: "email/zero_cpu_utilization.txt"
+  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -65,6 +66,7 @@ zero-cpu-utilization-2:
     - physics
   min_run_time: 61 # minutes
   email_file: "email/zero_cpu_utilization.txt"
+  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -86,7 +88,7 @@ zero-util-gpu-hours-1:
   gpu_hours_threshold_admin: 24 # hours
   max_num_jobid_admin: 4        # count
   email_file: "email/zero_util_gpu_hours.txt"
-  include_running_jobs: False
+  include_running_jobs: True
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -110,6 +112,7 @@ too-many-cores-per-gpu-1:
   cores_per_gpu_limit: 18
   min_run_time: 61 # minutes
   email_file: "email/too_many_cores_per_gpu.txt"
+  include_running_jobs: False
   excluded_users:
     - aturing
     - einstein
