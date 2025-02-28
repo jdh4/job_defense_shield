@@ -169,25 +169,24 @@ class ExcessCPUMemory(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Drop and rename some of the columns."""
         if self.admin.empty:
-            return ""
-        else:
-            cols = ["cluster",
-                    "partition",
-                    "User",
-                    "proportion",
-                    "mem-hrs-unused",
-                    "mem-hrs-used",
-                    "ratio",
-                    "mean-ratio",
-                    "median-ratio",
-                    "cpu-hrs",
-                    "jobs",
-                    "emails"]
-            self.admin = self.admin[cols]
-            self.admin.emails = self.format_email_counts(self.admin.emails)
-            renamings = {"mem-hrs-unused":"unused",
-                         "mem-hrs-used":"used",
-                         "mean-ratio":"mean",
-                         "median-ratio":"median"}
-            self.admin = self.admin.rename(columns=renamings)
-            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.admin), title)
+        cols = ["cluster",
+                "partition",
+                "User",
+                "proportion",
+                "mem-hrs-unused",
+                "mem-hrs-used",
+                "ratio",
+                "mean-ratio",
+                "median-ratio",
+                "cpu-hrs",
+                "jobs",
+                "emails"]
+        self.admin = self.admin[cols]
+        self.admin.emails = self.format_email_counts(self.admin.emails)
+        renamings = {"mem-hrs-unused":"unused",
+                     "mem-hrs-used":"used",
+                     "mean-ratio":"mean",
+                     "median-ratio":"median"}
+        self.admin = self.admin.rename(columns=renamings)
+        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

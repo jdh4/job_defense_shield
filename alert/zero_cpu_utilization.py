@@ -88,10 +88,9 @@ class ZeroCPU(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Rename some of the columns."""
         if self.df.empty:
-            return ""
-        else:
-            self.df = self.df.sort_values(["User", "JobID"])
-            self.df["emails"] = self.df.User.apply(lambda user:
-                                     self.get_emails_sent_count(user, self.violation))
-            self.df.emails = self.format_email_counts(self.df.emails)
-            return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.df), title)
+        self.df = self.df.sort_values(["User", "JobID"])
+        self.df["emails"] = self.df.User.apply(lambda user:
+                                 self.get_emails_sent_count(user, self.violation))
+        self.df.emails = self.format_email_counts(self.df.emails)
+        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

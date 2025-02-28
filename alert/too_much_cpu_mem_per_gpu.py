@@ -101,7 +101,7 @@ class TooMuchCpuMemPerGpu(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
-            return ""
+            return add_dividers(self.create_empty_report(self.df), title)
         self.df.drop(columns=["CPU-Mem-Used"], inplace=True)
         self.df["CPU-Mem"] = self.df["CPU-Mem"].apply(lambda x: f"{x} GB")
         self.df["Mem-Eff"] = self.df["Mem-Eff"].apply(lambda x: f"{round(100 * x)}%")

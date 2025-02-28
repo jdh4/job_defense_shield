@@ -110,13 +110,12 @@ class ExcessiveTimeLimits(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Rename some of the columns."""
         if self.gp.empty:
-            return ""
-        else:
-            xpu = "cpu"
-            renamings = {f"{xpu}-hours":"used",
-                         f"{xpu}-alloc-hours":"total"}
-            self.gp = self.gp.rename(columns=renamings)
-            self.gp["emails"] = self.gp.User.apply(lambda user:
-                                     self.get_emails_sent_count(user, self.violation))
-            self.gp.emails = self.format_email_counts(self.gp.emails)
-            return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.gp), title)
+        xpu = "cpu"
+        renamings = {f"{xpu}-hours":"used",
+                     f"{xpu}-alloc-hours":"total"}
+        self.gp = self.gp.rename(columns=renamings)
+        self.gp["emails"] = self.gp.User.apply(lambda user:
+                                 self.get_emails_sent_count(user, self.violation))
+        self.gp.emails = self.format_email_counts(self.gp.emails)
+        return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)

@@ -12,7 +12,7 @@ def test_add_dividers():
     df_str = "x y\n1 1\n2 2\n3 3"
     title = "points"
     actual = add_dividers(df_str, title, pre="", post="")
-    expected = "points\n------\nx y\n------\n1 1\n2 2\n3 3\n"
+    expected = "points\n------\nx y\n------\n1 1\n2 2\n3 3\n------\n"
     assert actual == expected
 
 def test_gpus_per_job():

@@ -1,6 +1,7 @@
 """Abstract and concrete classes to get the raw job data."""
 
 import os
+import sys
 import subprocess
 from datetime import datetime
 from datetime import timedelta
@@ -62,5 +63,14 @@ class SlurmSacct(RawJobData):
             rows = rows[:-1]
         cols = self.fields.split(",")
         raw = pd.DataFrame([row.split("|")[:len(cols)] for row in rows])
+        if raw.empty:
+            msg = (
+                   "\nCall to sacct resulted in no job data. If this is surprising\n"
+                   "then check the spelling of your cluster and/or partition names\n"
+                   "in config.yml and -M <clusters> -r <partition>. Run again using\n"
+                   "the only option --utilization-overview to see what is available."""
+                  )
+            print(msg)
+            sys.exit()
         raw.columns = cols
         return raw

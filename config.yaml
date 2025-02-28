@@ -27,7 +27,8 @@ external-emails:
 ####################################
 gpu-model-too-powerful-1:
   cluster: della
-  partition: gpu
+  partitions:
+    - gpu
   min_run_time: 61 # minutes
   num_cores_threshold: 1
   gpu_util_target: "50%"
@@ -88,7 +89,7 @@ zero-util-gpu-hours-1:
   gpu_hours_threshold_admin: 24 # hours
   max_num_jobid_admin: 4        # count
   email_file: "email/zero_util_gpu_hours.txt"
-  include_running_jobs: True
+  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu

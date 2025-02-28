@@ -66,9 +66,7 @@ class JobsOverview(Alert):
                 "partitions"]
         self.gp = self.gp[cols]
 
-    def create_emails(self):
-        """There are no emails for this alert."""
-        pass
-
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+        if self.gp.empty:
+            return add_dividers(self.create_empty_report(self.gp), title)
         return add_dividers(self.gp.head(10).to_string(index=keep_index, justify="center"), title)

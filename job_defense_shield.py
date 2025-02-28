@@ -336,10 +336,8 @@ if __name__ == "__main__":
                 zero_gpu_hours.create_emails(greeting_method)
                 zero_gpu_hours.send_emails_to_users()
             title="GPU-Hours at 0% Utilization"
-            s += zero_gpu_hours.generate_report_for_admins(title,
-                                                           start_date,
-                                                           end_date,
-                                                           keep_index=True)
+            s += zero_gpu_hours.generate_report_for_admins(title, keep_index=True)
+            s += zero_gpu_hours.add_report_metadata(start_date, end_date)
 
 
     #################################
@@ -361,6 +359,7 @@ if __name__ == "__main__":
                 cpu_frag.send_emails_to_users()
             title = "Multinode CPU Jobs with Fragmentation"
             s += cpu_frag.generate_report_for_admins(title, keep_index=False)
+            s += cpu_frag.add_report_metadata(start_date, end_date)
 
 
     #################################
@@ -382,6 +381,7 @@ if __name__ == "__main__":
                 gpu_frag.send_emails_to_users()
             title = "Multinode GPU Jobs with Fragmentation"
             s += gpu_frag.generate_report_for_admins(title)
+            s += gpu_frag.add_report_metadata(start_date, end_date)
 
 
     ########################
@@ -403,6 +403,7 @@ if __name__ == "__main__":
                 low_cpu.send_emails_to_users()
             title = "Low CPU Efficiencies"
             s += low_cpu.generate_report_for_admins(title, keep_index=True)
+            s += low_cpu.add_report_metadata(start_date, end_date)
 
 
     ########################
@@ -424,6 +425,7 @@ if __name__ == "__main__":
                 low_gpu.send_emails_to_users()
             title = "Low GPU Efficiencies"
             s += low_gpu.generate_report_for_admins(title, keep_index=True)
+            s += low_gpu.add_report_metadata(start_date, end_date)
 
 
     #######################
@@ -445,6 +447,7 @@ if __name__ == "__main__":
                 mem_hours.send_emails_to_users()
             title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
             s += mem_hours.generate_report_for_admins(title, keep_index=True)
+            s += mem_hours.add_report_metadata(start_date, end_date)
 
 
     ###########################################
@@ -466,6 +469,7 @@ if __name__ == "__main__":
                 serial.send_emails_to_users()
             title = "Serial Jobs Allocating Multiple CPU-cores"
             s += serial.generate_report_for_admins(title, keep_index=True)
+            s += serial.add_report_metadata(start_date, end_date)
 
 
     ##########################
@@ -487,6 +491,7 @@ if __name__ == "__main__":
                 zero_cpu.send_emails_to_users()
             title = "Jobs with Zero CPU Utilization"
             s += zero_cpu.generate_report_for_admins(title, keep_index=False)
+            s += zero_cpu.add_report_metadata(start_date, end_date)
 
 
     ############################
@@ -508,6 +513,7 @@ if __name__ == "__main__":
                 cpg.send_emails_to_users()
             title = "Too Many Cores Per GPU"
             s += cpg.generate_report_for_admins(title)
+            s += cpg.add_report_metadata(start_date, end_date)
 
 
     #################################
@@ -529,6 +535,7 @@ if __name__ == "__main__":
                 mpg.send_emails_to_users()
             title = "Too Much CPU Memory Per GPU"
             s += mpg.generate_report_for_admins(title)
+            s += mpg.add_report_metadata(start_date, end_date)
 
 
     ###########################
@@ -550,6 +557,7 @@ if __name__ == "__main__":
                 time_limits.send_emails_to_users()
             title = "Excessive Time Limits"
             s += time_limits.generate_report_for_admins(title)
+            s += time_limits.add_report_metadata(start_date, end_date)
 
 
     ############################
@@ -570,6 +578,7 @@ if __name__ == "__main__":
                 too_power.create_emails(greeting_method)
                 too_power.send_emails_to_users()
             s += too_power.generate_report_for_admins("GPU Model Too Powerful")
+            s += too_power.add_report_metadata(start_date, end_date)
 
 
     ################################

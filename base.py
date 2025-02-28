@@ -75,6 +75,20 @@ class Alert:
             A table of data as a string.
         """
 
+    @staticmethod
+    def create_empty_report(df_empty: pd.DataFrame) -> str:
+        heading = "  ".join(df_empty)
+        return heading + "\n" + "No entries".center(len(heading))
+
+    def add_report_metadata(self, start_date: datetime, end_date: datetime) -> str:
+        """Add data to the bottom of the report."""
+        s = f"   Cluster: {self.cluster}\n" 
+        s += f"Partitions: {', '.join(self.partitions)}\n" 
+        fmt = "%a %b %d, %Y at %I:%M %p"
+        s += f"     Start: {start_date.strftime(fmt)}\n" 
+        s += f"       End: {end_date.strftime(fmt)}\n" 
+        return s
+
     def get_admincomment_for_running_jobs(self) -> pd.Series:
         """Query the Prometheus server for the admincomment of
         jobs in a RUNNING state."""

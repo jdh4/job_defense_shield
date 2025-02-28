@@ -81,7 +81,7 @@ def test_gpu_model_too_powerful():
                                     "",
                                     "Subject",
                                     cluster="della",
-                                    partition="gpu",
+                                    partitions=["gpu"],
                                     min_run_time=0,
                                     num_cores_threshold=1,
                                     gpu_hours_threshold=24,

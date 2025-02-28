@@ -50,8 +50,10 @@ def add_dividers(df_str: str, title: str="", pre: str="\n\n\n", post: str="") ->
     else:
         rows.insert(0, divider)
         rows.insert(2, divider)
+    # need to remove post
     if post:
         rows.append(divider)
+    rows.append(divider)
     return pre + "\n".join(rows) + "\n" + post
 
 def show_history_of_emails_sent(vpath, mydir, title, day_ticks):

@@ -90,25 +90,15 @@ class ZeroUtilGPUHours(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self,
-                                   title: str,
-                                   start_date: datetime,
-                                   end_date: datetime,
-                                   keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.admin.empty:
-            return ""
-        else:
-            self.admin["emails"] = self.admin.User.apply(lambda user:
-                                        self.get_emails_sent_count(user, self.violation))
-            self.admin.emails = self.format_email_counts(self.admin.emails)
-            self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
-            self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
-            self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})
-            self.admin.reset_index(drop=True, inplace=True)
-            self.admin.index += 1
-            post  = f"   Cluster: {self.cluster}\n" 
-            post += f"Partitions: {', '.join(self.partitions)}\n" 
-            fmt = "%a %b %d, %Y at %I:%M %p"
-            post += f"     Start: {start_date.strftime(fmt)}\n" 
-            post += f"       End: {end_date.strftime(fmt)}\n" 
-            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title, post=post)
+            return add_dividers(self.create_empty_report(self.admin), title)
+        self.admin["Emails"] = self.admin.User.apply(lambda user:
+                                    self.get_emails_sent_count(user, self.violation))
+        self.admin.Emails = self.format_email_counts(self.admin.Emails)
+        self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
+        self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
+        self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})
+        self.admin.reset_index(drop=True, inplace=True)
+        self.admin.index += 1
+        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

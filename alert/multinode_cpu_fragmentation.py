@@ -139,12 +139,9 @@ class MultinodeCpuFragmentation(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
-            return ""
-        else:
-            self.df["emails"] = self.df.user.apply(lambda user:
-                                     self.get_emails_sent_count(user, self.violation))
-            self.df.emails = self.format_email_counts(self.df.emails)
-            self.df = self.df.drop(columns=["cluster", "partition"])
-            post  = f"   Cluster: {self.cluster}\n" 
-            post += f"Partitions: {', '.join(self.partitions)}\n" 
-            return add_dividers(self.df.to_string(index=keep_index, justify="center"), title, post=post)
+            return add_dividers(self.create_empty_report(self.df), title)
+        self.df["emails"] = self.df.user.apply(lambda user:
+                                 self.get_emails_sent_count(user, self.violation))
+        self.df.emails = self.format_email_counts(self.df.emails)
+        self.df = self.df.drop(columns=["cluster", "partition"])
+        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

@@ -4,10 +4,7 @@ from utils import add_dividers
 
 class UtilizationBySlurmAccount(Alert):
 
-    """Utilization of each user within a Slurm account. This is useful
-       for computing the number of GPU-hours consumed which is not
-       available from sreport. Note that sreport generates results by
-       performing the aggregation over all partitions."""
+    """Utilization of each user within each Slurm account."""
 
     def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
@@ -46,11 +43,6 @@ class UtilizationBySlurmAccount(Alert):
                                                 ascending=[True, True, True, False])
         cols = ["cpu-hours", "gpu-hours"]
         self.by_user[cols] = self.by_user[cols].apply(round).astype("int64")
-        # one could add the proportions in parentheses
-
-    def create_emails(self):
-        """There are no emails for this alert."""
-        pass
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         by_acc = self.gp.to_string(index=keep_index, justify="center")

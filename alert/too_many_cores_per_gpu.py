@@ -70,7 +70,7 @@ class TooManyCoresPerGpu(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
-            return ""
+            return add_dividers(self.create_empty_report(self.df), title)
         self.df["emails"] = self.df.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
         self.df.emails = self.format_email_counts(self.df.emails)

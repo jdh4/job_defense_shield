@@ -28,11 +28,7 @@ class LongestQueuedJobs(Alert):
         self.df.sort_values("s-days", ascending=False, inplace=True)
         self.df = self.df[self.df["s-days"] >= 4][:10]
 
-    def create_emails(self):
-        pass
-
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
-            return ""
-        else:
-            return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.df), title)
+        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

@@ -122,7 +122,7 @@ class SerialAllocatingMultipleCores(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.gp.empty:
-            return ""
+            return add_dividers(self.create_empty_report(self.gp), title)
         self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
         self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x:
                                                     str(round(x, 1)).replace(".0", ""))

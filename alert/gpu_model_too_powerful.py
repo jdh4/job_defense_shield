@@ -18,7 +18,7 @@ class GpuModelTooPowerful(Alert):
     def _filter_and_add_new_fields(self):
         # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
-                          (self.df.partition == self.partition) &
+                          (self.df.partition.isin(self.partitions)) &
                           (self.df.cores == self.num_cores_threshold) &
                           (self.df.gpus == 1) &
                           (self.df.admincomment != {}) &
@@ -76,7 +76,7 @@ class GpuModelTooPowerful(Alert):
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITION>"] = self.partition  # multiple partitions?
+                tags["<PARTITIONS>"] = ",".join(self.partitions)
                 tags["<TARGET>"] = self.gpu_util_target
                 tags["<NUM-JOBS>"] = str(len(usr))
                 indent = 4 * " "
@@ -89,20 +89,19 @@ class GpuModelTooPowerful(Alert):
               
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
-            return ""
-        else:
-            def jobid_list(series):
-                ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
-                return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
-            d = {"Hours":"sum", "User":"size", "JobID":jobid_list}
-            self.admin = self.df.groupby("User").agg(d)
-            self.admin["Hours"] = self.admin["Hours"].apply(lambda hrs: round(hrs, 1))
-            renamings = {"User":"Jobs", "Hours":"GPU-Hours"}
-            self.admin = self.admin.rename(columns=renamings)
-            self.admin = self.admin.sort_values(by="GPU-Hours", ascending=False)
-            self.admin.reset_index(drop=False, inplace=True)
-            self.admin.index += 1
-            self.admin["emails"] = self.admin["User"].apply(lambda user:
-                                        self.get_emails_sent_count(user, self.violation))
-            self.admin.emails = self.format_email_counts(self.admin.emails)
-            return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.df), title)
+        def jobid_list(series):
+            ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
+            return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
+        d = {"Hours":"sum", "User":"size", "JobID":jobid_list}
+        self.admin = self.df.groupby("User").agg(d)
+        self.admin["Hours"] = self.admin["Hours"].apply(lambda hrs: round(hrs, 1))
+        renamings = {"User":"Jobs", "Hours":"GPU-Hours"}
+        self.admin = self.admin.rename(columns=renamings)
+        self.admin = self.admin.sort_values(by="GPU-Hours", ascending=False)
+        self.admin.reset_index(drop=False, inplace=True)
+        self.admin.index += 1
+        self.admin["emails"] = self.admin["User"].apply(lambda user:
+                                    self.get_emails_sent_count(user, self.violation))
+        self.admin.emails = self.format_email_counts(self.admin.emails)
+        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
