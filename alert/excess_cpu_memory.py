@@ -170,9 +170,7 @@ class ExcessCPUMemory(Alert):
         """Drop and rename some of the columns."""
         if self.admin.empty:
             return add_dividers(self.create_empty_report(self.admin), title)
-        cols = ["cluster",
-                "partition",
-                "User",
+        cols = ["User",
                 "proportion",
                 "mem-hrs-unused",
                 "mem-hrs-used",

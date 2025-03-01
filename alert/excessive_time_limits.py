@@ -108,9 +108,19 @@ class ExcessiveTimeLimits(Alert):
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
-        """Rename some of the columns."""
+        """Generate a table for system administrators."""
         if self.gp.empty:
+            column_names = ["User",
+                            "CPU-Hours-Unused",
+                            "CPU-Hours",
+                            "CPU-Alloc-Hours",
+                            "Mean(%)",
+                            "Median(%)",
+                            "Rank",
+                            "Jobs"]
+            self.gp = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.gp), title)
+        self.gp = self.gp.drop(columns=["cluster", "partition"])
         xpu = "cpu"
         renamings = {f"{xpu}-hours":"used",
                      f"{xpu}-alloc-hours":"total"}

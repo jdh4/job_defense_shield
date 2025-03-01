@@ -101,11 +101,21 @@ class TooMuchCpuMemPerGpu(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
+            column_names = ["JobID",
+                            "User",
+                            "Hours",
+                            "Mem-Eff",
+                            "CPU-Mem",
+                            "GPUs",
+                            "CPU-Mem-per-GPU",
+                            "CPU-Mem-per-GPU-Limit",
+                            "Emails"]
+            self.df = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.df), title)
         self.df.drop(columns=["CPU-Mem-Used"], inplace=True)
         self.df["CPU-Mem"] = self.df["CPU-Mem"].apply(lambda x: f"{x} GB")
         self.df["Mem-Eff"] = self.df["Mem-Eff"].apply(lambda x: f"{round(100 * x)}%")
-        self.df["emails"] = self.df.User.apply(lambda user:
+        self.df["Emails"] = self.df.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
-        self.df.emails = self.format_email_counts(self.df.emails)
+        self.df.Emails = self.format_email_counts(self.df.Emails)
         return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

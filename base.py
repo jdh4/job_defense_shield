@@ -29,7 +29,6 @@ class Alert:
         for key in props:
             setattr(self, key, props[key])
         self._filter_and_add_new_fields()
-        # create directory to store user violations
         if self.vbase and not os.path.exists(self.vbase):
             os.mkdir(self.vbase)
 
@@ -78,7 +77,7 @@ class Alert:
     @staticmethod
     def create_empty_report(df_empty: pd.DataFrame) -> str:
         heading = "  ".join(df_empty)
-        return heading + "\n" + "No entries".center(len(heading))
+        return heading + "\n" + "no entries".center(len(heading))
 
     def add_report_metadata(self, start_date: datetime, end_date: datetime) -> str:
         """Add data to the bottom of the report."""

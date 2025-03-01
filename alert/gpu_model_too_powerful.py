@@ -89,6 +89,14 @@ class GpuModelTooPowerful(Alert):
               
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
+            column_names = ["JobID",
+                            "User",
+                            "GPU-Util",
+                            "GPU-Mem-Used",
+                            "CPU-Mem-Used",
+                            "Hours",
+                            "Emails"]
+            self.df = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.df), title)
         def jobid_list(series):
             ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
@@ -101,7 +109,7 @@ class GpuModelTooPowerful(Alert):
         self.admin = self.admin.sort_values(by="GPU-Hours", ascending=False)
         self.admin.reset_index(drop=False, inplace=True)
         self.admin.index += 1
-        self.admin["emails"] = self.admin["User"].apply(lambda user:
+        self.admin["Emails"] = self.admin["User"].apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
-        self.admin.emails = self.format_email_counts(self.admin.emails)
+        self.admin.Emails = self.format_email_counts(self.admin.Emails)
         return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)

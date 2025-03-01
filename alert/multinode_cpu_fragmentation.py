@@ -139,6 +139,16 @@ class MultinodeCpuFragmentation(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.df.empty:
+            column_names = ["JobID",
+                            "User",
+                            "Nodes",
+                            "Cores",
+                            "Mem-per-Node-Used",
+                            "Cores-per-Node",
+                            "Hours",
+                            "Min-Nodes",
+                            "Emails"]
+            self.df = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.df), title)
         self.df["emails"] = self.df.user.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))

@@ -12,7 +12,7 @@ greeting-method: getent
 workday-method: usa
 holidays-file: /path/to/job_defense_shield/holidays.txt
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
-admin-reports:
+report-emails:
     - halverson@princeton.edu
 email-domain-name: "princeton.edu"
 partition-renamings:

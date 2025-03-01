@@ -88,9 +88,19 @@ class ZeroCPU(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Rename some of the columns."""
         if self.df.empty:
+            column_names = ["JobID",
+                            "User",
+                            "Nodes",
+                            "Nodes-Unused",
+                            "CPU-Util-Unused",
+                            "Cores",
+                            "Hours",
+                            "Emails"]
+            self.df = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.df), title)
+        self.df = self.df.drop(columns=["Cluster"])
         self.df = self.df.sort_values(["User", "JobID"])
-        self.df["emails"] = self.df.User.apply(lambda user:
+        self.df["Emails"] = self.df.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
-        self.df.emails = self.format_email_counts(self.df.emails)
+        self.df.Emails = self.format_email_counts(self.df.Emails)
         return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)

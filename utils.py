@@ -119,47 +119,39 @@ def seconds_to_slurm_time_format(seconds: int) -> str:
     seconds %= 60
     return "%s%02d:%02d" % (hour, minutes, seconds)
 
-def send_email(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu", reply_to="cses@princeton.edu"):
-  """Send an email in HTML to the user."""
-  msg = MIMEMultipart('alternative')
-  msg['Subject'] = subject
-  msg['From'] = sender
-  msg['To'] = addressee
-  msg.add_header("reply-to", reply_to)
-  text = "None"
-  html = f'<html><head></head><body><font face="Courier New, Courier, monospace"><pre>{s}</pre></font></body></html>'
-  part1 = MIMEText(text, 'plain'); msg.attach(part1)
-  part2 = MIMEText(html, 'html');  msg.attach(part2)
-  s = smtplib.SMTP('localhost')
-  s.sendmail(sender, addressee, msg.as_string())
-  s.quit()
-  return None
+def send_email(email_body, addressee, subject, sender, reply_to):
+    """Send an email using simple HTML."""
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['To'] = addressee
+    msg.add_header("reply-to", reply_to)
+    text = ""
+    font = '<font face="Courier New, Courier, monospace">'
+    html = f'<html><head></head><body>{font}<pre>{email_body}</pre></font></body></html>'
+    part1 = MIMEText(text, 'plain')
+    part2 = MIMEText(html, 'html')
+    msg.attach(part1)
+    msg.attach(part2)
+    s = smtplib.SMTP('localhost')
+    s.sendmail(sender, addressee, msg.as_string())
+    s.quit()
+    return None
 
-def send_email_cses(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu"):
-  """Send an email in plain text to the user."""
-  msg = MIMEMultipart('alternative')
-  msg['Subject'] = subject
-  msg['From'] = sender
-  msg['To'] = addressee
-  msg.add_header("reply-to", "cses@princeton.edu")
-  text = s
-  html = f'<html><head></head><body><font face="Courier New, Courier, monospace"><pre>{s}</pre></font></body></html>'
-  part1 = MIMEText(text, 'plain'); msg.attach(part1)
-  #part2 = MIMEText(html, 'html');  msg.attach(part2)
-  s = smtplib.SMTP('localhost')
-  s.sendmail(sender, addressee, msg.as_string())
-  s.quit()
-
-def send_email_html(s, addressee, subject="Slurm job alerts", sender="rcsystems@princeton.edu"):
-  """Send an email in HTML to the user. Use nested tables and styles: https://kinsta.com/blog/html-email/
-     and https://www.emailvendorselection.com/create-html-email/"""
-  from email.message import EmailMessage
-  msg = EmailMessage()
-  msg['Subject'] = subject
-  msg['From'] = sender
-  msg['To'] = addressee
-  html = f'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title></title></head><body><table width="600px" border="0"><tr><td align="center">{s}</td></tr></table></body></html>'
-  msg.set_content(html, subtype="html")
-  # add alternative
-  with smtplib.SMTP('localhost') as s:
-      s.send_message(msg)
+def send_email_enhanced(email_body, addressee, subject, sender, reply_to):
+    """Send an email using HTML. Use nested tables and styles:
+       https://kinsta.com/blog/html-email/
+       and https://www.emailvendorselection.com/create-html-email/"""
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['To'] = addressee
+    msg.add_header("reply-to", reply_to)
+    html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">'
+    html += '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    html += '<title></title></head><body><table width="600px" border="0"><tr>'
+    html += f'<td align="center">{email_body}</td></tr></table></body></html>'
+    msg.set_content(html, subtype="html")
+    with smtplib.SMTP('localhost') as s:
+        s.send_message(msg)

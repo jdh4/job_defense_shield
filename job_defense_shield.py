@@ -399,7 +399,7 @@ if __name__ == "__main__":
                                        subject="Jobs with Low CPU Efficiency",
                                        **params)
             if args.email and is_workday:
-                low_cpu.create_emails_to_users(greeting_method)
+                low_cpu.create_emails(greeting_method)
                 low_cpu.send_emails_to_users()
             title = "Low CPU Efficiencies"
             s += low_cpu.generate_report_for_admins(title, keep_index=True)
@@ -445,7 +445,7 @@ if __name__ == "__main__":
             if args.email and is_workday:
                 mem_hours.create_emails(greeting_method)
                 mem_hours.send_emails_to_users()
-            title = "TB-Hours (1+ hour jobs, ignoring approximately full node jobs)"
+            title = "Users Allocating Excess CPU Memory"
             s += mem_hours.generate_report_for_admins(title, keep_index=True)
             s += mem_hours.add_report_metadata(start_date, end_date)
 
@@ -653,11 +653,20 @@ if __name__ == "__main__":
         title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
         s += most_gpus.generate_report_for_admins(title)
 
-    ##########################
-    ## SEND EMAIL TO ADMINS ##
-    ##########################
+    ####################################
+    ## SEND REPORT BY EMAIL TO ADMINS ##
+    ####################################
     if args.report:
-        send_email(s, "halverson@princeton.edu", subject="Cluster utilization report", sender="halverson@princeton.edu")
+        if "report-emails" in cfg and "sender" in cfg:
+            for report_email in cfg["report-emails"]:
+                send_email(s,
+                           report_email,
+                           subject="Cluster utilization report",
+                           sender=cfg["sender"])
+        else:
+            msg = ("ERROR: --report was found but report-emails and/or "
+                   "sender were not defined in config.yml.\n\n")
+            print(msg)
 
     print(s, end="\n\n")
     print(datetime.now())

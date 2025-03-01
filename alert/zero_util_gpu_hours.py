@@ -92,6 +92,12 @@ class ZeroUtilGPUHours(Alert):
 
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         if self.admin.empty:
+            column_names = ["User",
+                            "GPU-Hours-At-0%",
+                            "Jobs",
+                            "JobID",
+                            "Emails"]
+            self.admin = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.admin), title)
         self.admin["Emails"] = self.admin.User.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))

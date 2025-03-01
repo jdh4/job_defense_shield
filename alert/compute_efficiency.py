@@ -159,7 +159,18 @@ class LowEfficiency(Alert):
     def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
         """Return dataframe for admins."""
         if self.admin.empty:
+            column_names = ["User",
+                            "CPU-Hours",
+                            "Proportion(%)",
+                            "Eff(%)",
+                            "Jobs",
+                            "Interactive",
+                            "Cores",
+                            "Coverage",
+                            "Email"]
+            self.admin = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.admin), title)
+        self.admin = self.admin.drop(columns=["cluster", "partition"])
         self.admin["emails"] = self.admin.user.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.emails = self.format_email_counts(self.admin.emails)
