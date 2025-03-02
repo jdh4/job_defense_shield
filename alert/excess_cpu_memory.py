@@ -9,12 +9,18 @@ from email_translator import EmailTranslator
 
 class ExcessCPUMemory(Alert):
 
-    """Cumulative memory use per user."""
+    """Find users that allocating too much CPU memory."""
  
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        self.combine_partitions = False
-        self.excluded_users = []
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Jobs Requesting Too Much CPU Memory"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Users Allocating Excess CPU Memory"
+        if not hasattr(self, "combine_partitions"):
+            self.combine_partitions = False
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -166,10 +172,21 @@ class ExcessCPUMemory(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         """Drop and rename some of the columns."""
         if self.admin.empty:
-            return add_dividers(self.create_empty_report(self.admin), title)
+            column_names = ["User",
+                            "Proportion",
+                            "Mem-Hrs-Unused",
+                            "Mem-Hrs-Used",
+                            "Ratio",
+                            "Mean-Ratio",
+                            "Median-Ratio",
+                            "CPU-Hrs",
+                            "Jobs",
+                            "Emails"]
+            self.admin = pd.DataFrame(columns=column_names)
+            return add_dividers(self.create_empty_report(self.admin), self.report_title)
         cols = ["User",
                 "proportion",
                 "mem-hrs-unused",
@@ -178,13 +195,15 @@ class ExcessCPUMemory(Alert):
                 "mean-ratio",
                 "median-ratio",
                 "cpu-hrs",
-                "jobs",
-                "emails"]
+                "jobs"]
         self.admin = self.admin[cols]
-        self.admin.emails = self.format_email_counts(self.admin.emails)
+        self.admin["Emails"] = self.admin.User.apply(lambda user:
+                                    self.get_emails_sent_count(user, self.violation))
+        self.admin.Emails = self.format_email_counts(self.admin.Emails)
         renamings = {"mem-hrs-unused":"unused",
                      "mem-hrs-used":"used",
                      "mean-ratio":"mean",
                      "median-ratio":"median"}
         self.admin = self.admin.rename(columns=renamings)
-        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+        report_str = self.admin.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

@@ -66,7 +66,6 @@ def test_low_efficiency():
                                days_between_emails=0,
                                violation="",
                                vpath="",
-                               subject="",
                                cluster="della",
                                partitions=["cpu"],
                                eff_thres_pct=60,

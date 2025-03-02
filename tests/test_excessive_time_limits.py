@@ -17,10 +17,10 @@ def test_excessive_time_limits():
                                  0,
                                  "",
                                  "",
-                                 "Subject",
                                  cluster="della",
                                  partitions=["cpu"],
                                  min_run_time=0,
+                                 num_top_users=10,
                                  absolute_thres_hours=10000,
                                  mean_ratio_threshold=100,
                                  median_ratio_threshold=100)

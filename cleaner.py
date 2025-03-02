@@ -118,7 +118,7 @@ class SacctCleaner(BaseCleaner):
         self.raw = self.raw[pd.notnull(self.raw.alloctres) &
                             (self.raw.alloctres != "") &
                             pd.notnull(self.raw.start) &
-                            (~self.raw.start.isin(["", "None"]))]
+                            (~self.raw.start.isin(["", "nan", "None"]))]
         return self.raw
 
     def clean_time_columns(self) -> pd.DataFrame:

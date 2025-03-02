@@ -10,8 +10,14 @@ class TooManyCoresPerGpu(Alert):
 
     """Find jobs that are allocating too many CPU-cores per GPU."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Consider Using Fewer CPU-Cores per GPU"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Too Many Cores Per GPU"
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -69,7 +75,7 @@ class TooManyCoresPerGpu(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.df.empty:
             column_names = ["JobID",
                             "User",
@@ -80,8 +86,9 @@ class TooManyCoresPerGpu(Alert):
                             "Cores-per-GPU-Target",
                             "Emails"]
             self.df = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.df), title)
+            return add_dividers(self.create_empty_report(self.df), self.report_title)
         self.df["Emails"] = self.df.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
         self.df.Emails = self.format_email_counts(self.df.Emails)
-        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+        report_str = self.df.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

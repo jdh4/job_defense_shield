@@ -330,13 +330,11 @@ if __name__ == "__main__":
                                    days_between_emails=args.days,
                                    violation="zero_util_gpu_hours",
                                    vpath=violation_logs_path,
-                                   subject="GPU-hours at 0% Utilization",
                                    **params)
             if args.email and is_workday:
                 zero_gpu_hours.create_emails(greeting_method)
                 zero_gpu_hours.send_emails_to_users()
-            title="GPU-Hours at 0% Utilization"
-            s += zero_gpu_hours.generate_report_for_admins(title, keep_index=True)
+            s += zero_gpu_hours.generate_report_for_admins(keep_index=True)
             s += zero_gpu_hours.add_report_metadata(start_date, end_date)
 
 
@@ -353,12 +351,12 @@ if __name__ == "__main__":
                                    violation="multinode_cpu_fragmentation",
                                    vpath=violation_logs_path,
                                    subject="Multinode CPU Jobs with Fragmentation",
+                                   title="Multinode CPU Jobs with Fragmentation",
                                    **params)
             if args.email and is_workday:
                 cpu_frag.create_emails(greeting_method)
                 cpu_frag.send_emails_to_users()
-            title = "Multinode CPU Jobs with Fragmentation"
-            s += cpu_frag.generate_report_for_admins(title, keep_index=False)
+            s += cpu_frag.generate_report_for_admins(keep_index=False)
             s += cpu_frag.add_report_metadata(start_date, end_date)
 
 
@@ -375,12 +373,12 @@ if __name__ == "__main__":
                                    violation="multinode_gpu_fragmentation",
                                    vpath=violation_logs_path,
                                    subject="Multinode GPU Jobs with Fragmentation",
+                                   title="Multinode GPU Jobs with Fragmentation",
                                    **params)
             if args.email and is_workday:
                 gpu_frag.create_emails(greeting_method)
                 gpu_frag.send_emails_to_users()
-            title = "Multinode GPU Jobs with Fragmentation"
-            s += gpu_frag.generate_report_for_admins(title)
+            s += gpu_frag.generate_report_for_admins()
             s += gpu_frag.add_report_metadata(start_date, end_date)
 
 
@@ -396,13 +394,11 @@ if __name__ == "__main__":
                                        days_between_emails=args.days,
                                        violation="low_cpu_efficiency",
                                        vpath=violation_logs_path,
-                                       subject="Jobs with Low CPU Efficiency",
                                        **params)
             if args.email and is_workday:
                 low_cpu.create_emails(greeting_method)
                 low_cpu.send_emails_to_users()
-            title = "Low CPU Efficiencies"
-            s += low_cpu.generate_report_for_admins(title, keep_index=True)
+            s += low_cpu.generate_report_for_admins(keep_index=True)
             s += low_cpu.add_report_metadata(start_date, end_date)
 
 
@@ -419,12 +415,12 @@ if __name__ == "__main__":
                                        violation="low_gpu_efficiency",
                                        vpath=violation_logs_path,
                                        subject="Jobs with Low GPU Efficiency",
+                                       title="Low GPU Efficiencies",
                                        **params)
             if args.email and is_workday:
                 low_gpu.create_emails(greeting_method)
                 low_gpu.send_emails_to_users()
-            title = "Low GPU Efficiencies"
-            s += low_gpu.generate_report_for_admins(title, keep_index=True)
+            s += low_gpu.generate_report_for_admins(keep_index=True)
             s += low_gpu.add_report_metadata(start_date, end_date)
 
 
@@ -440,13 +436,11 @@ if __name__ == "__main__":
                                         days_between_emails=args.days,
                                         violation="excess_cpu_memory",
                                         vpath=violation_logs_path,
-                                        subject="Jobs Requesting Too Much CPU Memory",
                                         **params)
             if args.email and is_workday:
                 mem_hours.create_emails(greeting_method)
                 mem_hours.send_emails_to_users()
-            title = "Users Allocating Excess CPU Memory"
-            s += mem_hours.generate_report_for_admins(title, keep_index=True)
+            s += mem_hours.generate_report_for_admins(keep_index=True)
             s += mem_hours.add_report_metadata(start_date, end_date)
 
 
@@ -462,13 +456,11 @@ if __name__ == "__main__":
                                      days_between_emails=args.days,
                                      violation="serial_allocating_multiple",
                                      vpath=violation_logs_path,
-                                     subject="Serial Jobs Allocating Multiple CPU-cores",
                                      **params)
             if args.email and is_workday:
                 serial.create_emails(greeting_method)
                 serial.send_emails_to_users()
-            title = "Serial Jobs Allocating Multiple CPU-cores"
-            s += serial.generate_report_for_admins(title, keep_index=True)
+            s += serial.generate_report_for_admins(keep_index=True)
             s += serial.add_report_metadata(start_date, end_date)
 
 
@@ -484,13 +476,11 @@ if __name__ == "__main__":
                                days_between_emails=args.days,
                                violation="zero_cpu_utilization",
                                vpath=violation_logs_path,
-                               subject="Jobs with Zero CPU Utilization",
                                **params)
             if args.email and is_workday:
                 zero_cpu.create_emails(greeting_method)
                 zero_cpu.send_emails_to_users()
-            title = "Jobs with Zero CPU Utilization"
-            s += zero_cpu.generate_report_for_admins(title, keep_index=False)
+            s += zero_cpu.generate_report_for_admins()
             s += zero_cpu.add_report_metadata(start_date, end_date)
 
 
@@ -506,13 +496,11 @@ if __name__ == "__main__":
                                      days_between_emails=args.days,
                                      violation="too_many_cores_per_gpu",
                                      vpath=violation_logs_path,
-                                     subject="Consider Using Fewer CPU-Cores per GPU",
                                      **params)
             if args.email and is_workday:
                 cpg.create_emails(greeting_method)
                 cpg.send_emails_to_users()
-            title = "Too Many Cores Per GPU"
-            s += cpg.generate_report_for_admins(title)
+            s += cpg.generate_report_for_admins()
             s += cpg.add_report_metadata(start_date, end_date)
 
 
@@ -528,13 +516,11 @@ if __name__ == "__main__":
                                       days_between_emails=args.days,
                                       violation="too_much_cpu_mem_per_gpu",
                                       vpath=violation_logs_path,
-                                      subject="Consider Allocating Less CPU Memory per GPU",
                                       **params)
             if args.email and is_workday:
                 mpg.create_emails(greeting_method)
                 mpg.send_emails_to_users()
-            title = "Too Much CPU Memory Per GPU"
-            s += mpg.generate_report_for_admins(title)
+            s += mpg.generate_report_for_admins()
             s += mpg.add_report_metadata(start_date, end_date)
 
 
@@ -551,12 +537,12 @@ if __name__ == "__main__":
                                               violation="excessive_time_limits",
                                               vpath=violation_logs_path,
                                               subject="Requesting Too Much Time for Jobs",
+                                              title="Excessive Time Limits",
                                               **params)
             if args.email and is_workday:
                 time_limits.create_emails(greeting_method)
                 time_limits.send_emails_to_users()
-            title = "Excessive Time Limits"
-            s += time_limits.generate_report_for_admins(title)
+            s += time_limits.generate_report_for_admins()
             s += time_limits.add_report_metadata(start_date, end_date)
 
 
@@ -572,50 +558,46 @@ if __name__ == "__main__":
                                             days_between_emails=args.days,
                                             violation="gpu_model_too_powerful",
                                             vpath=violation_logs_path,
-                                            subject="Jobs with GPU Model Too Powerful",
                                             **params)
             if args.email and is_workday:
                 too_power.create_emails(greeting_method)
                 too_power.send_emails_to_users()
-            s += too_power.generate_report_for_admins("GPU Model Too Powerful")
+            s += too_power.generate_report_for_admins()
             s += too_power.add_report_metadata(start_date, end_date)
 
 
-    ################################
-    ## INFO: UTILIZATION OVERVIEW ##
-    ################################
+    ##########################
+    ## UTILIZATION OVERVIEW ##
+    ##########################
     if args.utilization_overview:
         util = UtilizationOverview(df,
                                    days_between_emails=args.days,
                                    violation="null",
-                                   vpath=violation_logs_path,
-                                   subject="")
-        title = "Utilization Overview"
-        s += util.generate_report_for_admins(title)
+                                   vpath=violation_logs_path)
+        s += util.generate_report_for_admins()
+
 
     ##################################
     ## UTILIZATION BY SLURM ACCOUNT ##
     ##################################
     if args.utilization_by_slurm_account:
-        util = UtilizationBySlurmAccount(df,
-                                         days_between_emails=args.days,
-                                         violation="null",
-                                         vpath=violation_logs_path,
-                                         subject="")
-        title = "Utilization by Slurm Account"
-        s += util.generate_report_for_admins(title)
+        util_account = UtilizationBySlurmAccount(df,
+                                                 days_between_emails=args.days,
+                                                 violation="null",
+                                                 vpath=violation_logs_path)
+        s += util_account.generate_report_for_admins()
+
 
     #########################
     ## LONGEST QUEUED JOBS ##
     #########################
     if args.longest_queued:
         queued = LongestQueuedJobs(pending,
-                             days_between_emails=args.days,
-                             violation="null",
-                             vpath=violation_logs_path,
-                             subject="")
-        title = "Longest queue times (1 job per user, ignoring job arrays, 4+ days)"
-        s += queued.generate_report_for_admins(title)
+                                   days_between_emails=args.days,
+                                   violation="null",
+                                   vpath=violation_logs_path)
+        s += queued.generate_report_for_admins()
+
 
     ###################
     ## JOBS OVERVIEW ##
@@ -624,22 +606,20 @@ if __name__ == "__main__":
         jobs = JobsOverview(df,
                             days_between_emails=args.days,
                             violation="null",
-                            vpath=violation_logs_path,
-                            subject="")
-        title = "Most jobs (1 second or longer -- ignoring running and pending)"
-        s += jobs.generate_report_for_admins(title)
+                            vpath=violation_logs_path)
+        s += jobs.generate_report_for_admins()
 
-    ################
-    ## MOST CORES ##
-    ################
+
+    ####################
+    ## MOST CPU-CORES ##
+    ####################
     if args.most_cores:
         most_cores = MostCores(df,
                                days_between_emails=args.days,
                                violation="null",
-                               vpath=violation_logs_path,
-                               subject="")
-        title = "Jobs with the most CPU-cores (1 job per user)"
-        s += most_cores.generate_report_for_admins(title)
+                               vpath=violation_logs_path)
+        s += most_cores.generate_report_for_admins()
+
 
     ###############
     ## MOST GPUS ##
@@ -648,10 +628,9 @@ if __name__ == "__main__":
         most_gpus = MostGPUs(df,
                              days_between_emails=args.days,
                              violation="null",
-                             vpath=violation_logs_path,
-                             subject="")
-        title = "Jobs with the most GPUs (1 job per user, ignoring cryoem)"
-        s += most_gpus.generate_report_for_admins(title)
+                             vpath=violation_logs_path)
+        s += most_gpus.generate_report_for_admins()
+
 
     ####################################
     ## SEND REPORT BY EMAIL TO ADMINS ##
@@ -662,7 +641,8 @@ if __name__ == "__main__":
                 send_email(s,
                            report_email,
                            subject="Cluster utilization report",
-                           sender=cfg["sender"])
+                           sender=cfg["sender"],
+                           reply_to=cfg["reply-to"])
         else:
             msg = ("ERROR: --report was found but report-emails and/or "
                    "sender were not defined in config.yml.\n\n")

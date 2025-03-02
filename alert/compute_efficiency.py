@@ -14,8 +14,18 @@ class LowEfficiency(Alert):
     """Low CPU or GPU utilization. The first part computes the proportion
        of CPU/GPU hours for each user."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject") and self.xpu == "cpu":
+            self.email_subject = "Jobs with Low CPU Efficiency"
+        if not hasattr(self, "email_subject") and self.xpu == "gpu":
+            self.email_subject = "Jobs with Low GPU Efficiency"
+        if not hasattr(self, "report_title") and self.xpu == "cpu":
+            self.report_title = "Low CPU Efficiencies"
+        if not hasattr(self, "report_title") and self.xpu == "gpu":
+            self.report_title = "Low GPU Efficiencies"
 
     def _filter_and_add_new_fields(self):
         # compute proportion (self.pr) using as much data as possible; we do not
@@ -156,7 +166,7 @@ class LowEfficiency(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         """Return dataframe for admins."""
         if self.admin.empty:
             column_names = ["User",
@@ -167,29 +177,30 @@ class LowEfficiency(Alert):
                             "Interactive",
                             "Cores",
                             "Coverage",
-                            "Email"]
+                            "Emails"]
             self.admin = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.admin), title)
+            return add_dividers(self.create_empty_report(self.admin), self.report_title)
         self.admin = self.admin.drop(columns=["cluster", "partition"])
-        self.admin["emails"] = self.admin.user.apply(lambda user:
+        self.admin["Emails"] = self.admin.user.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
-        self.admin.emails = self.format_email_counts(self.admin.emails)
-        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+        self.admin.Emails = self.format_email_counts(self.admin.Emails)
+        report_str = self.admin.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)
 
 
 class LowEfficiencyCPU(LowEfficiency):
 
     """Specialized implementation of LowEfficiency for CPUs."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
         self.xpu = "cpu"
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
 
 
 class LowEfficiencyGPU(LowEfficiency):
 
     """Specialized implementation of LowEfficiency for GPUs."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
         self.xpu = "gpu"
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)

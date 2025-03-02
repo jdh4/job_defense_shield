@@ -10,27 +10,40 @@ from utils import HOURS_PER_DAY
 
 class Alert:
 
-    """Base class for all alerts."""
+    """Base class for all alerts. The named parameters in props will
+       overwrite the default values of attributes. For example, if
+       excluded_users is defined in the alert then it will take on
+       those values (if not then it will be an empty list)."""
 
     def __init__(self,
                  df: pd.DataFrame,
                  days_between_emails: int,
                  violation: str,
                  vpath: str,
-                 subject: str,
                  **props: dict) -> None:
         self.df = df
         self.days_between_emails = days_between_emails
         self.violation = violation
         self.vpath = vpath
         self.vbase = os.path.join(self.vpath, self.violation)
-        self.subject = subject
         self.emails = []
+        self.excluded_users = []
+        self.admin_emails= []
+        self.include_running_jobs = False
         for key in props:
             setattr(self, key, props[key])
+        self._add_required_fields()
         self._filter_and_add_new_fields()
         if self.vbase and not os.path.exists(self.vbase):
             os.mkdir(self.vbase)
+
+    @abstractmethod
+    def _add_required_fields(self) -> None:
+        """Add fields that were not defined in the configuration file.
+
+        Returns:
+            None
+        """
 
     @abstractmethod
     def _filter_and_add_new_fields(self) -> None:
@@ -54,20 +67,21 @@ class Alert:
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             send_email(email,
                        f"{user}@{self.email_domain}",
-                       subject=self.subject,
+                       subject=self.email_subject,
                        sender=self.sender,
                        reply_to=self.reply_to)
             self.update_violation_log(usr, vfile)
             for admin_email in self.admin_emails:
                 send_email(email,
                            admin_email,
-                           subject=self.subject,
+                           subject=self.email_subject,
                            sender=self.sender,
                            reply_to=self.reply_to)
             print(email)
+        return None
 
     @abstractmethod
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         """Generate a report for system administrators.
 
         Returns:
@@ -165,7 +179,7 @@ class Alert:
 
     def __len__(self) -> int:
         """Returns the number of rows in the df dataframe."""
-        return self.df.shape[0]
+        return len(self.df)
 
     def __str__(self) -> str:
         """Returns the df dataframe as a string."""

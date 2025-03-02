@@ -18,7 +18,6 @@ def test_too_many_cores_per_gpu():
                              0,
                              "",
                              "",
-                             "Subject",
                              cluster="della",
                              partitions=["pli"],
                              cluster_name="Della (PLI)",

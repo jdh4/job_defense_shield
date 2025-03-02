@@ -13,12 +13,10 @@ class MultinodeCpuFragmentation(Alert):
 
     """Find multinode CPU jobs that use too many nodes. Ignore jobs
        with 0% CPU utilization on a node since those will captured
-       by a different alert.
-    """
+       by a different alert."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        self.excluded_users = []
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
 
     def is_fragmented(self, cores_per_node, mem_per_node_used) -> bool:
         """Classify the job as fragmented or not based on cores per node
@@ -38,6 +36,12 @@ class MultinodeCpuFragmentation(Alert):
         mem_per_node_safe = (1 - self.safety_fraction) * self.mem_per_node
         min_nodes_by_memory = math.ceil(total_mem_used / mem_per_node_safe)
         return max(min_nodes_by_cores, min_nodes_by_memory)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Multinode CPU Jobs with Fragmentation"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Multinode CPU Jobs with Fragmentation"
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -137,7 +141,7 @@ class MultinodeCpuFragmentation(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.df.empty:
             column_names = ["JobID",
                             "User",
@@ -149,9 +153,10 @@ class MultinodeCpuFragmentation(Alert):
                             "Min-Nodes",
                             "Emails"]
             self.df = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.df), title)
-        self.df["emails"] = self.df.user.apply(lambda user:
+            return add_dividers(self.create_empty_report(self.df), self.report_title)
+        self.df["Emails"] = self.df.user.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
-        self.df.emails = self.format_email_counts(self.df.emails)
+        self.df.Emails = self.format_email_counts(self.df.Emails)
         self.df = self.df.drop(columns=["cluster", "partition"])
-        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+        report_str = self.df.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

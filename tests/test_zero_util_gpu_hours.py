@@ -90,7 +90,6 @@ def test_zero_util_gpu_hours():
                             0,
                             "",
                             "",
-                            "Subject",
                             cluster="della",
                             partitions=["gpu"],
                             excluded_users=[],

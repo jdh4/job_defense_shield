@@ -9,8 +9,12 @@ class MostCores(Alert):
     """Top 10 users by the highest number of allocated CPU-cores in a job. Only
      one job per user is shown."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "report_title"):
+            self.report_title = "Jobs with the Most CPU-Cores (1 Job per User)"
 
     def _filter_and_add_new_fields(self):
         cols = ["jobid", "user", "cluster", "cores", "nodes", "gpus", "state",
@@ -32,7 +36,8 @@ class MostCores(Alert):
               "state", "partition", "hours", "CPU-eff"]
         self.gp = self.gp[cols]
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.gp.empty:
-            return add_dividers(self.create_empty_report(self.gp), title)
-        return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.gp), self.report_title)
+        report_str = self.gp.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

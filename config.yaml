@@ -33,12 +33,9 @@ gpu-model-too-powerful-1:
   num_cores_threshold: 1
   gpu_util_target: "50%"
   gpu_hours_threshold: 24 # gpu-hours
-  max_num_jobid_admin: 3
   email_file: "email/gpu_model_too_powerful.txt"
   excluded_users:
-    - aturing
     - jzp
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -55,7 +52,6 @@ zero-cpu-utilization-1:
     - pu
   min_run_time: 61 # minutes
   email_file: "email/zero_cpu_utilization.txt"
-  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -67,15 +63,14 @@ zero-cpu-utilization-2:
     - physics
   min_run_time: 61 # minutes
   email_file: "email/zero_cpu_utilization.txt"
-  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
 
 
-########################################
-## ZERO UTILIZATION GPU-HOURS (ALERT) ##
-########################################
+#########################################
+## GPU-HOURS AT 0% UTILIZATION (ALERT) ##
+#########################################
 zero-util-gpu-hours-1:
   cluster: della
   partitions:
@@ -87,9 +82,7 @@ zero-util-gpu-hours-1:
   min_run_time: 10              # minutes
   gpu_hours_threshold_user: 100 # hours
   gpu_hours_threshold_admin: 24 # hours
-  max_num_jobid_admin: 4        # count
   email_file: "email/zero_util_gpu_hours.txt"
-  include_running_jobs: False
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -113,10 +106,6 @@ too-many-cores-per-gpu-1:
   cores_per_gpu_limit: 18
   min_run_time: 61 # minutes
   email_file: "email/too_many_cores_per_gpu.txt"
-  include_running_jobs: False
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -142,9 +131,6 @@ too-much-cpu-mem-per-gpu-1:
   mem_eff_thres: 0.8           # [0, 1]
   min_run_time: 61             # minutes
   email_file: "email/too_much_cpu_mem_per_gpu.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -247,9 +233,6 @@ low-cpu-efficiency-1:
   num_top_users: 15         # count
   min_run_time: 30          # minutes
   email_file: "email/low_cpu_efficiency.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -266,9 +249,6 @@ low-cpu-efficiency-2:
   num_top_users: 3          # count
   min_run_time: 30          # minutes
   email_file: "email/low_cpu_efficiency.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -312,9 +292,6 @@ low-gpu-efficiency-1:
   num_top_users: 15         # count
   min_run_time: 30          # minutes
   email_file: "email/low_gpu_efficiency.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -331,9 +308,6 @@ low-gpu-efficiency-2:
   num_top_users: 5          # count
   min_run_time: 30          # minutes
   email_file: "email/low_gpu_efficiency.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -367,24 +341,18 @@ low-gpu-efficiency-3:
 ## SERIAL CODE ALLOCATING MULTIPLE CORES (ALERT) ##
 ###################################################
 serial-allocating-multiple-1:
-  cluster: della
-  partitions:
-    - cpu
-  cores_per_node: 32       # (optional)
-  min_run_time: 61         # minutes
-  cpu_hours_threshold: 100 # cpu-hours
-  lower_ratio: 0.85        # [0, 1]
-  num_top_users: 5
-  num_jobs_display: 10
-  email_file: "email/serial_allocating_multiple.txt"
-  max_num_jobid_admin: 3
-  include_running_jobs: False
-  excluded_users:
-    - aturing
-    - einstein
-  admin_emails:
-    - halverson@princeton.edu
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    cluster: della
+    partitions:
+      - cpu
+    cores_per_node: 32       # (optional)
+    min_run_time: 61         # minutes
+    cpu_hours_threshold: 100 # cpu-hours
+    lower_ratio: 0.85        # [0, 1]
+    num_top_users: 5
+    email_file: "email/serial_allocating_multiple.txt"
+    admin_emails:
+      - halverson@princeton.edu
+      - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
 
 ########################
@@ -394,16 +362,13 @@ excessive-time-1:
   cluster: della
   partitions:
     - cpu
-  min_run_time: 62             # minutes
+  min_run_time: 61             # minutes
   absolute_thres_hours: 10000  # cpu-hours
   mean_ratio_threshold: 20     # [0%, 100%]
   median_ratio_threshold: 20   # [0%, 100%]
   num_top_users: 5
   num_jobs_display: 10
   email_file: "email/excessive_time.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu

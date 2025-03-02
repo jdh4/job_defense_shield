@@ -79,7 +79,6 @@ def test_gpu_model_too_powerful():
                                     0,
                                     "",
                                     "",
-                                    "Subject",
                                     cluster="della",
                                     partitions=["gpu"],
                                     min_run_time=0,

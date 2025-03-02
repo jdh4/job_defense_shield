@@ -8,8 +8,12 @@ class JobsOverview(Alert):
     """Users with the most jobs. Only non-running jobs with greater than
        zero elapsed seconds are considered."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "report_title"):
+            self.report_title = "Most Jobs (Ignoring Running and Pending)"
 
     def _filter_and_add_new_fields(self):
         self.df = self.df[self.df["elapsedraw"] > 0].copy()
@@ -66,7 +70,8 @@ class JobsOverview(Alert):
                 "partitions"]
         self.gp = self.gp[cols]
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.gp.empty:
-            return add_dividers(self.create_empty_report(self.gp), title)
-        return add_dividers(self.gp.head(10).to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.gp), self.report_title)
+        report_str = self.gp.head(10).to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

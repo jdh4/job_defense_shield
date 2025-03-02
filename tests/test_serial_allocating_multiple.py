@@ -66,7 +66,6 @@ def test_serial_allocating_multiple_cores():
                                            0,
                                            "",
                                            "",
-                                           "Subject",
                                            cluster="della",
                                            partitions=["cpu"],
                                            cores_per_node=32,

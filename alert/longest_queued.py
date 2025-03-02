@@ -10,8 +10,12 @@ class LongestQueuedJobs(Alert):
     """Find the pending jobs with the longest queue times while ignoring
        array jobs."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "report_title"):
+            self.report_title = "Longest Queue Times (1 job per user, ignoring job arrays)"
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -28,7 +32,8 @@ class LongestQueuedJobs(Alert):
         self.df.sort_values("s-days", ascending=False, inplace=True)
         self.df = self.df[self.df["s-days"] >= 4][:10]
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.df.empty:
-            return add_dividers(self.create_empty_report(self.df), title)
-        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+            return add_dividers(self.create_empty_report(self.df), self.report_title)
+        report_str = self.df.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

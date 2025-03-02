@@ -58,7 +58,6 @@ def test_excess_cpu_memory():
                            0,
                            "",
                            "",
-                           "Subject",
                            cluster="della",
                            partitions=["cpu"],
                            min_run_time=0,

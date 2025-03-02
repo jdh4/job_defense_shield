@@ -10,13 +10,18 @@ from email_translator import EmailTranslator
 
 class ZeroUtilGPUHours(Alert):
 
-    """Identify users with many GPU-hours at 0% GPU utilization."""
+    """Identify users with many GPU-hours at 0% utilization."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        self.excluded_users = []
-        self.user_emails_bcc = []
-        self.report_emails = []
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "GPU-hours at 0% Utilization"
+        if not hasattr(self, "report_title"):
+            self.report_title = "GPU-hours at 0% Utilization"
+        if not hasattr(self, "max_num_jobid_admin"):
+            self.max_num_jobid_admin = 4
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -90,7 +95,7 @@ class ZeroUtilGPUHours(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.admin.empty:
             column_names = ["User",
                             "GPU-Hours-At-0%",
@@ -98,7 +103,7 @@ class ZeroUtilGPUHours(Alert):
                             "JobID",
                             "Emails"]
             self.admin = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.admin), title)
+            return add_dividers(self.create_empty_report(self.admin), self.report_title)
         self.admin["Emails"] = self.admin.User.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
@@ -107,4 +112,5 @@ class ZeroUtilGPUHours(Alert):
         self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})
         self.admin.reset_index(drop=True, inplace=True)
         self.admin.index += 1
-        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+        report_str = self.admin.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

@@ -9,12 +9,20 @@ from email_translator import EmailTranslator
 
 class SerialAllocatingMultipleCores(Alert):
 
-    """Find serial codes that are using multiple CPU-cores."""
+    """Find serial codes that have been allocated multiple CPU-cores."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        self.excluded_users = []
-        self.num_top_users = 0
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Serial Jobs Allocating Multiple CPU-Cores"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Serial Jobs Allocating Multiple CPU-Cores"
+        if not hasattr(self, "max_num_jobid_admin"):
+            self.max_num_jobid_admin = 3
+        if not hasattr(self, "num_jobs_display"):
+            self.num_jobs_display = 10
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -120,7 +128,7 @@ class SerialAllocatingMultipleCores(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.gp.empty:
             column_names = ["User",
                             "CPU-Hours-Wasted",
@@ -129,18 +137,19 @@ class SerialAllocatingMultipleCores(Alert):
                             "JobID",
                             "Emails"]
             self.gp = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.gp), title)
+            return add_dividers(self.create_empty_report(self.gp), self.report_title)
         self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
         self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x:
                                                     str(round(x, 1)).replace(".0", ""))
         self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
         self.gp.reset_index(drop=False, inplace=True)
-        self.gp["emails"] = self.gp.User.apply(lambda user:
+        self.gp["Emails"] = self.gp.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
-        self.gp.emails = self.format_email_counts(self.gp.emails)
-        cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "emails"]
+        self.gp.Emails = self.format_email_counts(self.gp.Emails)
+        cols = ["User", "CPU-Hours-Wasted", "AvgCores", "Jobs", "JobID", "Emails"]
         self.gp = self.gp[cols]
         self.gp = self.gp.sort_values(by="CPU-Hours-Wasted", ascending=False)
         self.gp.reset_index(drop=True, inplace=True)
         self.gp.index += 1
-        return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+        report_str = self.gp.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

@@ -11,9 +11,15 @@ class ZeroCPU(Alert):
 
     """CPU jobs with zero utilization on one or more nodes."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
         self.excluded_users = []
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Jobs with Zero CPU Utilization"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Jobs with Zero CPU Utilization"
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -85,7 +91,7 @@ class ZeroCPU(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         """Rename some of the columns."""
         if self.df.empty:
             column_names = ["JobID",
@@ -97,10 +103,11 @@ class ZeroCPU(Alert):
                             "Hours",
                             "Emails"]
             self.df = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.df), title)
+            return add_dividers(self.create_empty_report(self.df), self.report_title)
         self.df = self.df.drop(columns=["Cluster"])
         self.df = self.df.sort_values(["User", "JobID"])
         self.df["Emails"] = self.df.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
         self.df.Emails = self.format_email_counts(self.df.Emails)
-        return add_dividers(self.df.to_string(index=keep_index, justify="center"), title)
+        report_str = self.df.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

@@ -213,7 +213,6 @@ def test_zero_cpu_utilization():
                                          0,
                                          "",
                                          "",
-                                         "Subject",
                                          cluster="della",
                                          partitions=["cpu"],
                                          min_run_time=0,

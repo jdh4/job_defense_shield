@@ -12,12 +12,14 @@ class ExcessiveTimeLimits(Alert):
 
     """Over-allocating run time."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        self.num_top_users = 0
-        self.num_jobs_display = 10
-        self.excluded_users = []
-        self.admin_emails = []
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Requesting Too Much Time for Jobs"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Excessive Time Limits"
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -51,7 +53,8 @@ class ExcessiveTimeLimits(Alert):
             self.gp = self.gp[(self.gp[f"{xpu}-waste-hours"] > self.absolute_thres_hours) &
                               (self.gp["mean(%)"] < self.mean_ratio_threshold) &
                               (self.gp["median(%)"] < self.median_ratio_threshold)]
-            # DEFAULT set init
+            # how to deal with this?
+            # hasattr()
             if self.num_top_users:
                 self.gp = self.gp[self.gp["rank"] <= self.num_top_users]
             cols = ["user",
@@ -107,7 +110,7 @@ class ExcessiveTimeLimits(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         """Generate a table for system administrators."""
         if self.gp.empty:
             column_names = ["User",
@@ -119,7 +122,7 @@ class ExcessiveTimeLimits(Alert):
                             "Rank",
                             "Jobs"]
             self.gp = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.gp), title)
+            return add_dividers(self.create_empty_report(self.gp), self.report_title)
         self.gp = self.gp.drop(columns=["cluster", "partition"])
         xpu = "cpu"
         renamings = {f"{xpu}-hours":"used",
@@ -128,4 +131,5 @@ class ExcessiveTimeLimits(Alert):
         self.gp["emails"] = self.gp.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
         self.gp.emails = self.format_email_counts(self.gp.emails)
-        return add_dividers(self.gp.to_string(index=keep_index, justify="center"), title)
+        report_str = self.gp.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)

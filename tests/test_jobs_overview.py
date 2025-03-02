@@ -18,7 +18,7 @@ def test_jobs_overview():
                        "gpu-seconds":[0, 0, 0, 0, 0, num_gpus * wall_secs],
                        "gpu-job":[0, 0, 0, 0, 0, 1],
                        "elapsedraw":[wall_secs, wall_secs, 0, wall_secs, wall_secs, wall_secs]})
-    jobs = JobsOverview(df, 7, "", "", "")
+    jobs = JobsOverview(df, 7, "", "")
     actual = jobs.gp[["user", "jobs", "cpu", "gpu", "COM", "CLD", "cpu-hours", "gpu-hours", "partitions"]]
     expected = pd.DataFrame({"user":["user1", "user2"],
                              "jobs":[3, 2],

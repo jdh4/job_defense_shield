@@ -8,7 +8,7 @@ def test_jobs_overview():
                        "cpu-hours":[10, 20, 10, 50, 30, 10], 
                        "gpu-hours":[10, 20, 10, 50, 30, 10],
                        "elapsedraw":[1, 1, 1, 1, 1, 1]})
-    util = UtilizationOverview(df, 7, "", "", "")
+    util = UtilizationOverview(df, 7, "", "")
     actual = util.by_cluster
     expected = pd.DataFrame({"cluster":["della", "stellar", "traverse"],
                              "users":[2, 1, 2],

@@ -6,8 +6,12 @@ class UtilizationOverview(Alert):
 
     """Utilization by cluster and by partition."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "report_title"):
+            self.report_title = "Utilization Overview"
 
     def _filter_and_add_new_fields(self):
         def compute_utilization(fields: list, simple: bool=True):
@@ -48,7 +52,8 @@ class UtilizationOverview(Alert):
         self.special["cpu-hours"] = self.format_email_counts(self.special["cpu-hours"])
         self.special["gpu-hours"] = self.format_email_counts(self.special["gpu-hours"])
  
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         clus = self.by_cluster.to_string(index=keep_index, justify="center")
         part = self.special.to_string(index=False, justify="center")
-        return add_dividers(clus, title) + add_dividers(part, f"{title} by Partition")
+        return add_dividers(clus, self.report_title) + \
+               add_dividers(part, f"{self.report_title} by Partition")

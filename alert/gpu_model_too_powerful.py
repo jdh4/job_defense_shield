@@ -12,8 +12,16 @@ class GpuModelTooPowerful(Alert):
 
     """Find jobs that could have used a less powerful GPU model."""
 
-    def __init__(self, df, days_between_emails, violation, vpath, subject, **kwargs):
-        super().__init__(df, days_between_emails, violation, vpath, subject, **kwargs)
+    def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
+        super().__init__(df, days_between_emails, violation, vpath, **kwargs)
+
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Jobs with GPU Model Too Powerful"
+        if not hasattr(self, "report_title"):
+            self.report_title = "GPU Model Too Powerful"
+        if not hasattr(self, "max_num_jobid_admin"):
+            self.max_num_jobid_admin = 3
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -87,7 +95,7 @@ class GpuModelTooPowerful(Alert):
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
               
-    def generate_report_for_admins(self, title: str, keep_index: bool=False) -> str:
+    def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.df.empty:
             column_names = ["JobID",
                             "User",
@@ -97,7 +105,7 @@ class GpuModelTooPowerful(Alert):
                             "Hours",
                             "Emails"]
             self.df = pd.DataFrame(columns=column_names)
-            return add_dividers(self.create_empty_report(self.df), title)
+            return add_dividers(self.create_empty_report(self.df), self.report_title)
         def jobid_list(series):
             ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
             return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
@@ -112,4 +120,5 @@ class GpuModelTooPowerful(Alert):
         self.admin["Emails"] = self.admin["User"].apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
-        return add_dividers(self.admin.to_string(index=keep_index, justify="center"), title)
+        report_str = self.admin.to_string(index=keep_index, justify="center")
+        return add_dividers(report_str, self.report_title)
