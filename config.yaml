@@ -10,16 +10,15 @@ reply-to: rcsystems@princeton.edu
 verbose: False
 greeting-method: getent
 workday-method: usa
-holidays-file: /path/to/job_defense_shield/holidays.txt
 email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
 report-emails:
     - halverson@princeton.edu
-email-domain-name: "princeton.edu"
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+email-domain-name: "@princeton.edu"
 partition-renamings:
     datascience: datasci
 external-emails:
-    u12345: first.last@gmail.com
-    u98765: last.first@gmail.com
+    akleiner: halverson.jonathan@gmail.com
 
 
 ####################################
@@ -136,9 +135,43 @@ too-much-cpu-mem-per-gpu-1:
     - halverson@princeton.edu
     - kl5675@princeton.edu
 
-# della gpu partition
-#too-much-cpu-mem-per-gpu-2:
-# 250 GB per GPU
+too-much-cpu-mem-per-gpu-2:
+  cluster: della
+  partitions:
+    - gpu
+  cluster_name: "Della (gpu)"
+  cores_per_node: 48
+  gpus_per_node: 4
+  cpu_mem_per_node: 1000       # GB
+  cpu_mem_per_gpu_target: 240  # GB
+  cpu_mem_per_gpu_limit: 250   # GB
+  mem_eff_thres: 0.8           # [0, 1]
+  min_run_time: 61             # minutes
+  email_file: "email/too_much_cpu_mem_per_gpu_2.txt"
+  nodelist:
+    - della-i14g1
+    - della-i14g2
+    - della-i14g3
+    - della-i14g4
+    - della-i14g5
+    - della-i14g6
+    - della-i14g7
+    - della-i14g8
+    - della-i14g9
+    - della-i14g10
+    - della-i14g11
+    - della-i14g12
+    - della-i14g13
+    - della-i14g14
+    - della-i14g15
+    - della-i14g16
+    - della-i14g17
+    - della-i14g18
+    - della-i14g19
+    - della-i14g20
+  admin_emails:
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+    - halverson@princeton.edu
 
 
 #########################################
@@ -148,7 +181,7 @@ multinode-cpu-fragmentation-1:
   cluster: della
   partitions:
     - cpu
-  min_run_time: 120    # minutes
+  min_run_time: 10000  # minutes
   cores_per_node: 32   # count
   cores_fraction: 0.5  # [0, 1]
   mem_per_node: 190    # GB

@@ -3,6 +3,7 @@
 import json
 import gzip
 import base64
+from typing import Set
 import pandas as pd
 
 
@@ -243,3 +244,14 @@ def cpu_nodes_with_zero_util(ss, jobid, cluster, verbose=True):
             return (-1, error_code)
     error_code = 0
     return (counter, error_code)
+
+
+def get_nodelist(ss, jobid, cluster, verbose=True) -> Set[str]:
+    """Return a Python set of the node names used by the job."""
+    if 'nodes' not in ss:
+        if verbose:
+            msg = "Warning: nodes not found ss for get_nodelist."
+            print(msg, jobid, cluster)
+        error_code = 1
+        return (set(), error_code)
+    return (set(ss['nodes'].keys()), 0)

@@ -123,11 +123,12 @@ if __name__ == "__main__":
         print("Configuration file not found. Exiting ...")
         sys.exit()
 
-    sys_cfg = {"jobstats_path":cfg["jobstats-module-path"],
-               "verbose":      cfg["verbose"],
-               "sender":       cfg["sender"],
-               "reply_to":     cfg["reply-to"],
-               "email_domain": cfg["email-domain-name"]}
+    sys_cfg = {"jobstats_path":   cfg["jobstats-module-path"],
+               "verbose":         cfg["verbose"],
+               "sender":          cfg["sender"],
+               "reply_to":        cfg["reply-to"],
+               "email_domain":    cfg["email-domain-name"],
+               "external_emails": cfg["external-emails"]}
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]

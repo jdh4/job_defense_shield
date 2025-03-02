@@ -28,10 +28,12 @@ class Alert:
         self.vbase = os.path.join(self.vpath, self.violation)
         self.emails = []
         self.excluded_users = []
-        self.admin_emails= []
+        self.admin_emails = []
         self.include_running_jobs = False
         for key in props:
             setattr(self, key, props[key])
+        if hasattr(self, "partitions") and isinstance(self.partitions, str):
+            self.partitions = [self.partitions]
         self._add_required_fields()
         self._filter_and_add_new_fields()
         if self.vbase and not os.path.exists(self.vbase):
@@ -62,14 +64,18 @@ class Alert:
         """
 
     def send_emails_to_users(self) -> None:
-        """Send emails to users."""
+        """Send emails to users and administrators."""
         for user, email, usr in self.emails:
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            if user in self.external_emails:
+                user_email_address = self.external_emails[user]
+            else:
+                user_email_address = f"{user}{self.email_domain}"
             send_email(email,
-                       f"{user}@{self.email_domain}",
+                       user_email_address,
                        subject=self.email_subject,
                        sender=self.sender,
                        reply_to=self.reply_to)
+            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             self.update_violation_log(usr, vfile)
             for admin_email in self.admin_emails:
                 send_email(email,
@@ -158,7 +164,7 @@ class Alert:
         if counts.empty:
             return counts
         if counts.tolist() == ["0 (-)"] * len(counts):
-            return pd.Series(["0"] * len(counts))
+            return pd.Series(["0"] * len(counts), index=counts.index)
         max_len = max([len(count.split()[1]) for count in counts.tolist()])
         def fix_spacing(item: str):
             num_sent, days_ago = item.split()

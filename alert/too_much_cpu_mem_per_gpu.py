@@ -3,6 +3,7 @@ from base import Alert
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from efficiency import cpu_memory_usage
+from efficiency import get_nodelist
 from greeting import GreetingFactory
 from email_translator import EmailTranslator
 
@@ -31,6 +32,25 @@ class TooMuchCpuMemPerGpu(Alert):
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         self.df.rename(columns={"user":"User"}, inplace=True)
         # add new fields
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df["node-tuple"] = self.df.apply(lambda row:
+                                            get_nodelist(row["admincomment"],
+                                                         row["jobid"],
+                                                         row["cluster"]),
+                                                         axis="columns")
+            cols = ["nodelist", "error_code"]
+            self.df[cols] = pd.DataFrame(self.df["node-tuple"].tolist(), index=self.df.index)
+            self.df = self.df[self.df["error_code"] == 0]
+            self.nodelist = set(self.nodelist)
+            self.df["diff"] = self.df.nodelist.apply(lambda n: n - self.nodelist)
+            def compare_sets(a, b):
+               return a == b
+            self.df["cmp"] = self.df.apply(lambda row: compare_sets(row["nodelist"],
+                                                                    row["diff"]),
+                                                                    axis="columns")
+            self.df = self.df[self.df.cmp]
+            cols = ["node-tuple", "nodelist", "error_code", "diff", "cmp"]
+            self.df.drop(columns=cols, inplace=True)
         if not self.df.empty:
             self.df["memory-tuple"] = self.df.apply(lambda row:
                                            cpu_memory_usage(row["admincomment"],

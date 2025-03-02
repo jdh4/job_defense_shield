@@ -6,6 +6,7 @@ from efficiency import gpu_memory_usage_eff_tuples
 from efficiency import max_cpu_memory_used_per_node
 from efficiency import num_gpus_with_zero_util
 from efficiency import cpu_nodes_with_zero_util
+from efficiency import get_nodelist
 import numpy as np
 
 
@@ -188,7 +189,6 @@ def test_max_cpu_memory_used_per_node():
                             "total_memory": 100 * 1024**3}}}
     assert max_cpu_memory_used_per_node(ss, 12345, "c1", verbose=False) == (43.0, 0)
 
-
 def test_malformed_num_gpus_with_zero_util():
     # empty summary statistics
     ss = {}
@@ -238,3 +238,22 @@ def test_num_cpu_nodes_with_zero_util():
     actual = cpu_nodes_with_zero_util(ss, 12345, "c1")
     expected = (2, 0)
     assert actual == expected
+
+
+def test_get_nodelist():
+    # single node without nodes
+    ss = {}
+    assert get_nodelist(ss, 12345, "c1", verbose=False) == (set(), 1)
+    # single node
+    ss = {"nodes":{"node1":{"cpus": 8,
+                            "used_memory": 42 * 1024**3,
+                            "total_memory": 100 * 1024**3}}}
+    assert get_nodelist(ss, 12345, "c1", verbose=False) == (set(["node1"]), 0)
+    # multiple nodes
+    ss = {"nodes":{"node1":{"cpus": 8,
+                            "used_memory": 42 * 1024**3,
+                            "total_memory": 100 * 1024**3},
+                   "node2":{"cpus": 8,
+                            "used_memory": 43 * 1024**3,
+                            "total_memory": 100 * 1024**3}}}
+    assert get_nodelist(ss, 12345, "c1", verbose=False) == (set(["node1", "node2"]), 0)
