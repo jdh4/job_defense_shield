@@ -4,20 +4,22 @@
 ## GLOBAL SETTINGS ##
 #####################
 jobstats-module-path: /home/jdh4/software/jobstats
-violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
+violation-logs-path: /projects/j/jdh4/utilities/job_defense_shield/violations
+email-files-path: /projects/j/jdh4/utilities/job_defense_shield/email
+email-domain-name: "@princeton.edu"
 sender: cses@princeton.edu
 reply-to: rcsystems@princeton.edu
 greeting-method: getent
-workday-method: usa
-email-domain-name: "@princeton.edu"
+workday-method: file
+holidays-file: /projects/j/jdh4/utilities/job_defense_shield/.holidays
 report-emails:
   - halverson@princeton.edu
 verbose: False
 partition-renamings:
-    datascience: datasci
+  datascience: datasci
 external-emails:
-    u12345: first.last@gmail.com
-    u23456: first.last@gmail.com
+  u12345: first.last@gmail.com
+  u23456: first.last@gmail.com
 
 
 #########################################
@@ -31,11 +33,11 @@ cancel-zero-gpu-jobs:
   first_warning_minutes: 45   # minutes
   second_warning_minutes: 90  # minutes
   cancel_minutes: 105         # minutes
-  email_file_first_warning:  "email/cancel_gpu_jobs_warning_1.txt"
-  email_file_second_warning: "email/cancel_gpu_jobs_warning_2.txt"
-  email_file_cancel:         "email/cancel_gpu_jobs_scancel_3.txt"
+  email_file_first_warning:  "cancel_gpu_jobs_warning_1.txt"
+  email_file_second_warning: "cancel_gpu_jobs_warning_2.txt"
+  email_file_cancel:         "cancel_gpu_jobs_scancel_3.txt"
   jobid_cache_path: /projects/j/jdh4/utilities/job_defense_shield
-  warnings_to_admin: False
+  warnings_to_admin: True
   do_not_cancel: True
   admin_emails:
     - halverson@princeton.edu
@@ -52,7 +54,7 @@ gpu-model-too-powerful-1:
   num_cores_threshold: 1
   gpu_util_target: "50%"
   gpu_hours_threshold: 24 # gpu-hours
-  email_file: "email/gpu_model_too_powerful.txt"
+  email_file: "gpu_model_too_powerful.txt"
   excluded_users:
     - jzp
   admin_emails:
@@ -70,7 +72,7 @@ zero-cpu-utilization-1:
     - pppl
     - pu
   min_run_time: 61 # minutes
-  email_file: "email/zero_cpu_utilization.txt"
+  email_file: "zero_cpu_utilization.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -81,7 +83,7 @@ zero-cpu-utilization-2:
     - cpu
     - physics
   min_run_time: 61 # minutes
-  email_file: "email/zero_cpu_utilization.txt"
+  email_file: "zero_cpu_utilization.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -101,7 +103,7 @@ zero-util-gpu-hours-1:
   min_run_time: 10              # minutes
   gpu_hours_threshold_user: 100 # hours
   gpu_hours_threshold_admin: 24 # hours
-  email_file: "email/zero_util_gpu_hours.txt"
+  email_file: "zero_util_gpu_hours.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -124,7 +126,7 @@ too-many-cores-per-gpu-1:
   cores_per_gpu_target: 12
   cores_per_gpu_limit: 18
   min_run_time: 61 # minutes
-  email_file: "email/too_many_cores_per_gpu.txt"
+  email_file: "too_many_cores_per_gpu.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -149,7 +151,7 @@ too-much-cpu-mem-per-gpu-1:
   cpu_mem_per_gpu_limit: 125   # GB
   mem_eff_thres: 0.8           # [0, 1]
   min_run_time: 61             # minutes
-  email_file: "email/too_much_cpu_mem_per_gpu.txt"
+  email_file: "too_much_cpu_mem_per_gpu.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -167,7 +169,7 @@ too-much-cpu-mem-per-gpu-2:
   cpu_mem_per_gpu_limit: 250   # GB
   mem_eff_thres: 0.8           # [0, 1]
   min_run_time: 61             # minutes
-  email_file: "email/too_much_cpu_mem_per_gpu_2.txt"
+  email_file: "too_much_cpu_mem_per_gpu_2.txt"
   nodelist:
     - della-i14g1
     - della-i14g2
@@ -206,7 +208,7 @@ multinode-cpu-fragmentation-1:
   cores_fraction: 0.5  # [0, 1]
   mem_per_node: 190    # GB
   safety_fraction: 0.2 # [0, 1]
-  email_file: "email/multinode_cpu_fragmentation.txt"
+  email_file: "multinode_cpu_fragmentation.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -220,7 +222,7 @@ multinode-cpu-fragmentation-2:
   cores_fraction: 0.8  # [0, 1]
   mem_per_node: 380    # GB
   safety_fraction: 0.2 # [0, 1]
-  email_file: "email/multinode_cpu_fragmentation.txt"
+  email_file: "multinode_cpu_fragmentation.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -236,7 +238,7 @@ multinode-cpu-fragmentation-3:
   cores_fraction: 0.8  # [0, 1]
   mem_per_node: 768    # GB
   safety_fraction: 0.2 # [0, 1]
-  email_file: "email/multinode_cpu_fragmentation.txt"
+  email_file: "multinode_cpu_fragmentation.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -254,7 +256,7 @@ multinode-gpu-fragmentation-1:
     - pli-lc
   gpus_per_node: 8  # count
   min_run_time: 61  # minutes
-  email_file: "email/multinode_gpu_fragmentation.txt"
+  email_file: "multinode_gpu_fragmentation.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -266,7 +268,7 @@ multinode-gpu-fragmentation-2:
     - gpu
   gpus_per_node: 2  # count
   min_run_time: 61  # minutes
-  email_file: "email/multinode_gpu_fragmentation_2.txt"
+  email_file: "multinode_gpu_fragmentation_2.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -285,7 +287,7 @@ low-cpu-efficiency-1:
   absolute_thres_hours: 50  # cpu-hours
   num_top_users: 15         # count
   min_run_time: 30          # minutes
-  email_file: "email/low_cpu_efficiency.txt"
+  email_file: "low_cpu_efficiency.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -301,7 +303,7 @@ low-cpu-efficiency-2:
   absolute_thres_hours: 100 # cpu-hours
   num_top_users: 3          # count
   min_run_time: 30          # minutes
-  email_file: "email/low_cpu_efficiency.txt"
+  email_file: "low_cpu_efficiency.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -320,7 +322,7 @@ low-cpu-efficiency-3:
   absolute_thres_hours: 50  # cpu-hours
   num_top_users: 15         # count
   min_run_time: 30          # minutes
-  email_file: "email/low_cpu_efficiency.txt"
+  email_file: "low_cpu_efficiency.txt"
   excluded_users:
     - aturing
     - hejia
@@ -344,7 +346,7 @@ low-gpu-efficiency-1:
   absolute_thres_hours: 50  # gpu-hours
   num_top_users: 15         # count
   min_run_time: 30          # minutes
-  email_file: "email/low_gpu_efficiency.txt"
+  email_file: "low_gpu_efficiency.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -363,7 +365,7 @@ low-gpu-efficiency-2:
   absolute_thres_hours: 168 # gpu-hours
   num_top_users: 5          # count
   min_run_time: 30          # minutes
-  email_file: "email/low_gpu_efficiency.txt"
+  email_file: "low_gpu_efficiency.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -383,7 +385,7 @@ serial-allocating-multiple-1:
     cpu_hours_threshold: 100 # cpu-hours
     lower_ratio: 0.85        # [0, 1]
     num_top_users: 5
-    email_file: "email/serial_allocating_multiple.txt"
+    email_file: "serial_allocating_multiple.txt"
     admin_emails:
       - halverson@princeton.edu
       - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
@@ -402,7 +404,7 @@ excessive-time-1:
   median_ratio_threshold: 20   # [0%, 100%]
   num_top_users: 5
   num_jobs_display: 10
-  email_file: "email/excessive_time.txt"
+  email_file: "excessive_time.txt"
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -425,7 +427,7 @@ excess-cpu-memory-1:
   median_ratio_threshold: 0.35
   num_top_users: 10
   num_jobs_display: 10
-  email_file: "email/excess_cpu_memory.txt"
+  email_file: "excess_cpu_memory.txt"
   excluded_users:
     - aturing
     - einstein
@@ -448,7 +450,7 @@ xcess-cpu-memory-2:
   median_ratio_threshold: 0.25
   num_top_users: 10
   num_jobs_display: 10
-  email_file: "email/excess_cpu_memory.txt"
+  email_file: "excess_cpu_memory.txt"
   excluded_users:
     - aturing
     - einstein
@@ -473,7 +475,7 @@ xcess-cpu-memory-3:
   median_ratio_threshold: 0.25
   num_top_users: 5
   num_jobs_display: 10
-  email_file: "email/excess_cpu_memory.txt"
+  email_file: "excess_cpu_memory.txt"
   excluded_users:
     - aturing
     - einstein

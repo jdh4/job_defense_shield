@@ -1,3 +1,5 @@
+.holidays
+.jobid_cache.pkl
 *.csv
 __pycache__/
 violations/

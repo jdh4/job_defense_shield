@@ -91,7 +91,9 @@ class ZeroUtilGPUHours(Alert):
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 

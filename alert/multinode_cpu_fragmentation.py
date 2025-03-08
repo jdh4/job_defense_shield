@@ -137,7 +137,9 @@ class MultinodeCpuFragmentation(Alert):
                 tags["<SBATCH>"] = sb
                 tags["<NUM-CORES>"] = str(min_nodes * self.cores_per_node)
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 

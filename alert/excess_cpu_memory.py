@@ -168,7 +168,9 @@ class ExcessCPUMemory(Alert):
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobs.JobID.values[0]}"
                 # need a way to send a stern message at times
                 # if x > self.some_threshold and os.path.exists(stern_version) then self.email_file += "_stern"
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 

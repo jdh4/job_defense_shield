@@ -106,7 +106,9 @@ class ExcessiveTimeLimits(Alert):
                 table = jobs.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<UNUSED-HOURS>"] = str(round(usr[f"{xpu.upper()}-Hours-Unused"].values[0]))
-                translator = EmailTranslator("email/excessive_time.txt", tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 

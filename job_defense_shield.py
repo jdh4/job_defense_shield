@@ -131,6 +131,7 @@ if __name__ == "__main__":
 
     sys_cfg = {"no_emails_to_users": args.no_emails_to_users,
                "jobstats_path":      cfg["jobstats-module-path"],
+               "email_files_path":   cfg["email-files-path"],
                "verbose":            cfg["verbose"],
                "sender":             cfg["sender"],
                "reply_to":           cfg["reply-to"],
@@ -139,7 +140,10 @@ if __name__ == "__main__":
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]
-    is_workday = WorkdayFactory().create_workday(workday_method).is_workday()
+    holidays_file = None
+    if "holidays-file" in cfg:
+        holidays_file = cfg["holidays-file"]
+    is_workday = WorkdayFactory(holidays_file).create_workday(workday_method).is_workday()
 
     if cfg["verbose"]:
         for key in cfg.keys():

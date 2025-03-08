@@ -88,7 +88,9 @@ class MultinodeGpuFragmentation(Alert):
                 indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 

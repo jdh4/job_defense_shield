@@ -124,7 +124,9 @@ class SerialAllocatingMultipleCores(Alert):
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 tags["<CPU-HOURS>"] = str(cpu_hours_wasted)
                 tags["<NUM-NODES>"] = str(num_wasted_nodes)
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 

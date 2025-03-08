@@ -121,7 +121,9 @@ class TooMuchCpuMemPerGpu(Alert):
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobid}"
                 tags["<JOBID>"] = str(jobid)
                 tags["<PARTITIONS>"] = ",".join(self.partitions)
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
                 self.emails.append((user, email, usr))
 
