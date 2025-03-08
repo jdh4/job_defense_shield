@@ -1,5 +1,6 @@
 import os
 import sys
+from time import time
 from datetime import datetime
 from abc import abstractmethod
 import pandas as pd
@@ -26,10 +27,12 @@ class Alert:
         self.violation = violation
         self.vpath = vpath
         self.vbase = os.path.join(self.vpath, self.violation)
-        self.emails = []
         self.excluded_users = []
+        self.emails = []
+        self.email_file = None
         self.admin_emails = []
         self.include_running_jobs = False
+        self.warnings_to_admin = False
         for key in props:
             setattr(self, key, props[key])
         if hasattr(self, "partitions") and isinstance(self.partitions, str):
@@ -64,27 +67,31 @@ class Alert:
         """
 
     def send_emails_to_users(self) -> None:
-        """Send emails to users and administrators."""
-        for user, email, usr in self.emails:
-            if user in self.external_emails:
-                user_email_address = self.external_emails[user]
-            else:
-                user_email_address = f"{user}{self.email_domain}"
-            send_email(email,
-                       user_email_address,
-                       subject=self.email_subject,
-                       sender=self.sender,
-                       reply_to=self.reply_to)
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
-            self.update_violation_log(usr, vfile)
-            for admin_email in self.admin_emails:
+        """Send emails to users and administrators. The value of usr
+           can be None in cancel_zero_gpu_jobs."""
+        if not self.no_emails_to_users:
+            for user, email, usr in self.emails:
+                if user in self.external_emails:
+                    user_email_address = self.external_emails[user]
+                else:
+                    user_email_address = f"{user}{self.email_domain}"
                 send_email(email,
-                           admin_email,
+                           user_email_address,
                            subject=self.email_subject,
                            sender=self.sender,
                            reply_to=self.reply_to)
+                if usr is not None:
+                    vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+                    self.update_violation_log(usr, vfile)
+        for user, email, usr in self.emails:
+            for admin_email in self.admin_emails:
+                if usr is not None or (usr is None and self.warnings_to_admin):
+                    send_email(email,
+                               admin_email,
+                               subject=self.email_subject,
+                               sender=self.sender,
+                               reply_to=self.reply_to)
             print(email)
-        return None
 
     @abstractmethod
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
@@ -118,13 +125,14 @@ class Alert:
         print(f"\nQuerying server for admincomment on {num_jobs} running jobs ... ",
               end="",
               flush=True)
+        start = time()
         adminc = self.df.apply(lambda row:
                                eval(Jobstats(jobid=row["jobid"],
                                                    cluster=row["cluster"],
                                                    prom_server=PROM_SERVER).report_job_json(False))
                                if row["state"] == "RUNNING"
                                else row["admincomment"], axis="columns")
-        print("done.", flush=True)
+        print(f"done ({round(time() - start)} seconds).", flush=True)
         return adminc
 
     def has_sufficient_time_passed_since_last_email(self, vfile: str) -> bool:

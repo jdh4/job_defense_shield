@@ -7,7 +7,7 @@ Your <NAME> jobs may be using more CPU-cores per GPU than necessary:
 Each node on <NAME> has <CORES> CPU-cores and <GPUS> GPUs. If possible please try
 to use only up to <TARGET> CPU-cores per GPU. This will prevent the situation
 where there are free GPUs on a node but not enough CPU-cores to accept new
-jobs.
+jobs. CPU-Eff is the CPU efficiency.
 
 For more information about the PLI nodes on Della:
 

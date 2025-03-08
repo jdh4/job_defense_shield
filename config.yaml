@@ -7,18 +7,38 @@ jobstats-module-path: /home/jdh4/software/jobstats
 violation-logs-path: /tigress/jdh4/utilities/job_defense_shield/violations
 sender: cses@princeton.edu
 reply-to: rcsystems@princeton.edu
-verbose: False
 greeting-method: getent
 workday-method: usa
-email-files-path: /tigress/jdh4/utilities/job_defense_shield/email
-report-emails:
-    - halverson@princeton.edu
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 email-domain-name: "@princeton.edu"
+report-emails:
+  - halverson@princeton.edu
+verbose: False
 partition-renamings:
     datascience: datasci
 external-emails:
-    akleiner: halverson.jonathan@gmail.com
+    u12345: first.last@gmail.com
+    u23456: first.last@gmail.com
+
+
+#########################################
+## CANCEL JOBS WITH 0% GPU UTILIZATION ##
+#########################################
+cancel-zero-gpu-jobs:
+  cluster: della
+  partitions:
+    - pli-c
+  sampling_period_minutes: 15 # minutes
+  first_warning_minutes: 45   # minutes
+  second_warning_minutes: 90  # minutes
+  cancel_minutes: 105         # minutes
+  email_file_first_warning:  "email/cancel_gpu_jobs_warning_1.txt"
+  email_file_second_warning: "email/cancel_gpu_jobs_warning_2.txt"
+  email_file_cancel:         "email/cancel_gpu_jobs_scancel_3.txt"
+  jobid_cache_path: /projects/j/jdh4/utilities/job_defense_shield
+  warnings_to_admin: False
+  do_not_cancel: True
+  admin_emails:
+    - halverson@princeton.edu
 
 
 ####################################
@@ -181,7 +201,7 @@ multinode-cpu-fragmentation-1:
   cluster: della
   partitions:
     - cpu
-  min_run_time: 10000  # minutes
+  min_run_time: 120    # minutes
   cores_per_node: 32   # count
   cores_fraction: 0.5  # [0, 1]
   mem_per_node: 190    # GB
@@ -333,23 +353,7 @@ low-gpu-efficiency-1:
 low-gpu-efficiency-2:
   cluster: della
   partitions:
-    - pli-c
-  eff_thres_pct: 40         # percent
-  eff_target_pct: 75        # percent
-  proportion_thres_pct: 2   # percent
-  absolute_thres_hours: 168 # gpu-hours
-  num_top_users: 5          # count
-  min_run_time: 30          # minutes
-  email_file: "email/low_gpu_efficiency.txt"
-  admin_emails:
-    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
-    - halverson@princeton.edu
-    - kl5675@princeton.edu
-    - msbc@princeton.edu
-
-low-gpu-efficiency-3:
-  cluster: della
-  partitions:
+    - pli-c   # core
     - pli     # campus, low priority
     - pli-p   # campus, higher priority than pli
     - pli-lc  # large campus
@@ -357,12 +361,9 @@ low-gpu-efficiency-3:
   eff_target_pct: 75        # percent
   proportion_thres_pct: 2   # percent
   absolute_thres_hours: 168 # gpu-hours
-  num_top_users: 3          # count
+  num_top_users: 5          # count
   min_run_time: 30          # minutes
   email_file: "email/low_gpu_efficiency.txt"
-  excluded_users:
-    - aturing
-    - einstein
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu

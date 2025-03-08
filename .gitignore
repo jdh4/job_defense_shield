@@ -3,6 +3,7 @@ __pycache__/
 violations/
 log/
 .pytest_cache/
+.ruff_cache/
 cron.backup
 .coverage
 email/multinode_gpu_fragmentation_2.txt

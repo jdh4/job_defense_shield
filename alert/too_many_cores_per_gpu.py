@@ -2,6 +2,7 @@ import pandas as pd
 from base import Alert
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
+from efficiency import cpu_efficiency
 from greeting import GreetingFactory
 from email_translator import EmailTranslator
 
@@ -17,7 +18,7 @@ class TooManyCoresPerGpu(Alert):
         if not hasattr(self, "email_subject"):
             self.email_subject = "Consider Using Fewer CPU-Cores per GPU"
         if not hasattr(self, "report_title"):
-            self.report_title = "Too Many Cores Per GPU"
+            self.report_title = "Too Many CPU-Cores Per GPU"
 
     def _filter_and_add_new_fields(self):
         # filter the dataframe
@@ -27,30 +28,46 @@ class TooManyCoresPerGpu(Alert):
                           (self.df.cores > self.cores_per_gpu_limit * self.df.gpus) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-        if not self.include_running_jobs:
-            self.df = self.df[self.df.state != "RUNNING"]
+        #if not self.include_running_jobs:
+        #    self.df = self.df[self.df.state != "RUNNING"]
+        if self.include_running_jobs:
+            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        self.df = self.df[self.df.admincomment != {}]
         self.df.rename(columns={"user":"User"}, inplace=True)
-        # add new fields
         if not self.df.empty:
-            self.df["Cores-per-GPU"] = self.df.cores / self.df.gpus
-            self.df["Cores-per-GPU"] = self.df["Cores-per-GPU"].apply(lambda x:
-                                       str(round(x, 1)).replace(".0", ""))
-            self.df["Cores-per-GPU-Target"] = self.cores_per_gpu_target
-            cols = ["jobid",
-                    "User",
-                    "elapsed-hours",
-                    "cores",
-                    "gpus",
-                    "Cores-per-GPU",
-                    "Cores-per-GPU-Target"]
-            self.df = self.df[cols]
-            renamings = {"jobid":"JobID",
-                         "cores":"Cores",
-                         "gpus":"GPUs",
-                         "elapsed-hours":"Hours"}
-            self.df = self.df.rename(columns=renamings)
-            self.df["Hours"] = self.df["Hours"].apply(lambda x: str(round(x, 1))
-                                                      if x < 5 else str(round(x)))
+            self.df["cpu-tuple"] = self.df.apply(lambda row:
+                                                 cpu_efficiency(row["admincomment"],
+                                                                row["elapsedraw"],
+                                                                row["jobid"],
+                                                                row["cluster"],
+                                                                single=True),
+                                                                axis="columns")
+            cols = ["CPU-Eff", "error-code"]
+            self.df[cols] = pd.DataFrame(self.df["cpu-tuple"].tolist(), index=self.df.index)
+            self.df = self.df[self.df["error-code"] == 0]
+            if not self.df.empty:
+                self.df["Cores-per-GPU"] = self.df.cores / self.df.gpus
+                self.df["Cores-per-GPU"] = self.df["Cores-per-GPU"].apply(lambda x:
+                                           str(round(x, 1)).replace(".0", ""))
+                self.df["Cores-per-GPU-Target"] = self.cores_per_gpu_target
+                cols = ["jobid",
+                        "User",
+                        "elapsed-hours",
+                        "CPU-Eff",
+                        "cores",
+                        "gpus",
+                        "Cores-per-GPU",
+                        "Cores-per-GPU-Target"]
+                self.df = self.df[cols]
+                renamings = {"jobid":"JobID",
+                             "cores":"Cores",
+                             "gpus":"GPUs",
+                             "elapsed-hours":"Hours"}
+                self.df = self.df.rename(columns=renamings)
+                self.df["Hours"] = self.df["Hours"].apply(lambda x: str(round(x, 1))
+                                                          if x < 5 else str(round(x)))
+                self.df["CPU-Eff"] = self.df["CPU-Eff"].apply(lambda x: f"{x}%"
+                                                              if x < 5 else f"{round(x)}%")
 
     def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -58,6 +75,7 @@ class TooManyCoresPerGpu(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
+                usr.drop(columns=["User"], inplace=True)
                 indent = 3 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}
@@ -78,8 +96,8 @@ class TooManyCoresPerGpu(Alert):
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.df.empty:
             column_names = ["JobID",
-                            "User",
                             "Hours",
+                            "CPU-Eff",
                             "Cores",
                             "GPUs",
                             "Cores-per-GPU",

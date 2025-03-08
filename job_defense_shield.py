@@ -17,7 +17,7 @@ from efficiency import get_stats_dict
 from raw_job_data import SlurmSacct
 from cleaner import SacctCleaner
 
-from alert.zero_gpu_utilization import ZeroGpuUtilization
+from alert.cancel_zero_gpu_jobs import CancelZeroGpuJobs
 from alert.gpu_model_too_powerful import GpuModelTooPowerful
 from alert.zero_util_gpu_hours import ZeroUtilGPUHours
 from alert.excess_cpu_memory import ExcessCPUMemory
@@ -41,12 +41,12 @@ from alert.too_much_cpu_mem_per_gpu import TooMuchCpuMemPerGpu
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Job Defense Shield')
-    parser.add_argument('--zero-cpu-utilization', action='store_true', default=False,
-                        help='Identify completed CPU jobs with zero utilization')
-    parser.add_argument('--zero-gpu-utilization', action='store_true', default=False,
-                        help='Identify running GPU jobs with zero utilization')
+    parser.add_argument('--cancel-zero-gpu-jobs', action='store_true', default=False,
+                        help='Cancel running jobs with zero GPU utilization')
     parser.add_argument('--zero-util-gpu-hours', action='store_true', default=False,
                         help='Identify users with the most zero GPU utilization hours')
+    parser.add_argument('--zero-cpu-utilization', action='store_true', default=False,
+                        help='Identify completed CPU jobs with zero utilization')
     parser.add_argument('--low-cpu-efficiency', action='store_true', default=False,
                         help='Identify users with low CPU efficiency')
     parser.add_argument('--low-gpu-efficiency', action='store_true', default=False,
@@ -92,7 +92,9 @@ if __name__ == "__main__":
     parser.add_argument('--config-file', type=str, default=None,
                         help='Absolute path to the configuration file')
     parser.add_argument('--email', action='store_true', default=False,
-                        help='Send email alerts to users')
+                        help='Send email alerts to users and administrators')
+    parser.add_argument('--no-emails-to-users', action='store_true', default=False,
+                        help='Do not send emails to users but only to administrators (--email is required)')
     parser.add_argument('--report', action='store_true', default=False,
                         help='Send an email report to administrators')
     parser.add_argument('--check', action='store_true', default=False,
@@ -100,6 +102,10 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--strict-start', action='store_true', default=False,
                         help='Only include usage during time window and not before')
     args = parser.parse_args()
+
+    if not args.email and args.no_emails_to_users:
+        print("--no-emails-to-users must appear with --email. Exiting ...")
+        sys.exit()
 
     # read configuration file
     jds_path = os.path.join(os.path.dirname(__file__), "config.yaml")
@@ -123,12 +129,13 @@ if __name__ == "__main__":
         print("Configuration file not found. Exiting ...")
         sys.exit()
 
-    sys_cfg = {"jobstats_path":   cfg["jobstats-module-path"],
-               "verbose":         cfg["verbose"],
-               "sender":          cfg["sender"],
-               "reply_to":        cfg["reply-to"],
-               "email_domain":    cfg["email-domain-name"],
-               "external_emails": cfg["external-emails"]}
+    sys_cfg = {"no_emails_to_users": args.no_emails_to_users,
+               "jobstats_path":      cfg["jobstats-module-path"],
+               "verbose":            cfg["verbose"],
+               "sender":             cfg["sender"],
+               "reply_to":           cfg["reply-to"],
+               "email_domain":       cfg["email-domain-name"],
+               "external_emails":    cfg["external-emails"]}
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]
@@ -149,10 +156,10 @@ if __name__ == "__main__":
         if args.days == 7:
             print("\n\nINFO: Checking with --days=60, instead of the default of 7.\n")
             args.days = 60
-        if args.zero_gpu_utilization:
+        if args.cancel_zero_gpu_jobs:
             show_history_of_emails_sent(violation_logs_path,
-                                        "zero_gpu_utilization",
-                                        "ZERO GPU UTILIZATION OF A RUNNING JOB",
+                                        "cancel_zero_gpu_jobs",
+                                        "CANCEL JOBS WITH ZERO GPU UTILIZATION",
                                         args.days)
         if args.zero_cpu_utilization:
             show_history_of_emails_sent(violation_logs_path,
@@ -298,25 +305,27 @@ if __name__ == "__main__":
     df.reset_index(drop=True, inplace=True)
     
     fmt = "%a %b %-d"
-    s = f"{start_date.strftime(fmt)} - {end_date.strftime(fmt)}"
+    s = "Job Defense Shield\n"
+    s += "github.com/PrincetonUniversity/job_defense_shield\n\n"
+    s += f"{start_date.strftime(fmt)} - {end_date.strftime(fmt)}"
 
-    ############################################
-    ## RUNNING JOBS WITH ZERO GPU UTILIZATION ##
-    ############################################
-    if args.zero_gpu_utilization:
-        alerts = [alert for alert in cfg.keys() if "zero-gpu-utilization" in alert]
+    ###########################################
+    ## CANCEL JOBS WITH ZERO GPU UTILIZATION ##
+    ###########################################
+    if args.cancel_zero_gpu_jobs:
+        alerts = [alert for alert in cfg.keys() if "cancel-zero-gpu-jobs" in alert]
         for alert in alerts:
             params = cfg[alert]
             params.update(sys_cfg)
-            zero_gpu = ZeroGpuUtilization(df,
-                                          days_between_emails=args.days,
-                                          violation="zero_gpu_utilization",
-                                          vpath=violation_logs_path,
-                                          subject="Jobs with Zero GPU Utilization",
-                                          **params)
+            cancel_gpu = CancelZeroGpuJobs(df,
+                                           days_between_emails=1,
+                                           violation="cancel_zero_gpu_jobs",
+                                           vpath=violation_logs_path,
+                                           **params)
             if args.email:
-                zero_gpu.create_emails(greeting_method)
-                zero_gpu.send_emails_to_users()
+                cancel_gpu.create_emails(greeting_method)
+                cancel_gpu.send_emails_to_users()
+                cancel_gpu.cancel_jobs()
 
 
     ################################
@@ -641,12 +650,12 @@ if __name__ == "__main__":
             for report_email in cfg["report-emails"]:
                 send_email(s,
                            report_email,
-                           subject="Cluster utilization report",
+                           subject="Cluster Utilization Report",
                            sender=cfg["sender"],
                            reply_to=cfg["reply-to"])
         else:
             msg = ("ERROR: --report was found but report-emails and/or "
-                   "sender were not defined in config.yml.\n\n")
+                   "sender were not defined in config.yaml.\n\n")
             print(msg)
 
     print(s, end="\n\n")

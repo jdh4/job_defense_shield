@@ -5,6 +5,7 @@ def test_too_many_cores_per_gpu():
     n_jobs = 5
     wallclock_secs = 36000
     wallclock_hrs = wallclock_secs / 3600
+    ss = {"nodes":{"node1":{"total_time":424242, "cpus":8}}}
     df = pd.DataFrame({"jobid":["1234567"] * n_jobs,
                        "user":["user1", "user2", "user3", "user4", "user5"],
                        "cluster":["della", "della", "stellar", "della", "della"],
@@ -12,6 +13,8 @@ def test_too_many_cores_per_gpu():
                        "gpus":[3, 1, 3, 4, 2],
                        "partition":["pli"] * n_jobs,
                        "state":["COMPLETED"] * n_jobs,
+                       "admincomment":[ss] * n_jobs,
+                       "elapsedraw":[424242] * n_jobs,
                        "elapsed-hours":[round(wallclock_hrs)] * n_jobs})
     target = 12
     cpg = TooManyCoresPerGpu(df,

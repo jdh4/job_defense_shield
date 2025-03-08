@@ -1,0 +1,9 @@
+<GREETING>
+
+This is a second warning. The jobs below will be cancelled in about <SAMPLING> minutes
+unless GPU activity is detected:
+
+<TABLE>
+
+See our GPU Computing webpage for three common reasons for encountering zero GPU
+utilization.
