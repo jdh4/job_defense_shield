@@ -14,8 +14,8 @@ class Alert:
 
     """Base class for all alerts. The named parameters in props will
        overwrite the default values of attributes. For example, if
-       excluded_users is defined in the alert then it will take on
-       those values (if not then it will be an empty list)."""
+       excluded_users is defined in the alert in config.yaml then it
+       will take on those values (if not then it will be an empty list)."""
 
     def __init__(self,
                  df: pd.DataFrame,
@@ -170,6 +170,9 @@ class Alert:
                                             parse_dates=["email_sent"],
                                             date_format="mixed",
                                             dayfirst=False)
+            #violation_history = violation_history[(violation_history["Cluster"] == cluster) &
+            #                                      (violation_history["Alert-Partitions"] == alert_partitions)]
+            #if not violation_history.empty:
             last_sent_email_date = violation_history["email_sent"].max()
         seconds_since_last_email = datetime.now().timestamp() - last_sent_email_date.timestamp()
         seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR

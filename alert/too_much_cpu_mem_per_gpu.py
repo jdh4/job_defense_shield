@@ -56,6 +56,7 @@ class TooMuchCpuMemPerGpu(Alert):
                     "elapsed-hours",
                     "Mem-Eff",
                     "mem-alloc",
+                    "partition",
                     "gpus",
                     "CPU-Mem-per-GPU",
                     "CPU-Mem-per-GPU-Limit",
@@ -63,6 +64,7 @@ class TooMuchCpuMemPerGpu(Alert):
             self.df = self.df[cols]
             renamings = {"jobid":"JobID",
                          "mem-alloc":"CPU-Mem",
+                         "partition":"Partition",
                          "gpus":"GPUs",
                          "elapsed-hours":"Hours"}
             self.df = self.df.rename(columns=renamings)
@@ -84,11 +86,11 @@ class TooMuchCpuMemPerGpu(Alert):
                 cpu_mem_alloc = usr["CPU-Mem"].values[0]
                 num_gpus = usr["GPUs"].values[0]
                 mem_per_gpu = max(8, round(1.2 * mem_eff * cpu_mem_alloc / num_gpus))
-                usr.drop(columns=["User", "CPU-Mem-Used"], inplace=True)
                 usr["Mem-Eff"] = usr["Mem-Eff"].apply(lambda x: f"{x}%")
                 usr["CPU-Mem"] = usr["CPU-Mem"].apply(lambda x: f"{x} GB")
+                tbl = usr.drop(columns=["User", "Partition", "CPU-Mem-Used"]).copy()
                 indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<CLUSTER>"] = self.cluster
@@ -102,11 +104,23 @@ class TooMuchCpuMemPerGpu(Alert):
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobid}"
                 tags["<JOBID>"] = str(jobid)
-                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                tags["<PARTITIONS>"] = ",".join(sorted(set(self.partitions)))
                 translator = EmailTranslator(self.email_files_path,
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["CPU-Mem-per-GPU"] = usr["CPU-Mem-per-GPU"].apply(lambda x:
+                                                                      x.replace(" GB", ""))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "GPUs",
+                           "CPU-Mem-per-GPU",
+                           "Hours"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:

@@ -75,6 +75,7 @@ class ExcessiveTimeLimits(Alert):
             self.gp = self.gp[cols]
             self.gp["cluster"] = self.cluster
             renamings = {"user":"User",
+                         "partition":"Partitions",
                          f"{xpu}-waste-hours":f"{xpu.upper()}-Hours-Unused"}
             self.gp = self.gp.rename(columns=renamings)
 
@@ -94,9 +95,9 @@ class ExcessiveTimeLimits(Alert):
                 jobs["Time-Allocated"] = jobs["limit-minutes"].apply(lambda x:
                                                                      seconds_to_slurm_time_format(spm * x))
                 jobs["Percent-Used"] = jobs["ratio"].apply(lambda x: f"{round(x)}%")
-                cols = ["jobid", "user", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]
+                cols = ["jobid", "Time-Used", "Time-Allocated", "Percent-Used", "cores"]
                 jobs = jobs[cols].sort_values(by="jobid")
-                renamings = {"jobid":"JobID", "user":"User", "cores":"CPU-Cores"}
+                renamings = {"jobid":"JobID", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
                 indent = 4 * " "
                 table = jobs.to_string(index=False, justify="center").split("\n")
@@ -105,7 +106,7 @@ class ExcessiveTimeLimits(Alert):
                 tags["<CASE>"] = case
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
+                tags["<PARTITIONS>"] = usr.Partitions.values[0]
                 tags["<AVERAGE>"] = str(usr["mean(%)"].values[0])
                 tags["<NUM-JOBS>"] = str(total_jobs)
                 tags["<NUM-JOBS-DISPLAY>"] = str(total_jobs)
@@ -115,6 +116,14 @@ class ExcessiveTimeLimits(Alert):
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["Jobs"] = total_jobs
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "CPU-Hours-Unused",
+                           "Jobs"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
@@ -130,7 +139,7 @@ class ExcessiveTimeLimits(Alert):
                             "Jobs"]
             self.gp = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.gp), self.report_title)
-        self.gp = self.gp.drop(columns=["cluster", "partition"])
+        self.gp = self.gp.drop(columns=["cluster", "Partitions"])
         xpu = "cpu"
         renamings = {f"{xpu}-hours":"Used",
                      f"{xpu}-alloc-hours":"Total"}

@@ -10,8 +10,8 @@ email-domain-name: "@princeton.edu"
 sender: cses@princeton.edu
 reply-to: rcsystems@princeton.edu
 greeting-method: getent
-workday-method: always  ###########################
-#holidays-file: /projects/j/jdh4/utilities/job_defense_shield/.holidays
+workday-method: file
+holidays-file: /projects/j/jdh4/utilities/job_defense_shield/.holidays
 report-emails:
   - halverson@princeton.edu
 verbose: False
@@ -30,9 +30,9 @@ cancel-zero-gpu-jobs:
   partitions:
     - pli-c
   sampling_period_minutes: 15 # minutes
-  first_warning_minutes: 30   # minutes
-  second_warning_minutes: 45 # minutes
-  cancel_minutes: 60           # minutes
+  first_warning_minutes: 0    # minutes
+  second_warning_minutes: 15  # minutes
+  cancel_minutes: 30          # minutes
   email_file_first_warning:  "cancel_gpu_jobs_warning_1.txt"
   email_file_second_warning: "cancel_gpu_jobs_warning_2.txt"
   email_file_cancel:         "cancel_gpu_jobs_scancel_3.txt"

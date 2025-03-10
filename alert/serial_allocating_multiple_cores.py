@@ -9,7 +9,7 @@ from email_translator import EmailTranslator
 
 class SerialAllocatingMultipleCores(Alert):
 
-    """Find serial codes that have been allocated multiple CPU-cores."""
+    """Find serial codes that have been allocated multiple CPU-Cores."""
 
     def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, **kwargs)
@@ -63,28 +63,28 @@ class SerialAllocatingMultipleCores(Alert):
                          "jobid":"JobID",
                          "user":"User",
                          "partition":"Partition",
-                         "cores":"CPU-cores",
+                         "cores":"CPU-Cores",
                          "cpu-eff":"CPU-Util",
-                         "inverse-cores":"100%/CPU-cores"}
+                         "inverse-cores":"100%/CPU-Cores"}
             self.df = self.df.rename(columns=renamings)
             self.df = self.df[["JobID",
                                "User",
                                "Partition",
-                               "CPU-cores",
+                               "CPU-Cores",
                                "CPU-Util",
-                               "100%/CPU-cores",
+                               "100%/CPU-Cores",
                                "Hours"]]
             self.df = self.df.sort_values(by=["User", "JobID"])
-            self.df["100%/CPU-cores"] = self.df["100%/CPU-cores"].apply(lambda x: f"{x}%")
+            self.df["100%/CPU-Cores"] = self.df["100%/CPU-Cores"].apply(lambda x: f"{x}%")
             self.df["CPU-Util"] = self.df["CPU-Util"].apply(lambda x: f"{x}%")
-            self.df["cores-minus-1"] = self.df["CPU-cores"] - 1
+            self.df["cores-minus-1"] = self.df["CPU-Cores"] - 1
             self.df["CPU-Hours-Wasted"] = self.df["Hours"] * self.df["cores-minus-1"]
             def jobid_list(series):
                 ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
                 return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
             d = {"CPU-Hours-Wasted":"sum",
                  "User":"size",
-                 "CPU-cores":"mean",
+                 "CPU-Cores":"mean",
                  "JobID":jobid_list}
             self.gp = self.df.groupby("User").agg(d).rename(columns={"User":"Jobs"})
             self.gp.reset_index(drop=False, inplace=True)
@@ -114,7 +114,7 @@ class SerialAllocatingMultipleCores(Alert):
                 #making <NUM-NODES> nodes unavailable to all users (including yourself) for 1 week!
                 indent = 4 * " "
                 # ADDED num_disp but no sort before this
-                table = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
+                tbl = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<CASE>"] = case
@@ -122,7 +122,7 @@ class SerialAllocatingMultipleCores(Alert):
                 tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<NUM-JOBS>"] = str(total_jobs)
-                tags["<TABLE>"] = "\n".join([indent + row for row in table])
+                tags["<TABLE>"] = "\n".join([indent + row for row in tbl])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 tags["<CPU-HOURS>"] = str(cpu_hours_wasted)
                 tags["<NUM-NODES>"] = str(num_wasted_nodes)
@@ -131,7 +131,18 @@ class SerialAllocatingMultipleCores(Alert):
                                              tags)
                 email = translator.replace_tags()
                 usr["Cluster"] = self.cluster
-                usr["Partition"] = ",".join(sorted(set(self.partitions)))
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["User"] = user
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "CPU-Cores",
+                           "CPU-Util",
+                           "Hours"]]
+                usr["CPU-Cores"] = usr["CPU-Cores"].astype("int64")
+                usr["CPU-Util"] = usr["CPU-Util"].apply(lambda x: x.replace("%", ""))
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
@@ -145,9 +156,9 @@ class SerialAllocatingMultipleCores(Alert):
             self.gp = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.gp), self.report_title)
         self.gp["CPU-Hours-Wasted"] = self.gp["CPU-Hours-Wasted"].apply(round)
-        self.gp["CPU-cores"] = self.gp["CPU-cores"].apply(lambda x:
+        self.gp["CPU-Cores"] = self.gp["CPU-Cores"].apply(lambda x:
                                                     str(round(x, 1)).replace(".0", ""))
-        self.gp = self.gp.rename(columns={"CPU-cores":"AvgCores"})
+        self.gp = self.gp.rename(columns={"CPU-Cores":"AvgCores"})
         self.gp.reset_index(drop=False, inplace=True)
         self.gp["Emails"] = self.gp.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))

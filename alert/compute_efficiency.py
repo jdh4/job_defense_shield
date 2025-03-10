@@ -128,7 +128,7 @@ class LowEfficiency(Alert):
                 rank = self.ce.index[self.ce.user == user].tolist()[0]
                 myrank = f"the {rank}th most" if rank > 3 else rank_text[rank]
                 jobid = self.df[self.df.user == user].jobid.values[0]
-                usr[f"{self.xpu.upper()}-rank"] = f"{rank}/{self.pr.shape[0]}"
+                usr[f"{self.xpu}-rank"] = f"{rank}/{self.pr.shape[0]}"
                 usr["eff(%)"] = usr["eff(%)"].apply(lambda x: f"{x}%")
                 usr["cores"] = usr["cores"].apply(lambda x: str(x).replace(".0", ""))
                 cols = ["user",
@@ -136,7 +136,7 @@ class LowEfficiency(Alert):
                         "partition",
                         "jobs",
                         f"{self.xpu}-hours",
-                        f"{self.xpu.upper()}-rank",
+                        f"{self.xpu}-rank",
                         "eff(%)",
                         "cores"]
                 if self.xpu == "gpu":
@@ -145,11 +145,14 @@ class LowEfficiency(Alert):
                              "cluster":"Cluster",
                              "partition":"Partition(s)",
                              "jobs":"Jobs",
-                             f"{self.xpu}-hours":f"{self.xpu.upper()}-hours",
+                             f"{self.xpu}-hours":f"{self.xpu.upper()}-Hours",
+                             f"{self.xpu}-rank":f"{self.xpu.upper()}-Rank",
                              "eff(%)":"Efficiency",
                              "cores":"AvgCores"}
                 usr = usr[cols].rename(columns=renamings)
                 usr = usr.drop(columns=["Cluster"])
+                indent = 4 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
@@ -158,12 +161,24 @@ class LowEfficiency(Alert):
                 tags["<RANK>"] = myrank
                 tags["<EFFICIENCY>"] = usr['Efficiency'].values[0]
                 tags["<TARGET>"] = f"{str(self.eff_target_pct)}%"
-                indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobid}"
-                translator = EmailTranslator(self.email_file, tags)
+                translator = EmailTranslator(self.email_files_path,
+                                             self.email_file,
+                                             tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["Efficiency"] = usr["Efficiency"].apply(lambda x:
+                                                            x.replace("%", ""))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "Partition(s)",
+                           f"{self.xpu.upper()}-Hours",
+                           f"{self.xpu.upper()}-Rank",
+                           "Efficiency",
+                           "Jobs"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
@@ -186,7 +201,6 @@ class LowEfficiency(Alert):
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
         self.admin.index.name = "Rank"
         self.admin.reset_index(drop=False, inplace=True)
-        #Rank  user   cpu-hours  proportion(%)  eff(%)  jobs  interactive  cores  coverage Emails
         renamings = {"user":"User",
                      f"{self.xpu}-hours":f"{self.xpu.upper()}-Hours",
                      "proportion(%)":"Proportion(%)",

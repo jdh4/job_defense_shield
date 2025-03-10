@@ -44,15 +44,18 @@ class MultinodeCpuFragmentation(Alert):
             self.report_title = "Multinode CPU Jobs with Fragmentation"
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.nodes > 1) &
                           (self.df["gpu-job"] == 0) &
                           (~self.df.user.isin(self.excluded_users)) &
-                          (self.df["admincomment"] != {}) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
+        self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         # add new fields
         if not self.df.empty:
             self.df["nodes-tuple"] = self.df.apply(lambda row:
@@ -114,6 +117,7 @@ class MultinodeCpuFragmentation(Alert):
                 usr = self.df[self.df.user == user].copy()
                 renamings = {"jobid":"JobID",
                              "cluster":"Cluster",
+                             "partition":"Partition",
                              "nodes":"Nodes",
                              "mem-per-node-used":"Mem-per-Node",
                              "cores-per-node":"Cores-per-Node",
@@ -121,16 +125,16 @@ class MultinodeCpuFragmentation(Alert):
                              "min-nodes":"Nodes-Needed"}
                 usr = usr.rename(columns=renamings)
                 min_nodes = usr["Nodes-Needed"].mode().values[0]
+                indent = 4 * " "
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
+                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
                 tags["<CPN>"] = str(self.cores_per_node)
                 tags["<MPN>"] = str(self.mem_per_node)
-                usr = usr.drop(columns=["user", "partition", "cores"])
-                indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
+                tbl = usr.drop(columns=["user", "Partition", "cores"]).copy()
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 sb = f"{indent}#SBATCH --nodes={min_nodes}\n"
                 sb += f"{indent}#SBATCH --ntasks-per-node={self.cores_per_node}"
@@ -141,6 +145,17 @@ class MultinodeCpuFragmentation(Alert):
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["User"] = user
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "Nodes",
+                           "Hours",
+                           "Nodes-Needed"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:

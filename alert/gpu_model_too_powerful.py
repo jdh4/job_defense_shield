@@ -69,12 +69,21 @@ class GpuModelTooPowerful(Alert):
                                   (self.df["CPU-Mem-Used"] < cpu_mem_threshold)]
                 self.df["CPU-Mem-Used"] = self.df["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
                 self.df["GPU-Mem-Used"] = self.df["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
-                self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%" if x > 0.5 else f"{round(x, 1)}%")
-                renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "user":"User"}
+                self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%"
+                                                                    if x > 0.5 else f"{round(x, 1)}%")
+                renamings = {"elapsed-hours":"Hours",
+                             "jobid":"JobID",
+                             "user":"User",
+                             "partition":"Partition"}
                 self.df = self.df.rename(columns=renamings)
-                self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
-                # where is groupby and then compare to abs threshold?
-                # self.gpu_hours_threshold
+                cols = ["JobID",
+                        "User",
+                        "Partition",
+                        "GPU-Util",
+                        "GPU-Mem-Used",
+                        "CPU-Mem-Used",
+                        "Hours"]
+                self.df = self.df[cols]
                 self.gp = self.df.groupby("User").agg({"Hours":"sum"}).reset_index()
                 self.gp = self.gp[self.gp["Hours"] > self.gpu_hours_threshold]
                 self.df = self.df[self.df.User.isin(self.gp.User)]
@@ -85,14 +94,16 @@ class GpuModelTooPowerful(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
-                usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
+                usr["Hours"] = usr["Hours"].apply(lambda x: str(round(x, 1))
+                                                  if x < 5 else str(round(x)))
                 indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
+                tbl = usr.drop(columns=["Partition"]).copy()
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                tags["<PARTITIONS>"] = ",".join(sorted(set(self.partitions)))
                 tags["<TARGET>"] = str(self.gpu_util_target)
                 tags["<NUM-JOBS>"] = str(len(usr))
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
@@ -101,8 +112,22 @@ class GpuModelTooPowerful(Alert):
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["GPU-Util"] = usr["GPU-Util"].apply(lambda x: x.replace("%", ""))
+                usr["GPU-Mem-Used"] = usr["GPU-Mem-Used"].apply(lambda x: x.replace(" GB", ""))
+                usr["CPU-Mem-Used"] = usr["CPU-Mem-Used"].apply(lambda x: x.replace(" GB", ""))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "GPU-Util",
+                           "GPU-Mem-Used",
+                           "CPU-Mem-Used",
+                           "Hours"]]
                 self.emails.append((user, email, usr))
-              
+ 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
         if self.df.empty:
             column_names = ["JobID",
@@ -119,7 +144,8 @@ class GpuModelTooPowerful(Alert):
             return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
         d = {"Hours":"sum", "User":"size", "JobID":jobid_list}
         self.admin = self.df.groupby("User").agg(d)
-        self.admin["Hours"] = self.admin["Hours"].apply(lambda hrs: round(hrs, 1))
+        self.admin["Hours"] = self.admin["Hours"].apply(lambda x: str(round(x, 1))
+                                                        if x < 5 else str(round(x)))
         renamings = {"User":"Jobs", "Hours":"GPU-Hours"}
         self.admin = self.admin.rename(columns=renamings)
         self.admin = self.admin.sort_values(by="GPU-Hours", ascending=False)

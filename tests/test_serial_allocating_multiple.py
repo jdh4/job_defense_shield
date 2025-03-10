@@ -77,10 +77,10 @@ def test_serial_allocating_multiple_cores():
                                            include_running_jobs=False,
                                            email_file="",
                                            max_num_jobid_admin=3)
-    actual = serial.df[["User", "CPU-cores", "100%/CPU-cores", "CPU-Util", "Hours"]]
+    actual = serial.df[["User", "CPU-Cores", "100%/CPU-Cores", "CPU-Util", "Hours"]]
     expected = pd.DataFrame({"User":["user1", "user1", "user1", "user2"],
-                             "CPU-cores":[32, 16, 16, 32],
-                             "100%/CPU-cores":["3.1%", "6.2%", "6.2%", "3.1%"],
+                             "CPU-Cores":[32, 16, 16, 32],
+                             "100%/CPU-Cores":["3.1%", "6.2%", "6.2%", "3.1%"],
                              "CPU-Util":["3.1%", "6.2%", "6.2%", "3.1%"],
                              "Hours":[round(wallclock_hrs),
                                       round(wallclock_hrs),

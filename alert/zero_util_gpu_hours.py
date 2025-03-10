@@ -96,6 +96,8 @@ class ZeroUtilGPUHours(Alert):
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:

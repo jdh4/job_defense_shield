@@ -115,6 +115,8 @@ class CancelZeroGpuJobs(Alert):
             self.df["Hours"] = self.df.elapsedraw.apply(lambda x: round(x / sph, 1))
 
     def create_emails(self, method):
+        """Note that the violation history of a user is not considered here
+           since this alert is considered urgent."""
         g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             indent = 4 * " "
@@ -178,26 +180,37 @@ class CancelZeroGpuJobs(Alert):
                           (self.df.User == user)].copy()
             if not usr.empty:
                 usr["State"] = "CANCELLED"
-                usr = usr[["JobID",
+                tbl = usr[["JobID",
                            "Cluster",
                            "Partition",
                            "State",
                            "GPUs-Allocated",
                            "GPU-Util",
-                           "Hours"]]
-                table = usr.to_string(index=False, justify="center").split("\n")
+                           "Hours"]].copy()
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
-                tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
-                tags["<SCANCEL>"] = f"{indent}$ scancel {usr.JobID.values[0]}"
+                tags["<JOBSTATS>"] = f"{indent}$ jobstats {tbl.JobID.values[0]}"
+                tags["<SCANCEL>"] = f"{indent}$ scancel {tbl.JobID.values[0]}"
                 translator = EmailTranslator(self.email_files_path,
                                              self.email_file_cancel,
                                              tags)
                 email = translator.replace_tags()
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["User"] = user
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "GPUs-Allocated",
+                           "GPUs-Unused",
+                           "Hours"]]
                 self.emails.append((user, email, usr))
+                print(email, usr)
                 self.jobids_to_cancel.extend(usr.JobID.tolist())
 
     def cancel_jobs(self) -> None:
-        """Call scancel on each jobid. For this to work, it must be ran as
+        """Call scancel on each jobid. For this to work, the code must be ran by
            a user with sufficient privileges."""
         if not self.do_not_cancel:
             for jobid in self.jobids_to_cancel:
@@ -208,4 +221,4 @@ class CancelZeroGpuJobs(Alert):
                                    timeout=10,
                                    text=True,
                                    check=True)
-                print(f"Cancelled job {jobid} due to zero GPU utilization.")
+                print(f"INFO: Cancelled job {jobid} due to zero GPU utilization.")

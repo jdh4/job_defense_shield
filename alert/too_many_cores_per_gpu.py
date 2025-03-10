@@ -52,6 +52,7 @@ class TooManyCoresPerGpu(Alert):
                 self.df["Cores-per-GPU-Target"] = self.cores_per_gpu_target
                 cols = ["jobid",
                         "User",
+                        "partition",
                         "elapsed-hours",
                         "CPU-Eff",
                         "cores",
@@ -61,6 +62,7 @@ class TooManyCoresPerGpu(Alert):
                 self.df = self.df[cols]
                 renamings = {"jobid":"JobID",
                              "cores":"Cores",
+                             "partition":"Partition",
                              "gpus":"GPUs",
                              "elapsed-hours":"Hours"}
                 self.df = self.df.rename(columns=renamings)
@@ -75,9 +77,9 @@ class TooManyCoresPerGpu(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
-                usr.drop(columns=["User"], inplace=True)
+                tbl = usr.drop(columns=["User", "Partition"]).copy()
                 indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<CLUSTER>"] = self.cluster
@@ -93,6 +95,17 @@ class TooManyCoresPerGpu(Alert):
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr = usr[["User",
+                           "Cluster",      
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "Cores",
+                           "GPUs",
+                           "Cores-per-GPU",
+                           "Hours"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
