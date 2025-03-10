@@ -31,7 +31,7 @@ class ExcessCPUMemory(Alert):
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
         if self.combine_partitions:
-            self.df["partition"] = ",".join(sorted(set(self.partitions)))
+            self.df.partition = ",".join(sorted(set(self.partitions)))
         # only consider jobs that do not use (approximately) full nodes
         thres = self.cores_fraction * self.cores_per_node
         self.df = self.df[self.df["cores"] / self.df["nodes"] <= thres]
@@ -190,23 +190,37 @@ class ExcessCPUMemory(Alert):
             self.admin = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.admin), self.report_title)
         cols = ["User",
-                "proportion",
                 "mem-hrs-unused",
                 "mem-hrs-used",
                 "ratio",
                 "mean-ratio",
                 "median-ratio",
+                "proportion",
                 "cpu-hrs",
                 "jobs"]
         self.admin = self.admin[cols]
         self.admin["Emails"] = self.admin.User.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
-        renamings = {"mem-hrs-unused":"unused",
-                     "mem-hrs-used":"used",
-                     "mean-ratio":"mean",
-                     "median-ratio":"median"}
-        #columns_names = pd.MultiIndex.from_tuples([('Group1', 'Va'), ('Group3', ''), ('Group2', 'Value1')])
+        renamings = {"proportion":"Proportion",
+                     "ratio":"Ratio",
+                     "jobs":"Jobs",
+                     "mem-hrs-unused":"Unused",
+                     "mem-hrs-used":"Used",
+                     "mean-ratio":"Mean",
+                     "median-ratio":"Median"}
         self.admin = self.admin.rename(columns=renamings)
+        # User    proportion  unused  used  ratio  mean  median  cpu-hrs  jobs  Emails
+        column_names = pd.MultiIndex.from_tuples([('User', ''),
+                                                  ('Unused', '(TB-Hrs)'),
+                                                  ('Used', '(TB-Hrs)'),
+                                                  ('Ratio', 'Overall'),
+                                                  ('Ratio ', 'Mean'),
+                                                  (' Ratio', 'Median'),
+                                                  ('Proportion', ''),
+                                                  ('CPU-Hrs', ''),
+                                                  ('Jobs', ''),
+                                                  ('Emails', '')])
+        self.admin.columns = column_names
         report_str = self.admin.to_string(index=keep_index, justify="center")
-        return add_dividers(report_str, self.report_title)
+        return add_dividers(report_str, self.report_title, units_row=True)

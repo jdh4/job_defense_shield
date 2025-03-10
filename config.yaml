@@ -10,8 +10,8 @@ email-domain-name: "@princeton.edu"
 sender: cses@princeton.edu
 reply-to: rcsystems@princeton.edu
 greeting-method: getent
-workday-method: file
-holidays-file: /projects/j/jdh4/utilities/job_defense_shield/.holidays
+workday-method: always  ###########################
+#holidays-file: /projects/j/jdh4/utilities/job_defense_shield/.holidays
 report-emails:
   - halverson@princeton.edu
 verbose: False
@@ -30,15 +30,16 @@ cancel-zero-gpu-jobs:
   partitions:
     - pli-c
   sampling_period_minutes: 15 # minutes
-  first_warning_minutes: 45   # minutes
-  second_warning_minutes: 90  # minutes
-  cancel_minutes: 105         # minutes
+  first_warning_minutes: 30   # minutes
+  second_warning_minutes: 45 # minutes
+  cancel_minutes: 60           # minutes
   email_file_first_warning:  "cancel_gpu_jobs_warning_1.txt"
   email_file_second_warning: "cancel_gpu_jobs_warning_2.txt"
   email_file_cancel:         "cancel_gpu_jobs_scancel_3.txt"
   jobid_cache_path: /projects/j/jdh4/utilities/job_defense_shield
-  warnings_to_admin: True
   do_not_cancel: True
+  max_interactive_hours: 8
+  max_interactive_gpus: 1
   admin_emails:
     - halverson@princeton.edu
 
@@ -148,7 +149,7 @@ too-much-cpu-mem-per-gpu-1:
   gpus_per_node: 8
   cpu_mem_per_node: 1000       # GB
   cpu_mem_per_gpu_target: 115  # GB
-  cpu_mem_per_gpu_limit: 125   # GB
+  cpu_mem_per_gpu_limit: 128   # GB
   mem_eff_thres: 0.8           # [0, 1]
   min_run_time: 61             # minutes
   email_file: "too_much_cpu_mem_per_gpu.txt"
@@ -171,26 +172,75 @@ too-much-cpu-mem-per-gpu-2:
   min_run_time: 61             # minutes
   email_file: "too_much_cpu_mem_per_gpu_2.txt"
   nodelist:
-    - della-i14g1
-    - della-i14g2
-    - della-i14g3
-    - della-i14g4
-    - della-i14g5
-    - della-i14g6
-    - della-i14g7
-    - della-i14g8
-    - della-i14g9
-    - della-i14g10
-    - della-i14g11
-    - della-i14g12
-    - della-i14g13
-    - della-i14g14
-    - della-i14g15
-    - della-i14g16
-    - della-i14g17
-    - della-i14g18
-    - della-i14g19
-    - della-i14g20
+    - della-l01g3
+    - della-l01g4
+    - della-l01g5
+    - della-l01g6
+    - della-l01g7
+    - della-l01g8
+    - della-l01g9
+    - della-l01g10
+    - della-l01g11
+    - della-l01g12
+    - della-l01g13
+    - della-l01g14
+    - della-l01g15
+    - della-l01g16
+    - della-l02g1
+    - della-l02g2
+    - della-l02g3
+    - della-l02g4
+    - della-l02g5
+    - della-l02g6
+    - della-l02g7
+    - della-l02g8
+    - della-l02g9
+    - della-l02g10
+    - della-l02g11
+    - della-l02g12
+    - della-l02g13
+    - della-l02g14
+    - della-l02g15
+    - della-l02g16
+    - della-l03g1
+    - della-l03g2
+    - della-l03g3
+    - della-l03g4
+    - della-l03g5
+    - della-l03g6
+    - della-l03g7
+    - della-l03g8
+    - della-l03g9
+    - della-l03g10
+    - della-l03g11
+    - della-l03g12
+    - della-l03g13
+    - della-l03g14
+    - della-l03g15
+    - della-l03g16
+    - della-l04g1
+    - della-l04g2
+    - della-l04g3
+    - della-l04g4
+    - della-l04g5
+    - della-l04g6
+    - della-l04g7
+    - della-l04g8
+    - della-l04g9
+    - della-l04g10
+    - della-l04g11
+    - della-l04g12
+    - della-l04g13
+    - della-l04g14
+    - della-l04g15
+    - della-l04g16
+    - della-l05g1
+    - della-l05g2
+    - della-l05g3
+    - della-l05g4
+    - della-l05g5
+    - della-l05g6
+    - della-l05g7
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu
@@ -377,18 +427,18 @@ low-gpu-efficiency-2:
 ## SERIAL CODE ALLOCATING MULTIPLE CORES (ALERT) ##
 ###################################################
 serial-allocating-multiple-1:
-    cluster: della
-    partitions:
-      - cpu
-    cores_per_node: 32       # (optional)
-    min_run_time: 61         # minutes
-    cpu_hours_threshold: 100 # cpu-hours
-    lower_ratio: 0.85        # [0, 1]
-    num_top_users: 5
-    email_file: "serial_allocating_multiple.txt"
-    admin_emails:
-      - halverson@princeton.edu
-      - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
+  cluster: della
+  partitions:
+    - cpu
+  cores_per_node: 32       # (optional)
+  min_run_time: 61         # minutes
+  cpu_hours_threshold: 100 # cpu-hours
+  lower_ratio: 0.85        # [0, 1]
+  num_top_users: 5
+  email_file: "serial_allocating_multiple.txt"
+  admin_emails:
+    - halverson@princeton.edu
+    - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
 
 
 ########################
@@ -428,10 +478,6 @@ excess-cpu-memory-1:
   num_top_users: 10
   num_jobs_display: 10
   email_file: "excess_cpu_memory.txt"
-  excluded_users:
-    - aturing
-    - einstein
-    - vonholdt
   admin_emails:
     - alerts-jobs-aaaalegbihhpknikkw2fkdx6gi@princetonrc.slack.com
     - halverson@princeton.edu

@@ -25,16 +25,17 @@ class SerialAllocatingMultipleCores(Alert):
             self.num_jobs_display = 10
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.nodes == 1) &
                           (self.df.cores > 1) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-        if self.include_running_jobs:
-            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
         self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         self.gp = pd.DataFrame({"User":[]})
         if not self.df.empty:
             # add new fields
@@ -111,15 +112,16 @@ class SerialAllocatingMultipleCores(Alert):
                 # if cores_per_node:
                 #Your jobs allocated <CPU-HOURS> CPU-hours that were never used. This is equivalent to
                 #making <NUM-NODES> nodes unavailable to all users (including yourself) for 1 week!
+                indent = 4 * " "
+                # ADDED num_disp but no sort before this
+                table = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<CASE>"] = case
                 tags["<CLUSTER>"] = self.cluster
                 tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
                 tags["<DAYS>"] = str(self.days_between_emails)
-                indent = 4 * " "
-                # ADDED num_disp but no sort before this
-                table = usr.head(num_disp).to_string(index=False, justify="center").split("\n")
+                tags["<NUM-JOBS>"] = str(total_jobs)
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 tags["<CPU-HOURS>"] = str(cpu_hours_wasted)
@@ -128,6 +130,8 @@ class SerialAllocatingMultipleCores(Alert):
                                              self.email_file,
                                              tags)
                 email = translator.replace_tags()
+                usr["Cluster"] = self.cluster
+                usr["Partition"] = ",".join(sorted(set(self.partitions)))
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:

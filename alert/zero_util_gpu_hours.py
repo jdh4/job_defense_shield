@@ -24,15 +24,16 @@ class ZeroUtilGPUHours(Alert):
             self.max_num_jobid_admin = 4
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.gpus > 0) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-        if self.include_running_jobs:
-            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
         self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         self.gp = pd.DataFrame({"User":[]})
         self.admin = pd.DataFrame()
         # add new fields
@@ -79,6 +80,7 @@ class ZeroUtilGPUHours(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 zero_hours = round(self.gp[self.gp.User == user]["Zero-Util-GPU-Hours"].values[0])
+                indent = 4 * " "
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<GPU-HOURS>"] = str(zero_hours)
@@ -87,7 +89,6 @@ class ZeroUtilGPUHours(Alert):
                 tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
                 usr.drop(columns=["partition"], inplace=True)
                 tags["<NUM-JOBS>"] = str(len(usr))
-                indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"

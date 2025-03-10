@@ -7,6 +7,7 @@ import pandas as pd
 from utils import send_email
 from utils import SECONDS_PER_HOUR
 from utils import HOURS_PER_DAY
+from efficiency import get_nodelist
 
 
 class Alert:
@@ -32,7 +33,7 @@ class Alert:
         self.email_file = None
         self.admin_emails = []
         self.include_running_jobs = False
-        self.warnings_to_admin = False
+        self.warnings_to_admin = True
         for key in props:
             setattr(self, key, props[key])
         if hasattr(self, "partitions") and isinstance(self.partitions, str):
@@ -122,23 +123,49 @@ class Alert:
         from jobstats import Jobstats
         from config import PROM_SERVER
         num_jobs = len(self.df[self.df.state == "RUNNING"])
-        print(f"\nQuerying server for admincomment on {num_jobs} running jobs ... ",
+        print(f"\nINFO: Querying server for admincomment on {num_jobs} running jobs ... ",
               end="",
               flush=True)
         start = time()
         adminc = self.df.apply(lambda row:
                                eval(Jobstats(jobid=row["jobid"],
-                                                   cluster=row["cluster"],
-                                                   prom_server=PROM_SERVER).report_job_json(False))
+                                             cluster=row["cluster"],
+                                             prom_server=PROM_SERVER).report_job_json(False))
                                if row["state"] == "RUNNING"
                                else row["admincomment"], axis="columns")
         print(f"done ({round(time() - start)} seconds).", flush=True)
         return adminc
 
+    def filter_by_nodelist(self) -> pd.DataFrame:
+        """If the alert contains a nodelist then filter out the jobs
+           that ran on nodes that are not in the nodelist. This function
+           is useful when the cluster and partition do not provide
+           sufficient control. The approach is to subtract the nodelist
+           from the nodes that each job used. If the length of the
+           resulting set is zero then the job used only nodes in the
+           nodelist."""
+        self.df["node-tuple"] = self.df.apply(lambda row:
+                                        get_nodelist(row["admincomment"],
+                                                     row["jobid"],
+                                                     row["cluster"]),
+                                                     axis="columns")
+        cols = ["job_nodes", "error_code"]
+        self.df[cols] = pd.DataFrame(self.df["node-tuple"].tolist(),
+                                     index=self.df.index)
+        self.df = self.df[self.df["error_code"] == 0]
+        self.nodelist = set(self.nodelist)
+        self.df["num_other_nodes"] = self.df["job_nodes"].apply(lambda jns:
+                                                          len(jns - self.nodelist))
+        self.df = self.df[self.df["num_other_nodes"] == 0]
+        cols = ["node-tuple", "job_nodes", "error_code", "num_other_nodes"]
+        self.df.drop(columns=cols, inplace=True)
+        print("INFO: Applied nodelist")
+        return self.df
+
     def has_sufficient_time_passed_since_last_email(self, vfile: str) -> bool:
         """Return boolean specifying whether sufficient time has passed."""
         last_sent_email_date = datetime(1970, 1, 1)
-        if os.path.exists(vfile):
+        if os.path.isfile(vfile):
             violation_history = pd.read_csv(vfile,
                                             parse_dates=["email_sent"],
                                             date_format="mixed",
@@ -155,7 +182,7 @@ class Alert:
         if not os.path.exists(root_violations):
             print(f"Warning: {root_violations} not found in get_emails_sent_count()")
         user_violations = f"{root_violations}/{user}.email.csv"
-        if os.path.exists(user_violations):
+        if os.path.isfile(user_violations):
             d = pd.read_csv(user_violations,
                             parse_dates=["email_sent"],
                             date_format="mixed",
@@ -184,12 +211,12 @@ class Alert:
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
         """Append the new violations to file."""
         usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
-        if os.path.exists(vfile):
+        if os.path.isfile(vfile):
             curr = pd.read_csv(vfile)
             curr = pd.concat([curr, usr]).drop_duplicates()
-            curr.to_csv(vfile, index=False, header=True)
+            curr.to_csv(vfile, index=False, header=True, encoding="utf-8")
         else:
-            usr.to_csv(vfile, index=False, header=True)
+            usr.to_csv(vfile, index=False, header=True, encoding="utf-8")
 
     def __len__(self) -> int:
         """Returns the number of rows in the df dataframe."""

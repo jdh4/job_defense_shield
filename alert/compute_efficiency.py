@@ -170,7 +170,7 @@ class LowEfficiency(Alert):
         """Return dataframe for admins."""
         if self.admin.empty:
             column_names = ["User",
-                            "CPU-Hours",
+                            f"{self.xpu.upper()}-Hours",
                             "Proportion(%)",
                             "Eff(%)",
                             "Jobs",
@@ -184,6 +184,18 @@ class LowEfficiency(Alert):
         self.admin["Emails"] = self.admin.user.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
+        self.admin.index.name = "Rank"
+        self.admin.reset_index(drop=False, inplace=True)
+        #Rank  user   cpu-hours  proportion(%)  eff(%)  jobs  interactive  cores  coverage Emails
+        renamings = {"user":"User",
+                     f"{self.xpu}-hours":f"{self.xpu.upper()}-Hours",
+                     "proportion(%)":"Proportion(%)",
+                     "eff(%)":"Eff(%)",
+                     "jobs":"Jobs",
+                     "interactive":"Interactive",
+                     "cores":"Cores",
+                     "coverage":"Coverage"}
+        self.admin.rename(columns=renamings, inplace=True)
         report_str = self.admin.to_string(index=keep_index, justify="center")
         return add_dividers(report_str, self.report_title)
 

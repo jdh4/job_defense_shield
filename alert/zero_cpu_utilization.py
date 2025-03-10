@@ -12,7 +12,6 @@ class ZeroCPU(Alert):
     """CPU jobs with zero utilization on one or more nodes."""
 
     def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
-        self.excluded_users = []
         super().__init__(df, days_between_emails, violation, vpath, **kwargs)
 
     def _add_required_fields(self):
@@ -22,14 +21,16 @@ class ZeroCPU(Alert):
             self.report_title = "Jobs with Zero CPU Utilization"
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-        if self.include_running_jobs:
-            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
         self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
+        self.df.rename(columns={"user":"User"}, inplace=True)
         # add new fields
         if not self.df.empty:
             self.df["nodes-tuple"] = self.df.apply(lambda row:
@@ -47,7 +48,7 @@ class ZeroCPU(Alert):
             self.df["interactive"] = self.df["jobname"].apply(is_interactive)
             self.df["CPU-Util-Unused"] = "0%"
             cols = ["jobid",
-                    "user",
+                    "User",
                     "cluster",
                     "nodes",
                     "nodes-unused",
@@ -56,7 +57,6 @@ class ZeroCPU(Alert):
                     "elapsed-hours"]
             self.df = self.df[cols]
             renamings = {"jobid":"JobID",
-                         "user":"User",
                          "cluster":"Cluster",
                          "nodes":"Nodes",
                          "nodes-unused":"Nodes-Unused",
@@ -77,14 +77,14 @@ class ZeroCPU(Alert):
                    usr.Cores.values[0] < 4:
                     continue
                 usr.drop(columns=["User"], inplace=True)
+                indent = 4 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
                 tags["<PARTITIONS>"] = ",".join(self.partitions)
                 tags["<NUM-JOBS>"] = str(len(usr))
-                indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 translator = EmailTranslator(self.email_files_path,

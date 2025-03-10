@@ -14,11 +14,11 @@ A good target value for this quantity is 80% and above. Please use an accurate
 value for the --mem, --mem-per-cpu or --mem-per-gpu Slurm directive. For job
 <JOBID>, one could have used:
 
-   #SBATCH --mem-per-gpu=<MEM-PER-GPU>G
+    #SBATCH --mem-per-gpu=<MEM-PER-GPU>G
 
 To learn more about allocating CPU memory, please see this page:
 
-   https://researchcomputing.princeton.edu/support/knowledge-base/memory
+    https://researchcomputing.princeton.edu/support/knowledge-base/memory
 
 Replying to this automated email will open a support ticket with Research
 Computing.

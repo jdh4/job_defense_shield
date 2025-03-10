@@ -24,54 +24,60 @@ class GpuModelTooPowerful(Alert):
             self.max_num_jobid_admin = 3
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.cores == self.num_cores_threshold) &
                           (self.df.gpus == 1) &
-                          (self.df.admincomment != {}) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
+        self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
+        self.df.rename(columns={"user":"User"}, inplace=True)
         # add new fields
-        self.df["gpu-tuple"] = self.df.apply(lambda row:
-                               gpu_memory_usage_eff_tuples(row["admincomment"],
+        if not self.df.empty:
+            self.df["gpu-tuple"] = self.df.apply(lambda row:
+                                   gpu_memory_usage_eff_tuples(row["admincomment"],
+                                                               row["jobid"],
+                                                               row["cluster"]),
+                                                               axis="columns")
+            self.df["error_code"] = self.df["gpu-tuple"].apply(lambda x: x[1])
+            self.df = self.df[self.df["error_code"] == 0]
+            # next two lines are valid since only one GPU per job
+            self.df["GPU-Mem-Used"] = self.df["gpu-tuple"].apply(lambda tpl: tpl[0][0][0])
+            self.df["GPU-Util"]     = self.df["gpu-tuple"].apply(lambda tpl: tpl[0][0][2])
+            if not self.df.empty:
+                # add CPU memory usage
+                self.df["memory-tuple"] = self.df.apply(lambda row:
+                                          cpu_memory_usage(row["admincomment"],
                                                            row["jobid"],
                                                            row["cluster"]),
                                                            axis="columns")
-        self.df["error_code"] = self.df["gpu-tuple"].apply(lambda x: x[1])
-        self.df = self.df[self.df["error_code"] == 0]
-        # next two lines are valid since only one GPU per job
-        self.df["GPU-Mem-Used"] = self.df["gpu-tuple"].apply(lambda tpl: tpl[0][0][0])
-        self.df["GPU-Util"]     = self.df["gpu-tuple"].apply(lambda tpl: tpl[0][0][2])
-        # add CPU memory usage
-        self.df["memory-tuple"] = self.df.apply(lambda row:
-                                  cpu_memory_usage(row["admincomment"],
-                                                   row["jobid"],
-                                                   row["cluster"]),
-                                                   axis="columns")
-        cols = ["CPU-Mem-Used", "mem-alloc", "error_code"]
-        self.df[cols] = pd.DataFrame(self.df["memory-tuple"].tolist(), index=self.df.index)
-        self.df = self.df[self.df["error_code"] == 0]
-        # find jobs that could have used less powerful gpus
-        gpu_eff_threshold = 15 # percent
-        gpu_mem_threshold = 10 # GB
-        cpu_mem_threshold = 32 # GB
-        self.df = self.df[(self.df["GPU-Util"] <= gpu_eff_threshold) &
-                          (self.df["GPU-Util"] != 0) &
-                          (self.df["GPU-Mem-Used"] < gpu_mem_threshold) &
-                          (self.df["CPU-Mem-Used"] < cpu_mem_threshold)]
-        self.df["CPU-Mem-Used"] = self.df["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
-        self.df["GPU-Mem-Used"] = self.df["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
-        self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%" if x > 0.5 else f"{round(x, 1)}%")
-        renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "user":"User"}
-        self.df = self.df.rename(columns=renamings)
-        self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
-        # where is groupby and then compare to abs threshold?
-        # self.gpu_hours_threshold
-        self.gp = self.df.groupby("User").agg({"Hours":"sum"}).reset_index()
-        self.gp = self.gp[self.gp["Hours"] > self.gpu_hours_threshold]
-        self.df = self.df[self.df.User.isin(self.gp.User)]
+                cols = ["CPU-Mem-Used", "mem-alloc", "error_code"]
+                self.df[cols] = pd.DataFrame(self.df["memory-tuple"].tolist(), index=self.df.index)
+                self.df = self.df[self.df["error_code"] == 0]
+                # find jobs that could have used less powerful gpus
+                gpu_eff_threshold = 15 # percent
+                gpu_mem_threshold = 10 # GB
+                cpu_mem_threshold = 32 # GB
+                self.df = self.df[(self.df["GPU-Util"] <= gpu_eff_threshold) &
+                                  (self.df["GPU-Util"] != 0) &
+                                  (self.df["GPU-Mem-Used"] < gpu_mem_threshold) &
+                                  (self.df["CPU-Mem-Used"] < cpu_mem_threshold)]
+                self.df["CPU-Mem-Used"] = self.df["CPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
+                self.df["GPU-Mem-Used"] = self.df["GPU-Mem-Used"].apply(lambda x: f"{round(x)} GB")
+                self.df["GPU-Util"]     = self.df["GPU-Util"].apply(lambda x: f"{round(x)}%" if x > 0.5 else f"{round(x, 1)}%")
+                renamings = {"elapsed-hours":"Hours", "jobid":"JobID", "user":"User"}
+                self.df = self.df.rename(columns=renamings)
+                self.df = self.df[["JobID", "User", "GPU-Util", "GPU-Mem-Used", "CPU-Mem-Used", "Hours"]]
+                # where is groupby and then compare to abs threshold?
+                # self.gpu_hours_threshold
+                self.gp = self.df.groupby("User").agg({"Hours":"sum"}).reset_index()
+                self.gp = self.gp[self.gp["Hours"] > self.gpu_hours_threshold]
+                self.df = self.df[self.df.User.isin(self.gp.User)]
 
     def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
@@ -80,15 +86,15 @@ class GpuModelTooPowerful(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda hrs: round(hrs, 1))
+                indent = 4 * " "
+                table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
                 tags["<PARTITIONS>"] = ",".join(self.partitions)
-                tags["<TARGET>"] = self.gpu_util_target
+                tags["<TARGET>"] = str(self.gpu_util_target)
                 tags["<NUM-JOBS>"] = str(len(usr))
-                indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 translator = EmailTranslator(self.email_files_path,

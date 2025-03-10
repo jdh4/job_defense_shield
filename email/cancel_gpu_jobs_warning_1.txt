@@ -1,12 +1,12 @@
 <GREETING>
 
-You have GPU job(s) that have been running for more than <MINUTES-1ST> hour but appear to
+You have GPU job(s) that have been running for more than <MINUTES-1ST> minutes but appear to
 not be using the GPU(s):
 
 <TABLE> 
 
 Your jobs will be AUTOMATICALLY CANCELLED if they are found to not be using the
-GPUs for 2 hours. For more information see the the utilization policies:
+GPUs for <CANCEL-HRS> hours. For more information see the the utilization policies:
 
     https://your-institution.xyz/KB/utilization-policies
 

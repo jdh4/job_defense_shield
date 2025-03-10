@@ -140,10 +140,10 @@ if __name__ == "__main__":
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]
-    holidays_file = None
-    if "holidays-file" in cfg:
-        holidays_file = cfg["holidays-file"]
+    holidays_file = cfg["holidays-file"] if "holidays-file" in cfg else None
     is_workday = WorkdayFactory(holidays_file).create_workday(workday_method).is_workday()
+    if not is_workday:
+        print("INFO: Today is not a workday. Emails to users will not be sent.")
 
     if cfg["verbose"]:
         for key in cfg.keys():
@@ -165,6 +165,11 @@ if __name__ == "__main__":
                                         "cancel_zero_gpu_jobs",
                                         "CANCEL JOBS WITH ZERO GPU UTILIZATION",
                                         args.days)
+        if args.zero_util_gpu_hours:
+            show_history_of_emails_sent(violation_logs_path,
+                                        "zero_util_gpu_hours",
+                                        "GPU-HOURS AT 0% GPU UTILIZATION",
+                                        args.days)
         if args.zero_cpu_utilization:
             show_history_of_emails_sent(violation_logs_path,
                                         "zero_cpu_utilization",
@@ -184,11 +189,6 @@ if __name__ == "__main__":
             show_history_of_emails_sent(violation_logs_path,
                                         "low_gpu_efficiency",
                                         "LOW GPU EFFICIENCY",
-                                        args.days)
-        if args.zero_util_gpu_hours:
-            show_history_of_emails_sent(violation_logs_path,
-                                        "zero_util_gpu_hours",
-                                        "ZERO UTILIZATION GPU-HOURS",
                                         args.days)
         if args.multinode_cpu_fragmentation:
             show_history_of_emails_sent(violation_logs_path,
@@ -225,8 +225,15 @@ if __name__ == "__main__":
                                         "excessive_time_limits",
                                         "EXCESSIVE TIME LIMITS",
                                         args.days)
-        if args.most_gpus or args.most_cores or args.longest_queued:
-            print("Nothing to check for --most-gpus, --most-cores or --longest-queued.")
+        if args.most_gpus or \
+           args.most_cores or \
+           args.utilization_overview or \
+           args.utilization_by_slurm_account or \
+           args.jobs_overview or \
+           args.longest_queued:
+            print(("Nothing to check for --most-gpus, --most-cores, "
+                   "--utilization-overview, --utilization-by-slurm-account, "
+                   "--jobs-overview or --longest-queued."))
         sys.exit()
 
     # pandas display settings
@@ -364,8 +371,6 @@ if __name__ == "__main__":
                                    days_between_emails=args.days,
                                    violation="multinode_cpu_fragmentation",
                                    vpath=violation_logs_path,
-                                   subject="Multinode CPU Jobs with Fragmentation",
-                                   title="Multinode CPU Jobs with Fragmentation",
                                    **params)
             if args.email and is_workday:
                 cpu_frag.create_emails(greeting_method)
@@ -386,8 +391,6 @@ if __name__ == "__main__":
                                    days_between_emails=args.days,
                                    violation="multinode_gpu_fragmentation",
                                    vpath=violation_logs_path,
-                                   subject="Multinode GPU Jobs with Fragmentation",
-                                   title="Multinode GPU Jobs with Fragmentation",
                                    **params)
             if args.email and is_workday:
                 gpu_frag.create_emails(greeting_method)
@@ -412,7 +415,7 @@ if __name__ == "__main__":
             if args.email and is_workday:
                 low_cpu.create_emails(greeting_method)
                 low_cpu.send_emails_to_users()
-            s += low_cpu.generate_report_for_admins(keep_index=True)
+            s += low_cpu.generate_report_for_admins()
             s += low_cpu.add_report_metadata(start_date, end_date)
 
 
@@ -428,13 +431,11 @@ if __name__ == "__main__":
                                        days_between_emails=args.days,
                                        violation="low_gpu_efficiency",
                                        vpath=violation_logs_path,
-                                       subject="Jobs with Low GPU Efficiency",
-                                       title="Low GPU Efficiencies",
                                        **params)
             if args.email and is_workday:
                 low_gpu.create_emails(greeting_method)
                 low_gpu.send_emails_to_users()
-            s += low_gpu.generate_report_for_admins(keep_index=True)
+            s += low_gpu.generate_report_for_admins()
             s += low_gpu.add_report_metadata(start_date, end_date)
 
 
@@ -550,8 +551,6 @@ if __name__ == "__main__":
                                               days_between_emails=args.days,
                                               violation="excessive_time_limits",
                                               vpath=violation_logs_path,
-                                              subject="Requesting Too Much Time for Jobs",
-                                              title="Excessive Time Limits",
                                               **params)
             if args.email and is_workday:
                 time_limits.create_emails(greeting_method)

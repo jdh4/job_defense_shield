@@ -3,7 +3,6 @@ from base import Alert
 from utils import add_dividers
 from utils import MINUTES_PER_HOUR as mph
 from efficiency import cpu_memory_usage
-from efficiency import get_nodelist
 from greeting import GreetingFactory
 from email_translator import EmailTranslator
 
@@ -22,35 +21,18 @@ class TooMuchCpuMemPerGpu(Alert):
             self.report_title = "Too Much CPU Memory Per GPU"
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
                           (self.df.gpus > 0) &
-                          (self.df.admincomment != {}) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-        self.df.rename(columns={"user":"User"}, inplace=True)
-        # add new fields
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
+        self.df = self.df[self.df.admincomment != {}]
         if not self.df.empty and hasattr(self, "nodelist"):
-            self.df["node-tuple"] = self.df.apply(lambda row:
-                                            get_nodelist(row["admincomment"],
-                                                         row["jobid"],
-                                                         row["cluster"]),
-                                                         axis="columns")
-            cols = ["nodelist", "error_code"]
-            self.df[cols] = pd.DataFrame(self.df["node-tuple"].tolist(), index=self.df.index)
-            self.df = self.df[self.df["error_code"] == 0]
-            self.nodelist = set(self.nodelist)
-            self.df["diff"] = self.df.nodelist.apply(lambda n: n - self.nodelist)
-            def compare_sets(a, b):
-               return a == b
-            self.df["cmp"] = self.df.apply(lambda row: compare_sets(row["nodelist"],
-                                                                    row["diff"]),
-                                                                    axis="columns")
-            self.df = self.df[self.df.cmp]
-            cols = ["node-tuple", "nodelist", "error_code", "diff", "cmp"]
-            self.df.drop(columns=cols, inplace=True)
+            self.df = self.filter_by_nodelist()
+        self.df.rename(columns={"user":"User"}, inplace=True)
         if not self.df.empty:
             self.df["memory-tuple"] = self.df.apply(lambda row:
                                            cpu_memory_usage(row["admincomment"],
@@ -105,7 +87,7 @@ class TooMuchCpuMemPerGpu(Alert):
                 usr.drop(columns=["User", "CPU-Mem-Used"], inplace=True)
                 usr["Mem-Eff"] = usr["Mem-Eff"].apply(lambda x: f"{x}%")
                 usr["CPU-Mem"] = usr["CPU-Mem"].apply(lambda x: f"{x} GB")
-                indent = 3 * " "
+                indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)

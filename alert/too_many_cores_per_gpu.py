@@ -28,11 +28,11 @@ class TooManyCoresPerGpu(Alert):
                           (self.df.cores > self.cores_per_gpu_limit * self.df.gpus) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
-        #if not self.include_running_jobs:
-        #    self.df = self.df[self.df.state != "RUNNING"]
-        if self.include_running_jobs:
-            self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
         self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         self.df.rename(columns={"user":"User"}, inplace=True)
         if not self.df.empty:
             self.df["cpu-tuple"] = self.df.apply(lambda row:
@@ -76,7 +76,7 @@ class TooManyCoresPerGpu(Alert):
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr.drop(columns=["User"], inplace=True)
-                indent = 3 * " "
+                indent = 4 * " "
                 table = usr.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)

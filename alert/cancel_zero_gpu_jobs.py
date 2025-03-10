@@ -41,7 +41,25 @@ class CancelZeroGpuJobs(Alert):
                           (self.df.elapsedraw >= lower) &
                           (self.df.elapsedraw <  upper) &
                           (~self.df.user.isin(self.excluded_users))].copy()
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         self.df.rename(columns={"user":"User"}, inplace=True)
+
+        """
+        On the caching of jobs that are known to using GPUs. First, read pickle
+        file containing the jobid's of jobs that are known to using the GPUs
+        from previous iteration. Create a list called pre_approved that contains
+        these jobid's for the current running jobs. Note then len(pre_approved)
+        will be less than or equal to len(jobs_using_gpus) since jobs_using_gpus
+        includes jobs that have finished since the previous iteration. Filter
+        out the pre_approved jobs.
+
+        Calculate the number of "Unused-GPUs" for each running job that was not
+        previously known to be using the GPUs. Create a list called
+        jobs_using_gpus containing the jobid's of the new jobs that are using
+        the GPUs. Add this list to pre_approved and write this to file. Note
+        that the jobs in pre_approved and jobs_using_gpus do not overlap.
+        """
 
         # read cache file containing jobid's that are known to be using the gpus
         pre_approved = []
@@ -51,8 +69,7 @@ class CancelZeroGpuJobs(Alert):
                 with open(jobid_cache_file, "rb") as fp:
                     jobs_using_gpus = pickle.load(fp)
                 pre_approved = self.df[self.df.jobid.isin(jobs_using_gpus)].jobid.tolist()
-                print("pre (overlap)", len(jobs_using_gpus), len(pre_approved), len(set(jobs_using_gpus+pre_approved)))
-                self.df = self.df[~self.df.jobid.isin(jobs_using_gpus)]
+                self.df = self.df[~self.df.jobid.isin(pre_approved)]
         if not self.df.empty:
             self.df.admincomment = Alert.get_admincomment_for_running_jobs(self)
             self.df["zero-tuple"] = self.df.apply(lambda row:
@@ -61,16 +78,15 @@ class CancelZeroGpuJobs(Alert):
                                                                  row["cluster"]),
                                                                  axis="columns")
             cols = ["GPUs-Unused", "error_code"]
-            self.df[cols] = pd.DataFrame(self.df["zero-tuple"].tolist(), index=self.df.index)
+            self.df[cols] = pd.DataFrame(self.df["zero-tuple"].tolist(),
+                                         index=self.df.index)
             self.df = self.df[self.df["error_code"] == 0]
             # write cache file of jobid's that are known to be using the gpus
             if hasattr(self, "jobid_cache_path"):
                 jobs_using_gpus = self.df[self.df["GPUs-Unused"] == 0].jobid.tolist()
-                if jobs_using_gpus:
-                    jobid_cache_file = os.path.join(self.jobid_cache_path, ".jobid_cache.pkl")
-                    print("post", len(jobs_using_gpus), len(pre_approved), len(set(jobs_using_gpus+pre_approved)))
-                    with open(jobid_cache_file, "wb") as fp:
-                        pickle.dump(jobs_using_gpus + pre_approved, fp)
+                jobid_cache_file = os.path.join(self.jobid_cache_path, ".jobid_cache.pkl")
+                with open(jobid_cache_file, "wb") as fp:
+                    pickle.dump(pre_approved + jobs_using_gpus, fp)
             self.df = self.df[self.df["GPUs-Unused"] > 0]
             # filter interactive jobs if such settings are found in config.yaml
             if hasattr(self, "max_interactive_hours") and \
@@ -97,13 +113,18 @@ class CancelZeroGpuJobs(Alert):
             self.df.rename(columns=renamings, inplace=True)
             self.df["GPU-Util"] = "0%"
             self.df["Hours"] = self.df.elapsedraw.apply(lambda x: round(x / sph, 1))
-            if not self.df.empty:
-                print(self.df[["JobID", "GPUs-Unused", "Partition", "elapsedraw"]])
 
     def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
             indent = 4 * " "
+            tags = {}
+            tags["<GREETING>"] = g.greeting(user)
+            tags["<CLUSTER>"] = self.cluster
+            tags["<PARTITIONS>"] = ",".join(sorted(set(self.partitions)))
+            tags["<SAMPLING>"] = str(self.sampling_period_minutes)
+            tags["<CANCEL-MIN>"] = str(self.cancel_minutes)
+            tags["<CANCEL-HRS>"] = f"{round(self.cancel_minutes / mph)}"
             #################
             # first warning #
             #################
@@ -114,12 +135,8 @@ class CancelZeroGpuJobs(Alert):
                 if not usr.empty:
                     usr.drop(columns=["User", "elapsedraw"], inplace=True)
                     table = usr.to_string(index=False, justify="center").split("\n")
-                    tags = {}
-                    tags["<GREETING>"] = g.greeting(user)
-                    tags["<CLUSTER>"] = self.cluster
-                    tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
                     tags["<MINUTES-1ST>"] = str(self.first_warning_minutes)
-                    tags["<SAMPLING>"] = str(self.sampling_period_minutes)
+                    tags["<HOURS-1ST>"] = f"{round(self.first_warning_minutes / mph)}"
                     tags["<TABLE>"] = "\n".join([indent + row for row in table])
                     tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                     tags["<SCANCEL>"] = f"{indent}$ scancel {usr.JobID.values[0]}"
@@ -142,12 +159,8 @@ class CancelZeroGpuJobs(Alert):
                 if not usr.empty:
                     usr.drop(columns=["User", "elapsedraw"], inplace=True)
                     table = usr.to_string(index=False, justify="center").split("\n")
-                    tags = {}
-                    tags["<GREETING>"] = g.greeting(user)
-                    tags["<CLUSTER>"] = self.cluster
-                    tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
-                    tags["<MINUTES-2ND>"] = str(self.seond_warning_minutes)
-                    tags["<SAMPLING>"] = str(self.sampling_period_minutes)
+                    tags["<MINUTES-1ST>"] = str(self.first_warning_minutes)
+                    tags["<MINUTES-2ND>"] = str(self.second_warning_minutes)
                     tags["<TABLE>"] = "\n".join([indent + row for row in table])
                     tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                     tags["<SCANCEL>"] = f"{indent}$ scancel {usr.JobID.values[0]}"
@@ -173,14 +186,9 @@ class CancelZeroGpuJobs(Alert):
                            "GPU-Util",
                            "Hours"]]
                 table = usr.to_string(index=False, justify="center").split("\n")
-                tags = {}
-                tags["<GREETING>"] = g.greeting(user)
-                tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
-                tags["<CANCEL-MIN>"] = str(self.cancel_minutes)
-                tags["<CANCEL-HRS>"] = f"{round(self.cancel_minutes / mph)}"
+                tags["<SCANCEL>"] = f"{indent}$ scancel {usr.JobID.values[0]}"
                 translator = EmailTranslator(self.email_files_path,
                                              self.email_file_cancel,
                                              tags)

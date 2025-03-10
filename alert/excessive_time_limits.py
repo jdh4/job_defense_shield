@@ -20,16 +20,24 @@ class ExcessiveTimeLimits(Alert):
             self.email_subject = "Requesting Too Much Time for Jobs"
         if not hasattr(self, "report_title"):
             self.report_title = "Excessive Time Limits"
+        if not hasattr(self, "num_top_users"):
+            self.num_top_users = 100000
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
-                          (self.df.state == "COMPLETED") &
+                          (self.df.state.isin(["COMPLETED", "RUNNING"])) &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+
+        # include running jobs and ignore jobs without summary statistics
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
+        self.df = self.df[self.df.admincomment != {}]
+        # filter by nodelist if provided
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         self.gp = pd.DataFrame({"User":[]})
-        # add new fields
         if not self.df.empty:
             xpu = "cpu"
             self.df["ratio"] = 100 * self.df[f"{xpu}-hours"] / self.df[f"{xpu}-alloc-hours"]
@@ -53,10 +61,8 @@ class ExcessiveTimeLimits(Alert):
             self.gp = self.gp[(self.gp[f"{xpu}-waste-hours"] > self.absolute_thres_hours) &
                               (self.gp["mean(%)"] < self.mean_ratio_threshold) &
                               (self.gp["median(%)"] < self.median_ratio_threshold)]
-            # how to deal with this?
-            # hasattr()
             if self.num_top_users:
-                self.gp = self.gp[self.gp["rank"] <= self.num_top_users]
+                self.gp = self.gp[self.gp.index <= self.num_top_users]
             cols = ["user",
                     f"{xpu}-waste-hours",
                     f"{xpu}-hours",
@@ -92,7 +98,8 @@ class ExcessiveTimeLimits(Alert):
                 jobs = jobs[cols].sort_values(by="jobid")
                 renamings = {"jobid":"JobID", "user":"User", "cores":"CPU-Cores"}
                 jobs = jobs.rename(columns=renamings)
-
+                indent = 4 * " "
+                table = jobs.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<CASE>"] = case
@@ -102,8 +109,6 @@ class ExcessiveTimeLimits(Alert):
                 tags["<AVERAGE>"] = str(usr["mean(%)"].values[0])
                 tags["<NUM-JOBS>"] = str(total_jobs)
                 tags["<NUM-JOBS-DISPLAY>"] = str(total_jobs)
-                indent = 4 * " "
-                table = jobs.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<UNUSED-HOURS>"] = str(round(usr[f"{xpu.upper()}-Hours-Unused"].values[0]))
                 translator = EmailTranslator(self.email_files_path,
@@ -121,17 +126,22 @@ class ExcessiveTimeLimits(Alert):
                             "CPU-Alloc-Hours",
                             "Mean(%)",
                             "Median(%)",
-                            "Rank",
+                            "CPU-Rank",
                             "Jobs"]
             self.gp = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.gp), self.report_title)
         self.gp = self.gp.drop(columns=["cluster", "partition"])
         xpu = "cpu"
-        renamings = {f"{xpu}-hours":"used",
-                     f"{xpu}-alloc-hours":"total"}
+        renamings = {f"{xpu}-hours":"Used",
+                     f"{xpu}-alloc-hours":"Total"}
         self.gp = self.gp.rename(columns=renamings)
-        self.gp["emails"] = self.gp.User.apply(lambda user:
+        self.gp["Emails"] = self.gp.User.apply(lambda user:
                                  self.get_emails_sent_count(user, self.violation))
-        self.gp.emails = self.format_email_counts(self.gp.emails)
+        self.gp.Emails = self.format_email_counts(self.gp.Emails)
+        renamings = {"mean(%)":"Mean(%)",
+                     "median(%)":"Median(%)",
+                     "rank":"CPU-Rank",
+                     "jobs":"Jobs"}
+        self.gp = self.gp.rename(columns=renamings)
         report_str = self.gp.to_string(index=keep_index, justify="center")
         return add_dividers(report_str, self.report_title)

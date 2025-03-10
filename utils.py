@@ -38,25 +38,29 @@ def gpus_per_job(tres: str) -> int:
     gpus = re.findall(r"gres/gpu=\d+", tres)
     return int(gpus[0].replace("gres/gpu=", "")) if gpus else 0
 
-def add_dividers(df_str: str, title: str="", pre: str="\n\n\n", post: str="") -> str:
+def add_dividers(df_str: str,
+                 title: str="",
+                 pre: str="\n\n\n",
+                 units_row: bool=False) -> str:
     rows = df_str.split("\n")
     width = max([len(row) for row in rows] + [len(title)])
     heading = title.center(width)
     divider = "-" * width
-    if title:
+    if title and not units_row:
         rows.insert(0, heading)
         rows.insert(1, divider)
         rows.insert(3, divider)
+    elif title and units_row:
+        rows.insert(0, heading)
+        rows.insert(1, divider)
+        rows.insert(4, divider)
     else:
         rows.insert(0, divider)
         rows.insert(2, divider)
-    # need to remove post
-    if post:
-        rows.append(divider)
     rows.append(divider)
-    return pre + "\n".join(rows) + "\n" + post
+    return pre + "\n".join(rows) + "\n"
 
-def show_history_of_emails_sent(vpath, mydir, title, day_ticks):
+def show_history_of_emails_sent(vpath, mydir, title, day_ticks) -> None:
     """Display the history of emails sent to users."""
     files = sorted(glob.glob(f"{vpath}/{mydir}/*.csv"))
     if len(files) == 0:
