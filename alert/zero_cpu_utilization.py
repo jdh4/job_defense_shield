@@ -49,6 +49,7 @@ class ZeroCPU(Alert):
             self.df["CPU-Util-Unused"] = "0%"
             cols = ["jobid",
                     "User",
+                    "partition",
                     "cluster",
                     "nodes",
                     "nodes-unused",
@@ -58,6 +59,7 @@ class ZeroCPU(Alert):
             self.df = self.df[cols]
             renamings = {"jobid":"JobID",
                          "cluster":"Cluster",
+                         "partition":"Partition",
                          "nodes":"Nodes",
                          "nodes-unused":"Nodes-Unused",
                          "cores":"Cores",
@@ -76,14 +78,14 @@ class ZeroCPU(Alert):
                    usr.Nodes.values[0] == 1 and \
                    usr.Cores.values[0] < 4:
                     continue
-                usr.drop(columns=["User"], inplace=True)
+                tbl = usr.drop(columns=["User", "Partition"]).copy()
                 indent = 4 * " "
-                table = usr.to_string(index=False, justify="center").split("\n")
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(self.partitions)
+                tags["<PARTITIONS>"] = ",".join(sorted(set(self.partitions)))
                 tags["<NUM-JOBS>"] = str(len(usr))
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
@@ -93,6 +95,14 @@ class ZeroCPU(Alert):
                 email = translator.replace_tags()
                 usr["Cluster"] = self.cluster
                 usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "Nodes",
+                           "Nodes-Unused",
+                           "Hours"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:

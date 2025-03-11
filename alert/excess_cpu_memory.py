@@ -21,15 +21,20 @@ class ExcessCPUMemory(Alert):
             self.report_title = "Users Allocating Excess CPU Memory"
         if not hasattr(self, "combine_partitions"):
             self.combine_partitions = False
+        if not hasattr(self, "num_top_users"):
+            self.num_top_users = 100000
 
     def _filter_and_add_new_fields(self):
-        # filter the dataframe
         self.df = self.df[(self.df.cluster == self.cluster) &
                           (self.df.partition.isin(self.partitions)) &
-                          (self.df.admincomment != {}) &
                           (self.df.state != "OUT_OF_MEMORY") &
                           (~self.df.user.isin(self.excluded_users)) &
                           (self.df["elapsed-hours"] >= self.min_run_time / mph)].copy()
+        if not self.df.empty and self.include_running_jobs:
+            self.df.admincomment = self.get_admincomment_for_running_jobs()
+        self.df = self.df[self.df.admincomment != {}]
+        if not self.df.empty and hasattr(self, "nodelist"):
+            self.df = self.filter_by_nodelist()
         if self.combine_partitions:
             self.df.partition = ",".join(sorted(set(self.partitions)))
         # only consider jobs that do not use (approximately) full nodes
@@ -77,7 +82,7 @@ class ExcessCPUMemory(Alert):
             total_mem_hours = self.gp["mem-hrs-alloc"].sum()
             assert total_mem_hours != 0, "total_mem_hours found to be zero"
             self.gp["proportion"] = self.gp["mem-hrs-alloc"] / total_mem_hours
-            self.gp["ratio"] = self.gp["mem-hrs-used"] / self.gp["mem-hrs-alloc"]
+            self.gp["Ratio"] = self.gp["mem-hrs-used"] / self.gp["mem-hrs-alloc"]
             self.gp = self.gp.sort_values("mem-hrs-unused", ascending=False)
             cols = ["cluster",
                     "partition",
@@ -87,7 +92,7 @@ class ExcessCPUMemory(Alert):
                     "mem-hrs-unused",
                     "mem-hrs-used",
                     "mem-hrs-alloc",
-                    "ratio",
+                    "Ratio",
                     "median-ratio",
                     "mean-ratio",
                     "elapsed-hours",
@@ -97,23 +102,24 @@ class ExcessCPUMemory(Alert):
             self.gp = self.gp[cols]
             renamings = {"user":"User",
                          "elapsed-hours":"hrs",
+                         "mem-hrs-unused":"Mem-Hrs-Unused",
                          "cores":"avg-cores",
                          "cpu-hours":"cpu-hrs"}
             self.gp = self.gp.rename(columns=renamings)
             # should email be computed for a specific cluster and partition?
             self.gp["emails"] = self.gp["User"].apply(lambda user:
                                      self.get_emails_sent_count(user, self.violation))
-            cols = ["mem-hrs-unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
+            cols = ["Mem-Hrs-Unused", "mem-hrs-used", "mem-hrs-alloc", "cpu-hrs"]
             self.gp[cols] = self.gp[cols].apply(round).astype("int64")
-            cols = ["proportion", "ratio", "mean-ratio", "median-ratio"]
+            cols = ["proportion", "Ratio", "mean-ratio", "median-ratio"]
             self.gp[cols] = self.gp[cols].apply(lambda x: round(x, 2))
             self.gp["avg-cores"] = self.gp["avg-cores"].apply(lambda x: round(x, 1))
             self.gp.reset_index(drop=True, inplace=True)
             self.gp.index += 1
             self.gp = self.gp.head(self.num_top_users)
             self.admin = self.gp.copy()
-            self.gp = self.gp[(self.gp["mem-hrs-unused"] > self.tb_hours_threshold) &
-                              (self.gp["ratio"] < self.ratio_threshold) &
+            self.gp = self.gp[(self.gp["Mem-Hrs-Unused"] > self.tb_hours_threshold) &
+                              (self.gp["Ratio"] < self.ratio_threshold) &
                               (self.gp["mean-ratio"] < self.mean_ratio_threshold) &
                               (self.gp["median-ratio"] < self.median_ratio_threshold)]
 
@@ -128,7 +134,7 @@ class ExcessCPUMemory(Alert):
                 total_jobs = jobs.shape[0]
                 case = f"{num_disp} of your {total_jobs} jobs" if total_jobs > num_disp else "your jobs"
                 pct = round(100 * usr["mean-ratio"].values[0])
-                unused = usr["mem-hrs-unused"].values[0]
+                unused = usr["Mem-Hrs-Unused"].values[0]
                 hours_per_week = 7 * 24
                 tb_mem_per_node = self.mem_per_node / 1e3
                 num_wasted_nodes = round(unused / hours_per_week / tb_mem_per_node)
@@ -151,6 +157,7 @@ class ExcessCPUMemory(Alert):
                              "elapsed-hours":"Hours"}
                 jobs = jobs.rename(columns=renamings)
                 jobs["Hours"] = jobs["Hours"].apply(lambda hrs: round(hrs, 1))
+                indent = 4 * " "
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<CASE>"] = case
@@ -161,8 +168,7 @@ class ExcessCPUMemory(Alert):
                 tags["<NUM-JOBS>"] = str(total_jobs)
                 # is next line optional based on config params?
                 tags["<NUM-WASTED-NODES>"] = str(num_wasted_nodes)
-                tags["<UNUSED>"] = str(usr["mem-hrs-unused"].values[0])
-                indent = 4 * " "
+                tags["<UNUSED>"] = str(usr["Mem-Hrs-Unused"].values[0])
                 table = jobs.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {jobs.JobID.values[0]}"
@@ -174,6 +180,11 @@ class ExcessCPUMemory(Alert):
                 email = translator.replace_tags()
                 usr["Cluster"] = self.cluster
                 usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "Mem-Hrs-Unused",
+                           "Ratio"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
@@ -192,9 +203,9 @@ class ExcessCPUMemory(Alert):
             self.admin = pd.DataFrame(columns=column_names)
             return add_dividers(self.create_empty_report(self.admin), self.report_title)
         cols = ["User",
-                "mem-hrs-unused",
+                "Mem-Hrs-Unused",
                 "mem-hrs-used",
-                "ratio",
+                "Ratio",
                 "mean-ratio",
                 "median-ratio",
                 "proportion",
@@ -204,15 +215,6 @@ class ExcessCPUMemory(Alert):
         self.admin["Emails"] = self.admin.User.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
-        renamings = {"proportion":"Proportion",
-                     "ratio":"Ratio",
-                     "jobs":"Jobs",
-                     "mem-hrs-unused":"Unused",
-                     "mem-hrs-used":"Used",
-                     "mean-ratio":"Mean",
-                     "median-ratio":"Median"}
-        self.admin = self.admin.rename(columns=renamings)
-        # User    proportion  unused  used  ratio  mean  median  cpu-hrs  jobs  Emails
         column_names = pd.MultiIndex.from_tuples([('User', ''),
                                                   ('Unused', '(TB-Hrs)'),
                                                   ('Used', '(TB-Hrs)'),

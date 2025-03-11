@@ -1,4 +1,3 @@
-from datetime import datetime
 import pandas as pd
 from base import Alert
 from utils import add_dividers
@@ -46,7 +45,7 @@ class ZeroUtilGPUHours(Alert):
             cols = ["GPUs-Unused", "error_code"]
             self.df[cols] = pd.DataFrame(self.df["zero-tuple"].tolist(), index=self.df.index)
             self.df = self.df[(self.df["error_code"] == 0) & (self.df["GPUs-Unused"] > 0)]
-            self.df["Zero-Util-GPU-Hours"] = self.df["GPUs-Unused"] * self.df["elapsed-hours"]
+            self.df["GPU-Hours-At-0%"] = self.df["GPUs-Unused"] * self.df["elapsed-hours"]
             self.df["GPU-Unused-Util"] = "0%"
             cols = ["jobid",
                     "user",
@@ -54,23 +53,27 @@ class ZeroUtilGPUHours(Alert):
                     "gpus",
                     "GPUs-Unused",
                     "GPU-Unused-Util",
-                    "Zero-Util-GPU-Hours"]
+                    "GPU-Hours-At-0%"]
             self.df = self.df[cols]
-            renamings = {"jobid":"JobID", "user":"User", "gpus":"GPUs"}
+            renamings = {"jobid":"JobID",
+                         "user":"User",
+                         "partition":"Partition",
+                         "gpus":"GPUs"}
             self.df = self.df.rename(columns=renamings)
             def jobid_list(series):
                 ellipsis = "+" if len(series) > self.max_num_jobid_admin else ""
                 return ",".join(series[:self.max_num_jobid_admin]) + ellipsis
             # for each user sum the number of GPU-hours with zero GPU utilization
-            self.gp = self.df.groupby("User").agg({"Zero-Util-GPU-Hours":"sum",
+            self.gp = self.df.groupby("User").agg({"GPU-Hours-At-0%":"sum",
                                                    "User":"size",
                                                    "JobID":jobid_list})
             self.gp = self.gp.rename(columns={"User":"Jobs"})
             self.gp.reset_index(drop=False, inplace=True)
-            self.admin = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_admin].copy()
+            self.admin = self.gp[self.gp["GPU-Hours-At-0%"] >= self.gpu_hours_threshold_admin].copy()
             # apply a threshold to focus on the heaviest offenders
-            self.gp = self.gp[self.gp["Zero-Util-GPU-Hours"] >= self.gpu_hours_threshold_user]
-            self.df["Zero-Util-GPU-Hours"] = self.df["Zero-Util-GPU-Hours"].apply(round)
+            self.gp = self.gp[self.gp["GPU-Hours-At-0%"] >= self.gpu_hours_threshold_user]
+            self.df["GPU-Hours-At-0%"] = self.df["GPU-Hours-At-0%"].apply(lambda x:
+                                                                          round(x, 1))
 
     def create_emails(self, method):
         # self.gp is not needed here (could use df)
@@ -79,17 +82,17 @@ class ZeroUtilGPUHours(Alert):
             vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
-                zero_hours = round(self.gp[self.gp.User == user]["Zero-Util-GPU-Hours"].values[0])
+                zero_hours = round(self.gp[self.gp.User == user]["GPU-Hours-At-0%"].values[0])
                 indent = 4 * " "
                 tags = {}
                 tags["<GREETING>"] = g.greeting(user)
                 tags["<GPU-HOURS>"] = str(zero_hours)
                 tags["<DAYS>"] = str(self.days_between_emails)
                 tags["<CLUSTER>"] = self.cluster
-                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.partition)))
-                usr.drop(columns=["partition"], inplace=True)
+                tags["<PARTITIONS>"] = ",".join(sorted(set(usr.Partition)))
+                tbl = usr.drop(columns=["User", "Partition"]).copy()
                 tags["<NUM-JOBS>"] = str(len(usr))
-                table = usr.to_string(index=False, justify="center").split("\n")
+                table = tbl.to_string(index=False, justify="center").split("\n")
                 tags["<TABLE>"] = "\n".join([indent + row for row in table])
                 tags["<JOBSTATS>"] = f"{indent}$ jobstats {usr.JobID.values[0]}"
                 translator = EmailTranslator(self.email_files_path,
@@ -98,6 +101,18 @@ class ZeroUtilGPUHours(Alert):
                 email = translator.replace_tags()
                 usr["Cluster"] = self.cluster
                 usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                usr["GPU-Hours-At-0%"] = usr["GPU-Hours-At-0%"].apply(lambda x:
+                                                                      str(round(x, 1))
+                                                                      if x < 5 else
+                                                                      str(round(x)))
+                usr = usr[["User",
+                           "Cluster",
+                           "Alert-Partitions",
+                           "JobID",
+                           "Partition",
+                           "GPUs",
+                           "GPUs-Unused",
+                           "GPU-Hours-At-0%"]]
                 self.emails.append((user, email, usr))
 
     def generate_report_for_admins(self, keep_index: bool=False) -> str:
@@ -112,9 +127,8 @@ class ZeroUtilGPUHours(Alert):
         self.admin["Emails"] = self.admin.User.apply(lambda user:
                                     self.get_emails_sent_count(user, self.violation))
         self.admin.Emails = self.format_email_counts(self.admin.Emails)
-        self.admin = self.admin.sort_values(by="Zero-Util-GPU-Hours", ascending=False)
-        self.admin["Zero-Util-GPU-Hours"] = self.admin["Zero-Util-GPU-Hours"].apply(round)
-        self.admin = self.admin.rename(columns={"Zero-Util-GPU-Hours":"GPU-Hours-At-0%"})
+        self.admin = self.admin.sort_values(by="GPU-Hours-At-0%", ascending=False)
+        self.admin["GPU-Hours-At-0%"] = self.admin["GPU-Hours-At-0%"].apply(round)
         self.admin.reset_index(drop=True, inplace=True)
         self.admin.index += 1
         report_str = self.admin.to_string(index=keep_index, justify="center")

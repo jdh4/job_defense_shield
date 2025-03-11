@@ -71,12 +71,12 @@ def test_excess_cpu_memory():
                            num_top_users=10,
                            num_jobs_display=10)
     print(xmem)
-    actual = xmem.gp[["User", "ratio", "mean-ratio", "median-ratio", "mem-hrs-unused"]]
+    actual = xmem.gp[["User", "Ratio", "mean-ratio", "median-ratio", "Mem-Hrs-Unused"]]
     expected = pd.DataFrame({"User":["user1", "user2"],
-                             "ratio":[(1+5+10)/(3*100), (10+1)/(2*100)],
+                             "Ratio":[(1+5+10)/(3*100), (10+1)/(2*100)],
                              "mean-ratio":[(1/100+5/100+10/100)/3,(10/100+1/100)/2],
                              "median-ratio":[5/100, (10/100+1/100)/2],
-                             "mem-hrs-unused":[99+95+90, 90+99]})
-    cols = ["ratio", "mean-ratio", "median-ratio"]
+                             "Mem-Hrs-Unused":[99+95+90, 90+99]})
+    cols = ["Ratio", "mean-ratio", "median-ratio"]
     expected[cols] = expected[cols].apply(lambda x: round(x, 2))
     pd.testing.assert_frame_equal(actual.reset_index(drop=True), expected)
