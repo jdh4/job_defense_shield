@@ -5,10 +5,12 @@ repo_name: jdh4/job_defense_shield
 nav:
   - Overview: index.md
   - Installation: setup.md
+  - Configuration: configuration.md
+  - Emails: emails.md
   - Alerts:
     - Overview:                    alert/overview.md
-    - Zero GPU Utilization:        alert/zero_gpu_util.md
     - Cancel 0% GPU Jobs:          alert/cancel_gpu_jobs.md
+    - Zero GPU Utilization:        alert/zero_gpu_util.md
     - Low CPU Utilization:         alert/low_cpu_util.md
     - Low GPU Utilization:         alert/low_gpu_util.md
     - GPU Model Too Powerful:      alert/gpu_model_too_powerful.md
@@ -19,6 +21,7 @@ nav:
   - Reports:
     - Overview:             reports/overview.md
     - Usage By Slurm Account: reports/account.md
+  - Nodelist: nodelist.md
   - Contributions: contributions.md
   - Support: support.md
   - Publications: publications.md

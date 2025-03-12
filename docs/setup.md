@@ -6,12 +6,14 @@ that do not require Jobstats (e.g., time, utilization-overview), to take full ad
 The installation requirements for Job Defense Shield are Python 3.6+ and version 1.2+ of the Python `pandas` package. The `jobstats` command is also required if one wants to examine actively running jobs such as when looking for jobs with zero GPU utilization. The Python code, example alerts and emails, and instructions are available in the <a href="https://github.com/PrincetonUniversity/job_defense_shield" target="_blank">GitHub repository</a>.
 
 ```
-$ conda create --name jds-env pandas pyarrow pytest blessed requests pyyaml -c conda-forge -y
+$ conda create --name jds-env pandas pyarrow blessed requests pyyaml -c conda-forge -y
 ```
 
+```
 $ apt-get install python3-pandas python3-requests python3-yaml python3-blessed
+```
 
-You only need `requests` and `blessed` and `jobstats.py` to exmaine actively
+One only needs `requests`, `blessed` and `jobstats.py` to get the data for actively
 running jobs.
 
 ## Testing the Installation
@@ -19,7 +21,7 @@ running jobs.
 To test the software, run this simple command which does not send any emails:
 
 ```
-$ job_defense_shield --utilization-overview --days=7
+$ job_defense_shield --utilization-overview
 ```
 
 The command above will show an overview of the number of CPU-hours and GPU-hours
@@ -28,7 +30,7 @@ across all clusters and partitions in the Slurm database.
 Here is an example:
 
 ```
-$ job_defense_shield.py --utilization-overview --days=7
+$ job_defense_shield.py --utilization-overview
 
 
            Utilization Overview           
@@ -74,19 +76,23 @@ traverse           all    1   126183 (100%) 31546 (100%)
 
 ## Email Test
 
-Make a `config.yaml` file:
+Make a `config.yaml` file as below and place it in the same location as `job_defense_shield.py`:
 
-```
-$ cat config.yaml
-utilization-overview:
-  admin-emails:
-    - your-email@institution.xyz
+```yaml
+jobstats-module-path: /tmp
+violation-logs-path: /tmp
+email-files-path: /tmp
+email-domain-name: "@institution.edu"
+sender: support@institution.edu
+reply-to: support@institution.edu
+report-emails:
+  - admin1@institution.edu
 ```
 
 Now try again and you should received the report by email:
 
 ```
-$ job_defense_shield.py --utilization-overview --days=7 --email-admins
+$ job_defense_shield.py --utilization-overview --report
 ```
 
 
@@ -106,3 +112,6 @@ locations. You can always specify the full path with:
 --cfg=<path/to>/job_defense_shield/config.yaml
 ```
  
+## Creating a Configuration File for Production
+
+See the [next section](configuration.md) to learn how to write a proper configuration file.

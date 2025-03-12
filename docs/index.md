@@ -1,6 +1,7 @@
-# Overview
+# Defend the Hardware
 
-Job Defense Shield is a Python code for sending automated email alerts to users and for creating reports for system administrators. As discussed above, summary statistics for each completed job are stored in a compressed format in the `AdminComment` field in the Slurm database. The software described here works by calling the Slurm `sacct` command while requesting several fields including `AdminComment`. The `sacct` output is stored in a `pandas` dataframe for processing.
+**Job Defense Shield** is a Python code for sending automated email alerts to users and for creating reports for system administrators. It is built on the [Jobstats](https://github.com/PrincetonUniversity/jobstats) job monitoring platform.
+
 
 Automated email alerts to users are available for these cases:
 
@@ -26,12 +27,34 @@ administrators are:
 
 The Python code is written using object-oriented programming techniques which makes it easy to create new alerts and reports.
 
+## Example Reports
+
+Which users have wasted the most GPU-hours?
+
+```
+                         GPU-Hours at 0% Utilization                          
+------------------------------------------------------------------------------
+    User   GPU-Hours-At-0%  Jobs                 JobID                  emails
+------------------------------------------------------------------------------
+1  u12998        308         39   62266607,62285369,62303767,62317153+   1 (7)
+2  u9l487         84         14   62301196,62301737,62301738,62301742+   0     
+3  u39635         25          2                     62184669,62187323    0     
+4  u24074         24         13   62303161,62303182,62303183,62303184+   0      
+------------------------------------------------------------------------------
+   Cluster: della
+Partitions: gpu, pli-c, pli-p, pli, pli-lc
+     Start: Wed Feb 12, 2025 at 09:50 AM
+       End: Wed Feb 19, 2025 at 09:50 AM
+```
+
+Which users are wasting the most CPU memory?
+
 ## Example Emails
 
 Below is an example email for the automatic cancellation of a GPU job with 0% utilization:
 
 ```
-Hi Alan,
+Hi Alan (u1234),
 
 The jobs below have been cancelled because they ran for nearly 2 hours at 0% GPU
 utilization:
@@ -43,7 +66,7 @@ utilization:
 See our GPU Computing webpage for three common reasons for encountering zero GPU
 utilization:
 
-    https://<your-institution>.edu/knowledge-base/gpu-computing
+    https://your-institution.edu/knowledge-base/gpu-computing
 
 Replying to this automated email will open a support ticket with Research
 Computing.
@@ -52,20 +75,20 @@ Computing.
 Below is an example email to a user that is requesting too much CPU memory:
 
 ```
-Hi Alan,
+Hi Alan (u1234),
 
 Below are your jobs that ran on BioCluster in the past 7 days:
 
      JobID   Memory-Used  Memory-Allocated  Percent-Used  Cores  Hours
-    5761066      2 GB          100 GB            2%         1      48
-    5761091      4 GB          100 GB            4%         1      48
-    5761092      3 GB          100 GB            3%         1      48
+    5761066      2 GB          100 GB            2%         1     48
+    5761091      4 GB          100 GB            4%         1     48
+    5761092      3 GB          100 GB            3%         1     48
 
 It appears that you are requesting too much CPU memory for your jobs since
 you are only using on average 3% of the allocated memory. For help on
 allocating CPU memory with Slurm, please see:
 
-    https://<your-institution>.edu/knowledge-base/memory
+    https://your-institution.edu/knowledge-base/memory
 
 Replying to this automated email will open a support ticket with Research
 Computing. 
@@ -93,3 +116,7 @@ low-xpu-efficiencies:
     - all
   threshold: 10
 ```
+
+## How does it work?
+
+Summary statistics for each completed job are stored in a compressed format in the `AdminComment` field in the Slurm database. The software described here works by calling the Slurm `sacct` command while requesting several fields including `AdminComment`. The `sacct` output is stored in a `pandas` dataframe for processing.
