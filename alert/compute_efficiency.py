@@ -169,13 +169,15 @@ class LowEfficiency(Alert):
                 email = translator.replace_tags()
                 usr["Cluster"] = self.cluster
                 usr["Alert-Partitions"] = ",".join(sorted(set(self.partitions)))
+                xhrs = f"{self.xpu.upper()}-Hours"
+                usr[xhrs] = usr[xhrs].astype("int64")
                 usr["Efficiency"] = usr["Efficiency"].apply(lambda x:
                                                             x.replace("%", ""))
                 usr = usr[["User",
                            "Cluster",
                            "Alert-Partitions",
                            "Partition(s)",
-                           f"{self.xpu.upper()}-Hours",
+                           xhrs,
                            f"{self.xpu.upper()}-Rank",
                            "Efficiency",
                            "Jobs"]]
