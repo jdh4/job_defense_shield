@@ -23,9 +23,12 @@ class CancelZeroGpuJobs(Alert):
     def _add_required_fields(self):
         if not hasattr(self, "email_subject"):
             self.email_subject = "Jobs with Zero GPU Utilization"
+        if not hasattr(self, "gpu_frac_threshold"):
+            self.gpu_frac_threshold = 1.0
         if not hasattr(self, "do_not_cancel"):
             self.do_not_cancel = False
         self.jobids_to_cancel = []
+        
 
     def _filter_and_add_new_fields(self):
         if not hasattr(self, "first_warning_minutes") and \
@@ -87,7 +90,8 @@ class CancelZeroGpuJobs(Alert):
                 jobid_cache_file = os.path.join(self.jobid_cache_path, ".jobid_cache.pkl")
                 with open(jobid_cache_file, "wb") as fp:
                     pickle.dump(pre_approved + jobs_using_gpus, fp)
-            self.df = self.df[self.df["GPUs-Unused"] > 0]
+            self.df["gpu_frac"] = (self.df["gpus"] - self.df["GPUs-Unused"]) / self.df["gpus"]
+            self.df = self.df[self.df["gpu_frac"] < self.gpu_frac_threshold]
             # filter interactive jobs if such settings are found in config.yaml
             if hasattr(self, "max_interactive_hours") and \
                hasattr(self, "max_interactive_gpus"):
@@ -206,7 +210,6 @@ class CancelZeroGpuJobs(Alert):
                            "GPUs-Unused",
                            "Hours"]]
                 self.emails.append((user, email, usr))
-                print(email, usr)
                 self.jobids_to_cancel.extend(usr.JobID.tolist())
 
     def cancel_jobs(self) -> None:

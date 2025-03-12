@@ -28,16 +28,19 @@ external-emails:
 cancel-zero-gpu-jobs:
   cluster: della
   partitions:
+    - gpu
     - pli-c
-  sampling_period_minutes: 15 # minutes
-  first_warning_minutes: 0    # minutes
-  second_warning_minutes: 15  # minutes
-  cancel_minutes: 30          # minutes
+    - pli-p
+    - pli
+    - pli-lc
+  sampling_period_minutes: 15  # minutes
+  first_warning_minutes:   60  # minutes
+  second_warning_minutes: 105  # minutes
+  cancel_minutes:          90  # minutes
   email_file_first_warning:  "cancel_gpu_jobs_warning_1.txt"
   email_file_second_warning: "cancel_gpu_jobs_warning_2.txt"
   email_file_cancel:         "cancel_gpu_jobs_scancel_3.txt"
   jobid_cache_path: /projects/j/jdh4/utilities/job_defense_shield
-  do_not_cancel: True
   max_interactive_hours: 8
   max_interactive_gpus: 1
   admin_emails:
