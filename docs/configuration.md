@@ -39,19 +39,25 @@ zero-cpu-utilization-1:
     - admin@institution.edu
 ```
 
-See a full example of [config.yaml](https://github.com/jdh4/job_defense_shield/blob/main/config.yaml) in the GitHub repository.
+Below each line of the global settings are explained. See [example.yaml](https://github.com/jdh4/job_defense_shield/blob/main/example.yaml) in the GitHub repository for a full configuration file example.
 
 ## Global Settings
 
-### Jobstats Files
+### Jobstats Path
 
-The first entry in `config.yaml` is the path to `jobstats.py` and `config.py`:
+This setting is only needed for addressing the underutilization of actively running jobs. If you do not need this feature then use a setting such as:
+
+```yaml
+jobstats-module-path: /tmp
+```
+
+If you do need this feature then set this path to the `jobstats` directory which contains `jobstats.py` and `config.py`:
 
 ```yaml
 jobstats-module-path: /path/to/jobstats/
 ```
 
-These two files are needed for getting the summary statistics of actively running jobs. To be clear, `/path/to/jobstats` should contain these files:
+These two files are needed for getting the summary statistics of actively running jobs. To be clear, `/path/to/jobstats/` should contain these files:
 
 ```
 /path/to/jobstats/jobstats.py
@@ -60,21 +66,21 @@ These two files are needed for getting the summary statistics of actively runnin
 
 The value of `PROM_SERVER` is taken from `config.py`.
 
-If you are not interested in addressing the underutilization of actively running jobs then just set this to a dummy path (e.g., `/tmp`).
-
 ### Violation Logs
 
-One must specifiy the path to a writable directory to store the underutilization history of each user:
+One must specify the path to a writable directory to store the underutilization history of each user:
 
 ```yaml
 violation-logs-path: /path/to/violations/
 ```
 
-The files stored in this directory are read when deciding whether or not sufficient time has passed to send the user another email. These files are important and should be backed up.
+If the path does not exist then the software will try to make it.
+
+The files stored in this directory are read when deciding whether or not sufficient time has passed to send the user another email. These files are important and we recommend maintaining a backup.
 
 ### Email Settings
 
-Set the path to your email files. These are the files that are read and enhanced by the software. A set of examples in found in the `email` directory of the `job_defense_shield` GitHub repository.
+Set the path to your email files. These are the files that are read and enhanced by the software. A set of examples in found in the `email` directory of the `job_defense_shield` GitHub repository. It is recommended to copy the example email files to another directory outside of `job_defense_shield` and put that under version control.
 
 ```yaml
 email-files-path: /path/to/email/
@@ -86,7 +92,7 @@ Specify the email domain for your institution:
 email-domain-name: "@institution.edu"
 ```
 
-Usernames will be concatenated with the email domain to make email addresses.
+Usernames will be concatenated with the email domain to make user email addresses.
 
 Specify the `sender` and `reply-to` values for sending emails:
 
@@ -104,7 +110,19 @@ Use the `greeting-method` to determine the first line of the email that users re
 greeting-method: getent
 ```
 
-If you find that `getent` is not working properly during testing then use `basic`.
+The `getent` method will call `getent passwd` on the username to find the first name of the user in producing a greeting such as:
+
+```
+Hello Alan (u12345),
+```
+
+A choice of `basic` will produce:
+
+```
+Hello u12345,
+```
+
+There is also `ldap` which calls `ldapsearch`. Our recommendation is `getent`. If you find that `getent` is not working properly during testing then use `basic`.
 
 Lastly, one can create multiple reports and have those sent to administrators by email when the `--report` flag is used:
 
@@ -199,7 +217,7 @@ zero-cpu-utilization-1:
 
 While the two alerts above are written for different clusters, only the second one will run since both alerts have the same name (`zero-cpu-utilization-1`).
 
-!!! danger
+!!! warning
 
     Make sure each alert name has a different number at the end. An alert with the same name as one previously defined will override the previous alert.
 
@@ -242,7 +260,7 @@ zero-cpu-utilization-1:
     - admin@institution.edu
 ```
 
-If the default value for `min_run_time` should be used then completely remove the line. Here is the **correct** entry:
+If the default value for `min_run_time` should be used then completely remove the line. Here is the **corrected** entry:
 
 ```yaml
 zero-cpu-utilization-1:
@@ -269,7 +287,7 @@ zero-cpu-utilization-1:
 
 ## Full Example Configuration File
 
-For more examples see [config.yaml](https://github.com/jdh4/job_defense_shield/blob/main/config.yaml) in the GitHub repository.
+For more examples see [example.yaml](https://github.com/jdh4/job_defense_shield/blob/main/example.yaml) in the GitHub repository.
 
 ## Writing and Testing Custom Emails
 

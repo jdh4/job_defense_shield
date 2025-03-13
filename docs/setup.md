@@ -1,36 +1,89 @@
 # Installation
 
-We assume that the [Jobstats platform](https://github.com/PrincetonUniversity/jobstats) is available and working. While there are some alerts
-that do not require Jobstats (e.g., time, utilization-overview), to take full advantage of the software it should be present.
+We assume that the [Jobstats platform](https://github.com/PrincetonUniversity/jobstats) is available and working.
 
-The installation requirements for Job Defense Shield are Python 3.6+ and version 1.2+ of the Python `pandas` package. The `jobstats` command is also required if one wants to examine actively running jobs such as when looking for jobs with zero GPU utilization. The Python code, example alerts and emails, and instructions are available in the <a href="https://github.com/PrincetonUniversity/job_defense_shield" target="_blank">GitHub repository</a>.
+!!! info "Cancelling Jobs at 0% GPU Utilization"
+    To automatically cancel actively running jobs, the software must be ran as a user with sufficient privileges to call `scancel`. This may inform your decision of where to install the software. All of the other alerts can be ran as a regular user. It may make sense to have one installation on a secure machine which cancels GPU jobs and a second installation on a login node which is ran as a regular user for the other alerts.
+
+The installation requirements for Job Defense Shield are `pandas` and `pyyaml`. The `requests` module is needed only if one wants to address the underutilization of actively running jobs. In this case, the Prometheus server must be queried.
+
+Here are some ways the requirements can be installed:
+
+=== "Ubuntu"
+
+    ```
+    $ apt-get install python3-pandas python3-yaml python3-requests
+    ```
+
+=== "conda"
+
+    ```bash
+    $ conda create --name jds-env pandas pyarrow pyyaml requests -c conda-forge
+    $ conda activate jds-env
+    ```
+
+=== "pip"
+
+    ```bash
+    $ python3 -m venv jds-env
+    $ source jds-env/bin/activate
+    (jds-env) $ pip3 install pandas pyarrow pyyaml requests
+    ``` 
+
+Next, pull down the repository:
 
 ```
-$ conda create --name jds-env pandas pyarrow blessed requests pyyaml -c conda-forge -y
+$ git clone https://github.com/jdh4/job_defense_shield
+$ cd job_defense_shield
 ```
-
-```
-$ apt-get install python3-pandas python3-requests python3-yaml python3-blessed
-```
-
-One only needs `requests`, `blessed` and `jobstats.py` to get the data for actively
-running jobs.
 
 ## Testing the Installation
 
-To test the software, run this simple command which does not send any emails:
+The simplest test is to run the help menu:
 
 ```
-$ job_defense_shield --utilization-overview
+$ python job_defense_shield.py --help
+```
+
+Try running a simple informational alert. First, make a trivial configuration file called `config.yaml` in the same directory as `job_defense_shield.py`:
+
+```
+$ cat config.yaml
+```
+```yaml
+%YAML 1.1
+---
+#####################
+## GLOBAL SETTINGS ##
+#####################
+jobstats-module-path: /tmp
+violation-logs-path: /tmp
+email-files-path: /tmp
+email-domain-name: "@institution.edu"
+sender: support@institution.edu
+reply-to: support@institution.edu
+report-emails:
+  - admin@institution.edu
+```
+
+!!! tip
+    If the path that you use for `violation-logs-path` does not exist then the software will try to make it. If `/tmp` does not exist then use something else like `/scratch`.
+
+Be sure to replace `email-domain-name`, `sender`, `reply-to` and `report-emails` with your values.
+
+To test the software, run this command (which does not send any emails):
+
+```
+$ python job_defense_shield.py --utilization-overview
 ```
 
 The command above will show an overview of the number of CPU-hours and GPU-hours
-across all clusters and partitions in the Slurm database.
+across all clusters and partitions in the Slurm database over the past 7 days.
 
-Here is an example:
+Here is an example output:
 
 ```
-$ job_defense_shield.py --utilization-overview
+$ python job_defense_shield.py --utilization-overview
 
 
            Utilization Overview           
@@ -74,47 +127,45 @@ cluster    partition    users   cpu-hours    gpu-hours
 traverse           all    1   126183 (100%) 31546 (100%)
 ```
 
+You can go further back in time by using the `--days` option:
+
+```
+$ python job_defense_shield.py --utilization-overview --days=14
+```
+
+!!! info
+    Using a large value for the `--days` option can cause the Slurm database to fail to produce the data. The default is 7 days.
+
+One can only include data from specific clusters or partitions using the `-M` and `-r` options from `sacct`:
+
+```
+$ python job_defense_shield.py --utilization-overview -M della
+```
+
+The `-M` and `-r` options are very useful for alerts that only apply to a particular cluster or particular partitions.
+
 ## Email Test
 
-Make a `config.yaml` file as below and place it in the same location as `job_defense_shield.py`:
-
-```yaml
-%YAML 1.1
----
-#####################
-## GLOBAL SETTINGS ##
-#####################
-jobstats-module-path: /tmp
-violation-logs-path: /tmp
-email-files-path: /tmp
-email-domain-name: "@institution.edu"
-sender: support@institution.edu
-reply-to: support@institution.edu
-report-emails:
-  - admin1@institution.edu
-```
-
-Now try again and you should received the report by email:
+By having your email address in `report-emails`, the `--report` flag can be used to send the output to administrators by email:
 
 ```
-$ job_defense_shield.py --utilization-overview --report
+$ python job_defense_shield.py --utilization-overview --report
 ```
-
 
 ## Troubleshooting the Installation
 
-Finding the right `python`
+Make sure you are using the right `python`. All three commands below should run successfully:
 
 ```
-$ python -c "import pandas"
-$ python -c "import pyyaml"
+$ python -c "import sys; print(sys.version)"
+$ python -c "import pandas; print(pandas.__version__)"
+$ python -c "import pyyaml; print(pyyaml.__version__)"
 ```
 
-Finding the configuration file. The code will look for the configuration file in multiple
-locations. You can always specify the full path with:
+If the configuration file is not found then try specifying the full path:
 
 ```
---cfg=<path/to>/job_defense_shield/config.yaml
+$ python job_defense_shield.py --config-file=/path/to/config.yaml --utilization-overview --report
 ```
  
 ## Creating a Configuration File for Production

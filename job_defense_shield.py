@@ -149,6 +149,8 @@ if __name__ == "__main__":
             print(f"ERROR: An error occurred when making {dir_path}: {e}")
             raise
 
+    if "jobstats-module-path" not in cfg:
+        cfg["jobstats-module-path"] = "/tmp"
     if "verbose" not in cfg:
         cfg["verbose"] = False
     if "external-emails" not in cfg:

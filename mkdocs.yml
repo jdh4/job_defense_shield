@@ -22,6 +22,7 @@ nav:
     - Overview:             reports/overview.md
     - Usage By Slurm Account: reports/account.md
   - Nodelist: nodelist.md
+  - Tips: extra.md
   - Contributions: contributions.md
   - Support: support.md
   - Publications: publications.md

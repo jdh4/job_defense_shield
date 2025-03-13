@@ -1,6 +1,30 @@
 # Emails
 
-## Custom Emails to Users
+## When Are Emails Sent?
+
+By default, users can only receive an email for a particular instance of underutilization once per week. The email they receive will contain either the individual jobs or a summary for that week. This time window can be modified by the `--days` option. Note that users can received multiple emails about the same type of underutilization if there are multiple alerts covering different partitions or different clusters.
+
+The `Email` column in the table below shows the number of emails that each user has received about this particular instance of underutilization:
+
+```
+                         GPU-Hours at 0% Utilization                          
+------------------------------------------------------------------------------
+    User   GPU-Hours-At-0%  Jobs                 JobID                  Emails
+------------------------------------------------------------------------------
+1  u12998        308         39   62266607,62285369,62303767,62317153+   1 (7)
+2  u9l487         84         14   62301196,62301737,62301738,62301742+   0     
+3  u39635         25          2                     62184669,62187323    2 (4)     
+4  u24074         24         13   62303161,62303182,62303183,62303184+   0      
+------------------------------------------------------------------------------
+   Cluster: della
+Partitions: gpu, pli-c, pli-p, pli, pli-lc
+     Start: Wed Feb 12, 2025 at 09:50 AM
+       End: Wed Feb 19, 2025 at 09:50 AM
+```
+
+The number in parentheses is the number of days since the last email was sent. For example, `2 (4)` means that the user has received 2 previous emails with the last one being sent 4 days ago.
+
+## Sending Custom Emails to Users
 
 Each alert requires a text file for the `email_file`:
 

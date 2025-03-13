@@ -1,6 +1,6 @@
 # Cancel GPU Jobs at 0% Utilization
 
-This is one of the most popular features of Jobstats.
+This is one of the most popular features of [Jobstats](https://github.com/PrincetonUniversity/jobstats).
 This alert automatically cancels jobs with GPUs at 0% utilization.
 Up to two warning emails can be sent before each job is cancelled.
 
@@ -145,8 +145,8 @@ Hi Alan (aturing),
 You have GPU job(s) that have been running for nearly 1 hour but appear to not
 be using the GPU(s):
 
-       JobID    Cluster Partition  GPUs-Allocated  GPUs-Unused GPU-Util  Hours
-     60131148    della     gpu            4             4         0%       1  
+     JobID    Cluster Partition  GPUs-Allocated  GPUs-Unused GPU-Util  Hours
+   60131148    della     gpu            4             4         0%       1  
 
 Your jobs will be AUTOMATICALLY CANCELLED if they are found to not be using the
 GPUs for 2 hours.
@@ -154,7 +154,7 @@ GPUs for 2 hours.
 Please consider cancelling the job(s) listed above by using the "scancel"
 command:
 
-     $ scancel 60131148
+   $ scancel 60131148
 
 Replying to this automated email will open a support ticket with Research
 Computing.
@@ -186,8 +186,8 @@ Hi Alan (aturing),
 This is a second warning. The jobs below will be cancelled in about 15 minutes
 unless GPU activity is detected:
 
-       JobID    Cluster Partition  GPUs-Allocated  GPUs-Unused GPU-Util  Hours
-     60131148    della     gpu           4             4          0%      1.6  
+     JobID    Cluster Partition  GPUs-Allocated  GPUs-Unused GPU-Util  Hours
+   60131148    della     gpu            4             4         0%      1.6  
 
 Replying to this automated email will open a support ticket with Research
 Computing.
@@ -219,8 +219,8 @@ Hi Alan (aturing),
 The jobs below have been cancelled because they ran for more than 2 hours at 0% GPU
 utilization:
 
-     JobID    Cluster  Partition    State    GPUs-Allocated GPU-Util  Hours
-    60131148   della      gpu     CANCELLED         4          0%      2.1
+     JobID   Cluster  Partition    State    GPUs-Allocated GPU-Util  Hours
+   60131148   della      gpu     CANCELLED         4          0%      2.1
 
 See our GPU Computing webpage for three common reasons for encountering zero GPU
 utilization:

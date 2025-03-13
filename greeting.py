@@ -41,7 +41,7 @@ class GreetingGetent:
 
 class GreetingLDAP(Greeting):
 
-    """A more advanced greeting that uses LDAP. The ldap3 Python
+    """Another greeting that uses LDAP. The ldap3 Python
        module is not used to avoid having an additional dependency."""
 
     def greeting(self, user: str) -> str:
