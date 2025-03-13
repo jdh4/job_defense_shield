@@ -129,6 +129,19 @@ if __name__ == "__main__":
         print("Configuration file not found. Exiting ...")
         sys.exit()
 
+    if "verbose" not in cfg:
+        cfg["verbose"] = False
+    if "external-emails" not in cfg:
+        cfg["external-emails"] = {}
+    if "greeting-method" not in cfg:
+        print('INFO: Setting greeting-method to "basic"')
+        cfg["greeting-method"] = "basic"
+    if "workday-method" not in cfg:
+        print('INFO: Setting workday-method to "always"')
+        cfg["workday-method"] = "always"
+    if "partition-renamings" not in cfg:
+        cfg["partition-renamings"] = {}
+
     sys_cfg = {"no_emails_to_users": args.no_emails_to_users,
                "jobstats_path":      cfg["jobstats-module-path"],
                "email_files_path":   cfg["email-files-path"],
@@ -137,6 +150,7 @@ if __name__ == "__main__":
                "reply_to":           cfg["reply-to"],
                "email_domain":       cfg["email-domain-name"],
                "external_emails":    cfg["external-emails"]}
+
     greeting_method = cfg["greeting-method"]
     violation_logs_path = cfg["violation-logs-path"]
     workday_method = cfg["workday-method"]

@@ -80,8 +80,8 @@ def show_history_of_emails_sent(vpath, mydir, title, day_ticks) -> None:
     today = datetime.now().date()
     for f in files:
         netid = f.split("/")[-1].split(".")[0]
-        df = pd.read_csv(f, parse_dates=["email_sent"], date_format="mixed", dayfirst=False)
-        df["when"] = df.email_sent.apply(lambda x: x.date())
+        df = pd.read_csv(f, parse_dates=["Email-Sent"], date_format="mixed", dayfirst=False)
+        df["when"] = df["Email-Sent"].apply(lambda x: x.date())
         hits = df.when.unique()
         row = []
         for i in range(day_ticks):

@@ -18,6 +18,12 @@ class MultinodeCpuFragmentation(Alert):
     def __init__(self, df, days_between_emails, violation, vpath, **kwargs):
         super().__init__(df, days_between_emails, violation, vpath, **kwargs)
 
+    def _add_required_fields(self):
+        if not hasattr(self, "email_subject"):
+            self.email_subject = "Multinode CPU Jobs with Fragmentation"
+        if not hasattr(self, "report_title"):
+            self.report_title = "Multinode CPU Jobs with Fragmentation"
+
     def is_fragmented(self, cores_per_node, mem_per_node_used) -> bool:
         """Classify the job as fragmented or not based on cores per node
            and memory usage."""
@@ -36,12 +42,6 @@ class MultinodeCpuFragmentation(Alert):
         mem_per_node_safe = (1 - self.safety_fraction) * self.mem_per_node
         min_nodes_by_memory = math.ceil(total_mem_used / mem_per_node_safe)
         return max(min_nodes_by_cores, min_nodes_by_memory)
-
-    def _add_required_fields(self):
-        if not hasattr(self, "email_subject"):
-            self.email_subject = "Multinode CPU Jobs with Fragmentation"
-        if not hasattr(self, "report_title"):
-            self.report_title = "Multinode CPU Jobs with Fragmentation"
 
     def _filter_and_add_new_fields(self):
         self.df = self.df[(self.df.cluster == self.cluster) &
@@ -112,7 +112,7 @@ class MultinodeCpuFragmentation(Alert):
     def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.df.user.unique():
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            vfile = f"{self.vpath}/{self.violation}/{user}.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.user == user].copy()
                 renamings = {"jobid":"JobID",
@@ -175,5 +175,14 @@ class MultinodeCpuFragmentation(Alert):
                                  self.get_emails_sent_count(user, self.violation))
         self.df.Emails = self.format_email_counts(self.df.Emails)
         self.df = self.df.drop(columns=["cluster", "partition"])
+        renamings = {"jobid":"JobID",
+                     "user":"User",
+                     "nodes":"Nodes",
+                     "cores":"Cores",
+                     "mem-per-node-used":"Mem-per-Node-Used",
+                     "cores-per-node":"Cores-per-Node",
+                     "hours":"Hours",
+                     "min-nodes":"Min-Nodes"}
+        self.df = self.df.rename(columns=renamings)
         report_str = self.df.to_string(index=keep_index, justify="center")
         return add_dividers(report_str, self.report_title)

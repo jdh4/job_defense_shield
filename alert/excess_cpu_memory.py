@@ -126,7 +126,7 @@ class ExcessCPUMemory(Alert):
     def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            vfile = f"{self.vpath}/{self.violation}/{user}.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.gp[self.gp.User == user].copy()
                 jobs = self.df[self.df.user == user].copy()

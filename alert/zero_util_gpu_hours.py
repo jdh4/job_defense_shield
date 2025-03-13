@@ -79,7 +79,7 @@ class ZeroUtilGPUHours(Alert):
         # self.gp is not needed here (could use df)
         g = GreetingFactory().create_greeting(method)
         for user in self.gp.User.unique():
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            vfile = f"{self.vpath}/{self.violation}/{user}.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 zero_hours = round(self.gp[self.gp.User == user]["GPU-Hours-At-0%"].values[0])

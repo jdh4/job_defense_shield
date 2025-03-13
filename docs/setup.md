@@ -79,6 +79,11 @@ traverse           all    1   126183 (100%) 31546 (100%)
 Make a `config.yaml` file as below and place it in the same location as `job_defense_shield.py`:
 
 ```yaml
+%YAML 1.1
+---
+#####################
+## GLOBAL SETTINGS ##
+#####################
 jobstats-module-path: /tmp
 violation-logs-path: /tmp
 email-files-path: /tmp

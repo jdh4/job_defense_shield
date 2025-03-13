@@ -82,7 +82,7 @@ class Alert:
                            sender=self.sender,
                            reply_to=self.reply_to)
                 if usr is not None:
-                    vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+                    vfile = f"{self.vpath}/{self.violation}/{user}.csv"
                     self.update_violation_log(usr, vfile)
         for user, email, usr in self.emails:
             for admin_email in self.admin_emails:
@@ -167,13 +167,15 @@ class Alert:
         last_sent_email_date = datetime(1970, 1, 1)
         if os.path.isfile(vfile):
             violation_history = pd.read_csv(vfile,
-                                            parse_dates=["email_sent"],
+                                            parse_dates=["Email-Sent"],
                                             date_format="mixed",
                                             dayfirst=False)
-            #violation_history = violation_history[(violation_history["Cluster"] == cluster) &
-            #                                      (violation_history["Alert-Partitions"] == alert_partitions)]
-            #if not violation_history.empty:
-            last_sent_email_date = violation_history["email_sent"].max()
+            alert_partitions = ",".join(sorted(set(self.partitions)))
+            violation_history = violation_history[(violation_history["Cluster"] == self.cluster) &
+                                                  (violation_history["Alert-Partitions"] == alert_partitions)]
+            print(violation_history)
+            if not violation_history.empty:
+                last_sent_email_date = violation_history["Email-Sent"].max()
         seconds_since_last_email = datetime.now().timestamp() - last_sent_email_date.timestamp()
         seconds_threshold = self.days_between_emails * HOURS_PER_DAY * SECONDS_PER_HOUR
         return seconds_since_last_email >= seconds_threshold
@@ -184,14 +186,14 @@ class Alert:
         root_violations = f"{self.vpath}/{violation}"
         if not os.path.exists(root_violations):
             print(f"Warning: {root_violations} not found in get_emails_sent_count()")
-        user_violations = f"{root_violations}/{user}.email.csv"
+        user_violations = f"{root_violations}/{user}.csv"
         if os.path.isfile(user_violations):
             d = pd.read_csv(user_violations,
-                            parse_dates=["email_sent"],
+                            parse_dates=["Email-Sent"],
                             date_format="mixed",
                             dayfirst=False)
-            num_emails_sent = d["email_sent"].unique().size
-            dt = datetime.now() - d["email_sent"].unique().max()
+            num_emails_sent = d["Email-Sent"].unique().size
+            dt = datetime.now() - d["Email-Sent"].unique().max()
             days_ago_last_email_sent = round(dt.total_seconds() / 24 / 3600)
             return f"{num_emails_sent} ({days_ago_last_email_sent})"
         return "0 (-)"
@@ -213,7 +215,7 @@ class Alert:
     @staticmethod
     def update_violation_log(usr: pd.DataFrame, vfile: str) -> None:
         """Append the new violations to file."""
-        usr["email_sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
+        usr["Email-Sent"] = datetime.now().strftime("%m/%d/%Y %H:%M:%S")
         if os.path.isfile(vfile):
             curr = pd.read_csv(vfile)
             curr = pd.concat([curr, usr]).drop_duplicates()

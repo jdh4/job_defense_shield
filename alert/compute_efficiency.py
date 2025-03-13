@@ -122,7 +122,7 @@ class LowEfficiency(Alert):
         rank_text = {1:"the most", 2:"the 2nd most", 3:"the 3rd most"}
         g = GreetingFactory().create_greeting(method)
         for user in self.ce.user.unique():
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            vfile = f"{self.vpath}/{self.violation}/{user}.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.ce[self.ce.user == user].copy()
                 rank = self.ce.index[self.ce.user == user].tolist()[0]

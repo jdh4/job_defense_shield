@@ -91,7 +91,7 @@ class GpuModelTooPowerful(Alert):
     def create_emails(self, method):
         g = GreetingFactory().create_greeting(method)
         for user in self.df.User.unique():
-            vfile = f"{self.vpath}/{self.violation}/{user}.email.csv"
+            vfile = f"{self.vpath}/{self.violation}/{user}.csv"
             if self.has_sufficient_time_passed_since_last_email(vfile):
                 usr = self.df[self.df.User == user].copy()
                 usr["Hours"] = usr["Hours"].apply(lambda x: str(round(x, 1))
