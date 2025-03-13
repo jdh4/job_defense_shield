@@ -173,7 +173,6 @@ class Alert:
             alert_partitions = ",".join(sorted(set(self.partitions)))
             violation_history = violation_history[(violation_history["Cluster"] == self.cluster) &
                                                   (violation_history["Alert-Partitions"] == alert_partitions)]
-            print(violation_history)
             if not violation_history.empty:
                 last_sent_email_date = violation_history["Email-Sent"].max()
         seconds_since_last_email = datetime.now().timestamp() - last_sent_email_date.timestamp()
