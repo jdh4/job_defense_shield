@@ -107,10 +107,15 @@ class Alert:
         heading = "  ".join(df_empty)
         return heading + "\n" + "no entries".center(len(heading))
 
-    def add_report_metadata(self, start_date: datetime, end_date: datetime) -> str:
+    def add_report_metadata(self,
+                            start_date: datetime,
+                            end_date: datetime,
+                            dates_only: bool=False) -> str:
         """Add data to the bottom of the report."""
-        s = f"   Cluster: {self.cluster}\n" 
-        s += f"Partitions: {', '.join(self.partitions)}\n" 
+        s = ""
+        if not dates_only:
+            s += f"   Cluster: {self.cluster}\n" 
+            s += f"Partitions: {', '.join(self.partitions)}\n" 
         fmt = "%a %b %d, %Y at %I:%M %p"
         s += f"     Start: {start_date.strftime(fmt)}\n" 
         s += f"       End: {end_date.strftime(fmt)}\n" 

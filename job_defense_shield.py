@@ -129,6 +129,26 @@ if __name__ == "__main__":
         print("Configuration file not found. Exiting ...")
         sys.exit()
 
+    if "violation-logs-path" not in cfg:
+        print('ERROR: "violation-logs-path" must be specified in the configuration file.')
+        sys.exit()
+    if not os.path.exists(cfg["violation-logs-path"]): 
+        dir_path = cfg["violation-logs-path"]
+        try:
+            os.makedirs(dir_path)
+        except OSError:
+            print(f"ERROR: Unable to create directory {dir_path}")
+            raise
+        except FileExistsError:
+            print(f"ERROR: Path {dir_path} already exists")
+            raise
+        except PermissionError:
+            print(f"ERROR: Permission denied: Unable to create {dir_path}")
+            raise
+        except Exception as e:
+            print(f"ERROR: An error occurred when making {dir_path}: {e}")
+            raise
+
     if "verbose" not in cfg:
         cfg["verbose"] = False
     if "external-emails" not in cfg:
@@ -602,6 +622,7 @@ if __name__ == "__main__":
                                    violation="null",
                                    vpath=violation_logs_path)
         s += util.generate_report_for_admins()
+        s += util.add_report_metadata(start_date, end_date, dates_only=True)
 
 
     ##################################
