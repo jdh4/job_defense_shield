@@ -23,6 +23,9 @@ Be sure that the tests are passing before making a pull request:
 (jds-env) $ pytest
 ```
 
+$ pytest  --cov=. --capture=tee-sys tests
+$ pytest -s tests  # use the -s option to run print statements
+
 ## Static Checking
 
 Run `ruff` and make sure it is passing for each source file modified:
